@@ -34,11 +34,15 @@ const DEFAULT_SYSTEMS = [
 ];
 
 const LOG_COLOR       = { Inspección:"#16a34a", Servicio:"#2563eb", Combustible:"#d97706", Salida:"#7c3aed", Compra:"#0891b2" };
-const LOG_TYPES       = ["Inspección","Servicio","Combustible","Salida","Compra"];
+const LOG_TYPES       = ["Combustible","Compra","Inspección","Salida","Servicio"];
 const SERVICE_TYPES   = ["Preventivo","Reactivo","Reparación"];
-const PAYMENT_METHODS = ["Zelle","Efectivo USD","Efectivo Bs","Pago Móvil","Transferencia","Tarjeta"];
+const PAYMENT_METHODS = ["Efectivo Bs","Efectivo USD","Pago Móvil","Tarjeta","Transferencia","Zelle"];
 const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Trimestral","Semestral","Anual","Por horas","Por millas"];
-const SEGMENTS        = ["Mecánica","A/C y Refrigeración","Hidráulicos","Eléctrico","Teak / Fibra","Pintura","Electrónica","Grúa / Transporte","Buceo","Gestión","Broker","Surveyor","Otro"];
+const SEGMENTS        = ["A/C y Refrigeración","Broker","Buceo","Eléctrico","Electrónica","Gestión","Grúa / Transporte","Hidráulicos","Mecánica","Pintura","Surveyor","Teak / Fibra","Otro"];
+
+// Helper: get motor/generator labels from vessel propulsion config
+function getMotorLabels(vessel) { return vessel.motors || ["Motor Estribor","Motor Babor"]; }
+function getGenLabels(vessel)   { return vessel.generators || ["Generador Principal"]; }
 const STATUS_CFG      = {
   ok:      { label:"Al día",    color:"#16a34a", bg:"#dcfce7", dot:"#16a34a" },
   alert:   { label:"Atención",  color:"#d97706", bg:"#fef3c7", dot:"#d97706" },
@@ -53,6 +57,8 @@ const INIT_VESSELS = [
     id:1, name:"La Gaviota", type:"Velero 60'", marina:"Puerto La Cruz",
     captain:"Carlos Mendoza", fuel:72, fuelUnit:"gal", engineHours:1243, genHours:342, status:"alert",
     crew:["Carlos Mendoza","José Pérez","María González"],
+    motors:["Motor Estribor","Motor Babor"],
+    generators:["Generador Principal"],
     customSystems:[],
     profile:{ firstName:"Ricardo", lastName:"Ortega", phone:"305-799-7996", email:"ricardo@theboatingzone.com", marinaAddress:"Marina Puerto La Cruz, Muelle 12, Anzoátegui, Venezuela" },
     subscription:{ plan:"Pro", price:79, currency:"USD", cycle:"Mensual", nextBilling:"2025-07-05", status:"active" },
@@ -92,7 +98,7 @@ const INIT_VESSELS = [
   },
   {
     id:2,name:"Mar Adentro",type:"Yate Motor 48'",marina:"Tucacas",captain:"José Rivas",fuel:38,fuelUnit:"gal",engineHours:887,genHours:210,status:"critical",
-    crew:["José Rivas"],customSystems:[],
+    crew:["José Rivas"],motors:["Motor Estribor","Motor Babor"],generators:["Generador Principal"],customSystems:[],
     profile:{firstName:"Ricardo",lastName:"Ortega",phone:"305-799-7996",email:"ricardo@theboatingzone.com",marinaAddress:"Marina Tucacas, Muelle 3, Falcón, Venezuela"},
     subscription:{plan:"Pro",price:79,currency:"USD",cycle:"Mensual",nextBilling:"2025-07-05",status:"active"},
     providers:[],
@@ -104,7 +110,7 @@ const INIT_VESSELS = [
   },
   {
     id:3,name:"Brisa Caribe",type:"Catamarán 55'",marina:"Margarita",captain:"Andrés Torres",fuel:85,fuelUnit:"%",engineHours:562,genHours:89,status:"ok",
-    crew:["Andrés Torres","Luis Mata"],customSystems:[],
+    crew:["Andrés Torres","Luis Mata"],motors:["Motor Estribor","Motor Babor"],generators:[],customSystems:[],
     profile:{firstName:"Ricardo",lastName:"Ortega",phone:"305-799-7996",email:"ricardo@theboatingzone.com",marinaAddress:"Marina Margarita, Porlamar, Nueva Esparta, Venezuela"},
     subscription:{plan:"Pro",price:79,currency:"USD",cycle:"Mensual",nextBilling:"2025-07-05",status:"active"},
     providers:[],
@@ -716,12 +722,15 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
   const [arrTime,setArrTime]         = useState(initial?.arrTime||"");
   const [fuelOut,setFuelOut]         = useState(initial?.fuelOut||"");
   const [fuelIn,setFuelIn]           = useState(initial?.fuelIn||"");
-  const [engOut,setEngOut]           = useState(initial?.engineHrsOut||"");
-  const [engIn,setEngIn]             = useState(initial?.engineHrsIn||"");
-  const [genOut,setGenOut]           = useState(initial?.genHrsOut||"");
-  const [genIn,setGenIn]             = useState(initial?.genHrsIn||"");
+  const [engOut,setEngOut]           = useState(initial?.engineHrsOut||{});
+  const [engIn,setEngIn]             = useState(initial?.engineHrsIn||{});
+  const [genOut,setGenOut]           = useState(initial?.genHrsOut||{});
+  const [genIn,setGenIn]             = useState(initial?.genHrsIn||{});
   const [clima,setClima]             = useState(initial?.salidaClima||"");
   const [item,setItem]               = useState(initial?.item||"");
+  const [brand,setBrand]             = useState(initial?.brand||"");
+  const [model2,setModel2]           = useState(initial?.model2||"");
+  const [partNum,setPartNum]         = useState(initial?.partNum||"");
   const [costUSD,setCostUSD]         = useState(initial?.costUSD||"");
   const [costBs,setCostBs]           = useState(initial?.costBs||"");
   const [payment,setPayment]         = useState(initial?.payment||"");
@@ -755,7 +764,7 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
     if (type==="Salida")      entry={...entry,ownerAboard,crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
-    if (type==="Compra")      entry={...entry,item,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment};
+    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment};
     onSave(entry);
   };
 
@@ -882,11 +891,25 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
                 </div>
                 <div><label style={s.label}>Dueño a bordo</label><div style={{display:"flex",gap:8,marginTop:4}}>{[true,false].map(v=><button key={String(v)} onClick={()=>setOwnerAboard(v)} style={{...s.typeChip,background:ownerAboard===v?"#2563eb22":"#f8fafc",borderColor:ownerAboard===v?"#2563eb":"#e2e8f0",color:ownerAboard===v?"#2563eb":"#64748b",fontWeight:ownerAboard===v?700:400}}>{v?"Sí":"No"}</button>)}</div></div>
                 <div><label style={s.label}>Tripulación</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>{vessel.crew.map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}</div></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <div><label style={s.label}>Combustible al salir ({vessel.fuelUnit})</label><input type="number" value={fuelOut} onChange={e=>setFuelOut(e.target.value)} style={s.input}/></div>
-                  <div><label style={s.label}>Horas Motor al salir</label><input type="number" value={engOut} onChange={e=>setEngOut(e.target.value)} style={s.input}/></div>
+                <div>
+                  <label style={s.label}>Combustible al salir</label>
+                  <div style={{display:"flex",gap:10}}>
+                    <div style={{flex:"0 0 90px"}}><label style={{...s.label,marginBottom:4}}>Unidad</label><select value={fuelUnit} onChange={e=>setFuelUnit(e.target.value)} style={s.input}>{["gal","lts","%"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+                    <div style={{flex:1}}><label style={{...s.label,marginBottom:4}}>Cantidad</label><input type="number" value={fuelOut} onChange={e=>setFuelOut(e.target.value)} style={s.input}/></div>
+                  </div>
                 </div>
-                <div><label style={s.label}>Horas Generador al salir</label><input type="number" value={genOut} onChange={e=>setGenOut(e.target.value)} style={s.input}/></div>
+                {getMotorLabels(vessel).length>0&&<div>
+                  <label style={s.label}>Horas de Motores al salir</label>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                    {getMotorLabels(vessel).map(m=><div key={m}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{m}</label><input type="number" value={engOut[m]||""} onChange={e=>setEngOut(v=>({...v,[m]:e.target.value}))} placeholder="Ej: 1243" style={s.input}/></div>)}
+                  </div>
+                </div>}
+                {getGenLabels(vessel).length>0&&<div>
+                  <label style={s.label}>Horas de Generadores al salir</label>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                    {getGenLabels(vessel).map(g=><div key={g}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{g}</label><input type="number" value={genOut[g]||""} onChange={e=>setGenOut(v=>({...v,[g]:e.target.value}))} placeholder="Ej: 342" style={s.input}/></div>)}
+                  </div>
+                </div>}
               </div>
             </div>
             <div style={{background:"#f0fdf4",borderRadius:10,padding:"14px 16px",border:"1px solid #bbf7d0"}}>
@@ -894,12 +917,20 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                   <div><label style={s.label}>Hora de Llegada</label><input type="time" value={arrTime} onChange={e=>setArrTime(e.target.value)} style={s.input}/></div>
-                  <div><label style={s.label}>Combustible al regresar ({vessel.fuelUnit})</label><input type="number" value={fuelIn} onChange={e=>setFuelIn(e.target.value)} style={s.input}/></div>
+                  <div><label style={s.label}>Combustible al regresar ({fuelUnit})</label><input type="number" value={fuelIn} onChange={e=>setFuelIn(e.target.value)} style={s.input}/></div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <div><label style={s.label}>Horas Motor al regresar</label><input type="number" value={engIn} onChange={e=>setEngIn(e.target.value)} style={s.input}/></div>
-                  <div><label style={s.label}>Horas Generador al regresar</label><input type="number" value={genIn} onChange={e=>setGenIn(e.target.value)} style={s.input}/></div>
-                </div>
+                {getMotorLabels(vessel).length>0&&<div>
+                  <label style={s.label}>Horas de Motores al regresar</label>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                    {getMotorLabels(vessel).map(m=><div key={m}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{m}</label><input type="number" value={engIn[m]||""} onChange={e=>setEngIn(v=>({...v,[m]:e.target.value}))} placeholder="Ej: 1248" style={s.input}/></div>)}
+                  </div>
+                </div>}
+                {getGenLabels(vessel).length>0&&<div>
+                  <label style={s.label}>Horas de Generadores al regresar</label>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                    {getGenLabels(vessel).map(g=><div key={g}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{g}</label><input type="number" value={genIn[g]||""} onChange={e=>setGenIn(v=>({...v,[g]:e.target.value}))} placeholder="Ej: 345" style={s.input}/></div>)}
+                  </div>
+                </div>}
               </div>
             </div>
             <div><label style={s.label}>Observaciones</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} style={{...s.input,resize:"vertical"}}/></div>
@@ -907,13 +938,18 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
           </>)}
 
           {type==="Compra"&&(<>
-            <div><label style={s.label}>Artículo <span style={{color:"#dc2626"}}>*</span></label><input value={item} onChange={e=>setItem(e.target.value)} placeholder="Ej: Filtro aceite Fleetguard FF5052" style={{...s.input,borderColor:errors.item?"#dc2626":"#e2e8f0"}}/>{errors.item&&<div style={s.errMsg}>{errors.item}</div>}</div>
-            <div><label style={s.label}>Descripción</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} style={{...s.input,resize:"vertical"}}/></div>
+            <div><label style={s.label}>Descripción <span style={{color:"#dc2626"}}>*</span></label><input value={item} onChange={e=>setItem(e.target.value)} placeholder="Ej: Filtro de aceite marino" style={{...s.input,borderColor:errors.item?"#dc2626":"#e2e8f0"}}/>{errors.item&&<div style={s.errMsg}>{errors.item}</div>}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div><label style={s.label}>Marca</label><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Ej: Fleetguard" style={s.input}/></div>
+              <div><label style={s.label}>Modelo</label><input value={model2} onChange={e=>setModel2(e.target.value)} placeholder="Ej: FF5052" style={s.input}/></div>
+            </div>
+            <div><label style={s.label}>Número de Parte</label><input value={partNum} onChange={e=>setPartNum(e.target.value)} placeholder="Ej: FF5052-A" style={s.input}/></div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
               <div><label style={s.label}>Costo USD</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
               <div><label style={s.label}>Costo Bs</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>Bs</span><input type="number" value={costBs} onChange={e=>setCostBs(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
             </div>
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+            <div><label style={s.label}>Notas adicionales</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
             <PhotoFld count={photos} setCount={setPhotos} label="Foto del recibo"/>
           </>)}
 
@@ -983,7 +1019,7 @@ function RecordsPage({ vessel }) {
       {mainFilter==="Combustible"&&<RecordTable rows={fuelLog.map(e=>({Fecha:e.date,Cantidad:`${e.fuelQty} ${e.fuelUnit}`,Notas:e.desc||"—","Registrado por":e.performedBy}))}/>}
       {mainFilter==="Compras"&&(<>
         <div style={{marginBottom:12,padding:"10px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,fontSize:13}}>Total: <strong style={{color:"#16a34a"}}>${totalPurch.toFixed(2)} USD</strong></div>
-        <RecordTable rows={purchaseLog.map(e=>({Fecha:e.date,Artículo:e.item,Descripción:e.desc||"—",USD:`$${e.costUSD||0}`,Bs:e.costBs?`Bs ${e.costBs}`:"—",Pago:e.payment||"—",Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>
+        <RecordTable rows={purchaseLog.map(e=>({Fecha:e.date,Descripción:e.item||"—",Marca:e.brand||"—",Modelo:e.model2||"—","N° Parte":e.partNum||"—",USD:`$${e.costUSD||0}`,Bs:e.costBs?`Bs ${e.costBs}`:"—",Pago:e.payment&&e.payment.startsWith("P:")?"—":e.payment||"—",Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>
       </>)}
       {mainFilter==="Historico"&&(<>
         <div style={{marginBottom:12,padding:"10px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,fontSize:13}}>Costo total histórico: <strong style={{color:"#16a34a"}}>${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}</strong></div>
@@ -1223,7 +1259,14 @@ function ProvidersModal({ vessel, updateVessel, onClose }) {
                 {[["firstName","Nombre *"],["lastName","Apellido"],["company","Empresa *"],["phone","Teléfono"],["email","Email"],["referredBy","Referido por"]].map(([k,lbl])=>(
                   <div key={k}><label style={s.label}>{lbl}</label><input value={form[k]} onChange={e=>set(k,e.target.value)} style={s.input}/></div>
                 ))}
-                <div><label style={s.label}>Especialidad</label><select value={form.segment} onChange={e=>set("segment",e.target.value)} style={s.input}><option value="">Seleccionar...</option>{SEGMENTS.map(sg=><option key={sg} value={sg}>{sg}</option>)}</select></div>
+                <div>
+                  <label style={s.label}>Especialidad</label>
+                  <select value={SEGMENTS.slice(0,-1).includes(form.segment)?form.segment:"Otro"} onChange={e=>{if(e.target.value!=="Otro")set("segment",e.target.value);else set("segment","");}} style={s.input}>
+                    <option value="">Seleccionar...</option>
+                    {SEGMENTS.map(sg=><option key={sg} value={sg}>{sg}</option>)}
+                  </select>
+                  {(!SEGMENTS.slice(0,-1).includes(form.segment)||form.segment==="")&&<input value={form.segment} onChange={e=>set("segment",e.target.value)} placeholder="Escribe la especialidad y se guardará..." style={{...s.input,marginTop:6}}/>}
+                </div>
                 <div style={{gridColumn:"span 2"}}><label style={s.label}>Notas</label><input value={form.notes} onChange={e=>set("notes",e.target.value)} style={s.input}/></div>
               </div>
               <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}><button style={s.btnOutline} onClick={()=>setShowAdd(false)}>Cancelar</button><button style={s.btnPrimary} onClick={addProvider}>Guardar</button></div>
