@@ -1109,74 +1109,229 @@ function DocsPage() {
     {id:1,title:"Carpeta Google Drive - La Gaviota",url:"https://drive.google.com",icon:"☁️"},
     {id:2,title:"Manual Motor Caterpillar 3208",url:"https://drive.google.com",icon:"📄"},
   ]);
-  const [showAdd,setShowAdd]   = useState(false);
-  const [newTitle,setNewTitle] = useState("");
-  const [newUrl,setNewUrl]     = useState("");
+  const [showAddLink,setShowAddLink] = useState(false);
+  const [newTitle,setNewTitle]       = useState("");
+  const [newUrl,setNewUrl]           = useState("");
+  const [activeTab,setActiveTab]     = useState("links");
+  const [aiQuery,setAiQuery]         = useState("");
+  const [aiLoading,setAiLoading]     = useState(false);
+  const [aiResult,setAiResult]       = useState(null);
+  const [manuals,setManuals]         = useState([
+    {id:1,category:"Mecánica / Motores",name:"Manual Caterpillar 3208",file:"CAT_3208_Manual.pdf",size:"12.4 MB"},
+    {id:2,category:"Refrigeración / A/C",name:"Manual Compresor Carrier",file:"Carrier_AC.pdf",size:"8.2 MB"},
+    {id:3,category:"Sistemas de Agua",name:"Manual Watermaker Spectra",file:"Spectra_WM.pdf",size:"5.1 MB"},
+  ]);
+  const [selectedCat,setSelectedCat] = useState("Todos");
+
+  const MANUAL_CATS = [
+    "Mecánica / Motores","Generadores","Refrigeración / A/C","Sistemas de Agua",
+    "Electrónica / Navegación","Eléctrico","Hidráulico","Seguridad","Velas y Jarcia","Otro"
+  ];
 
   const addLink = () => {
     if (!newTitle.trim()||!newUrl.trim()) return;
     const url = newUrl.startsWith("http")?newUrl:"https://"+newUrl;
     setLinks(l=>[...l,{id:Date.now(),title:newTitle.trim(),url,icon:"🔗"}]);
-    setNewTitle(""); setNewUrl(""); setShowAdd(false);
+    setNewTitle(""); setNewUrl(""); setShowAddLink(false);
   };
-  const removeLink = (id) => setLinks(l=>l.filter(x=>x.id!==id));
+
+  const askAI = async () => {
+    if (!aiQuery.trim()) return;
+    setAiLoading(true); setAiResult(null);
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6",
+          max_tokens:1000,
+          messages:[{role:"user",content:`Eres un experto en mantenimiento marino. El usuario tiene un barco con los siguientes datos: La Gaviota, Hatteras 60 Convertible 1998, motores Caterpillar 3208 con 1243 horas, generador Kohler 20kW con 342 horas, A/C Quality Air Marine, Watermaker Spectra.
+
+Consulta del usuario: ${aiQuery}
+
+Responde en español con:
+1. Lista de repuestos necesarios con números de parte específicos
+2. Marcas recomendadas y alternativas
+3. Estimado de tiempo de trabajo
+4. Notas importantes de seguridad
+
+Formato tu respuesta de forma clara y estructurada.`}]
+        })
+      });
+      const data = await resp.json();
+      setAiResult(data.content?.[0]?.text || "No se pudo obtener respuesta.");
+    } catch(e) {
+      setAiResult("Error al conectar con el asistente. Verifica tu conexión.");
+    }
+    setAiLoading(false);
+  };
+
+  const filteredManuals = selectedCat==="Todos" ? manuals : manuals.filter(m=>m.category===selectedCat);
 
   return (
-    <div style={{padding:"32px 28px",maxWidth:800,margin:"0 auto"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-        <div>
-          <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4}}>📄 Documentos</h2>
-          <p style={{color:"#64748b",fontSize:13}}>Links y acceso directo a documentos de la embarcación</p>
-        </div>
-        <button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar Link</button>
+    <div style={{padding:"24px 28px",maxWidth:1000,margin:"0 auto"}}>
+      <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4}}>📄 Documentos y Manuales</h2>
+      <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>Gestión de documentos, manuales técnicos y asistente AI de partes</p>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:0,marginBottom:24,borderBottom:"1px solid #e2e8f0"}}>
+        {[
+          {key:"links",   label:"🔗 Links y Documentos"},
+          {key:"manuals", label:"📚 Manuales de Equipos"},
+          {key:"ai",      label:"🤖 Asistente AI de Partes"},
+        ].map(t=>(
+          <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:activeTab===t.key?"2px solid #0ea5e9":"2px solid transparent",cursor:"pointer",fontSize:13,color:activeTab===t.key?"#0ea5e9":"#64748b",fontWeight:activeTab===t.key?600:400,whiteSpace:"nowrap"}}>{t.label}</button>
+        ))}
       </div>
 
-      {showAdd&&(
-        <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:24}}>
-          <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:14}}>Nuevo Documento / Link</div>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div><label style={s.label}>Título o nombre del documento *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Carpeta Google Drive - La Gaviota" style={s.input}/></div>
-            <div><label style={s.label}>URL o link *</label><input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="Ej: https://drive.google.com/..." style={s.input}/></div>
+      {/* ── LINKS TAB ── */}
+      {activeTab==="links"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
+            <button style={s.btnPrimary} onClick={()=>setShowAddLink(!showAddLink)}>＋ Agregar Link</button>
           </div>
-          <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"flex-end"}}>
-            <button style={s.btnOutline} onClick={()=>{setShowAdd(false);setNewTitle("");setNewUrl("");}}>Cancelar</button>
-            <button style={s.btnPrimary} onClick={addLink}>Guardar</button>
+          {showAddLink&&(
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:20}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Nuevo Documento / Link</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div><label style={s.label}>Título *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Manual Motor Caterpillar" style={s.input}/></div>
+                <div><label style={s.label}>URL *</label><input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="https://drive.google.com/..." style={s.input}/></div>
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
+                <button style={s.btnOutline} onClick={()=>{setShowAddLink(false);setNewTitle("");setNewUrl("");}}>Cancelar</button>
+                <button style={s.btnPrimary} onClick={addLink}>Guardar</button>
+              </div>
+            </div>
+          )}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {links.map(link=>(
+              <div key={link.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                <span style={{fontSize:22,flexShrink:0}}>{link.icon}</span>
+                <div style={{flex:1}}>
+                  <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none"}}>{link.title}</a>
+                  <div style={{fontSize:11,color:"#94a3b8",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:500}}>{link.url}</div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <a href={link.url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:4}}>↗ Abrir</a>
+                  <button onClick={()=>setLinks(l=>l.filter(x=>x.id!==link.id))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"4px 8px"}}>✕</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Links list */}
-      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:32}}>
-        {links.length===0&&<div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>No hay documentos guardados. Agrega un link arriba.</div>}
-        {links.map(link=>(
-          <div key={link.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-            <span style={{fontSize:24,flexShrink:0}}>{link.icon}</span>
-            <div style={{flex:1}}>
-              <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none"}}>{link.title}</a>
-              <div style={{fontSize:11,color:"#94a3b8",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:400}}>{link.url}</div>
+      {/* ── MANUALS TAB ── */}
+      {activeTab==="manuals"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["Todos",...MANUAL_CATS].map(c=>(
+                <button key={c} onClick={()=>setSelectedCat(c)} style={{...s.filterBtn,background:selectedCat===c?"#1e3a5f":"transparent",color:selectedCat===c?"#fff":"#64748b",borderColor:selectedCat===c?"#4a9eff":"#e2e8f0",fontSize:11,padding:"4px 10px"}}>{c}</button>
+              ))}
             </div>
-            <div style={{display:"flex",gap:8}}>
-              <a href={link.url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>↗ Abrir</a>
-              <button onClick={()=>removeLink(link.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"4px 8px"}}>✕</button>
+            <button style={s.btnPrimary}>＋ Subir Manual</button>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
+            {filteredManuals.map(m=>(
+              <div key={m.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:16,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                <div style={{fontSize:28,marginBottom:8}}>📖</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>{m.name}</div>
+                <div style={{fontSize:11,color:"#0ea5e9",marginBottom:6}}>{m.category}</div>
+                <div style={{fontSize:10,color:"#94a3b8",marginBottom:12}}>{m.file} · {m.size}</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button style={{...s.btnOutline,padding:"4px 10px",fontSize:11,flex:1}}>↗ Abrir</button>
+                  <button style={{...s.btnPrimary,padding:"4px 10px",fontSize:11,flex:1}} onClick={()=>{setActiveTab("ai");setAiQuery(`Lista de repuestos para servicio de ${m.name}`);}}>🤖 Buscar partes</button>
+                </div>
+              </div>
+            ))}
+            {filteredManuals.length===0&&(
+              <div style={{gridColumn:"1/-1",textAlign:"center",padding:"40px",color:"#94a3b8"}}>
+                <div style={{fontSize:40,marginBottom:12}}>📚</div>
+                <div style={{fontSize:14,fontWeight:600,color:"#475569",marginBottom:4}}>No hay manuales en esta categoría</div>
+                <div style={{fontSize:12}}>Sube un manual con el botón de arriba</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── AI ASSISTANT TAB ── */}
+      {activeTab==="ai"&&(
+        <div>
+          {/* Hero */}
+          <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:14,padding:"24px 28px",marginBottom:24,color:"#fff"}}>
+            <div style={{fontSize:28,marginBottom:8}}>🤖</div>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:6}}>Asistente AI de Partes y Servicios</div>
+            <div style={{fontSize:13,opacity:.85,lineHeight:1.6}}>Pregunta sobre cualquier servicio y recibirás la lista exacta de repuestos con números de parte. Nosotros nos encargamos de la procura desde USA.</div>
+          </div>
+
+          {/* Quick suggestions */}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#64748b",letterSpacing:"0.06em",marginBottom:10}}>CONSULTAS RÁPIDAS</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[
+                "Repuestos para servicio 1000h Caterpillar 3208",
+                "Kit de impeller para Kohler 20kW",
+                "Filtros para Watermaker Spectra",
+                "Servicio anual A/C marino",
+                "Zinc anodes 60ft yacht",
+                "Correas y poleas Caterpillar 3208",
+              ].map(q=>(
+                <button key={q} onClick={()=>setAiQuery(q)} style={{padding:"6px 12px",border:"1.5px solid #e2e8f0",borderRadius:20,fontSize:11,cursor:"pointer",background:aiQuery===q?"#eff6ff":"#fff",borderColor:aiQuery===q?"#2563eb":"#e2e8f0",color:aiQuery===q?"#2563eb":"#64748b",fontWeight:aiQuery===q?600:400}}>{q}</button>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Storage options */}
-      <div style={{borderTop:"1px solid #e2e8f0",paddingTop:24}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#64748b",marginBottom:12,letterSpacing:"0.06em"}}>OPCIONES DE ALMACENAMIENTO</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-          {[{icon:"☁️",title:"Google Drive",desc:"Integración directa. Tus archivos siguen en Google — sin costo adicional.",tag:"Recomendado",tagColor:"#16a34a"},{icon:"📁",title:"Almacenamiento interno",desc:"Sube archivos directamente a NautiTrack. Implica costo de servidor.",tag:"En desarrollo",tagColor:"#d97706"}].map(opt=>(
-            <div key={opt.title} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:16}}>
-              <div style={{fontSize:26,marginBottom:8}}>{opt.icon}</div>
-              <div style={{fontSize:14,fontWeight:700,color:"#0f172a",marginBottom:4}}>{opt.title}</div>
-              <div style={{fontSize:12,color:"#64748b",lineHeight:1.6,marginBottom:10}}>{opt.desc}</div>
-              <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:opt.tagColor+"18",color:opt.tagColor}}>{opt.tag}</span>
+          {/* Query input */}
+          <div style={{display:"flex",gap:10,marginBottom:20}}>
+            <input
+              value={aiQuery}
+              onChange={e=>setAiQuery(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&askAI()}
+              placeholder="Ej: ¿Qué repuestos necesito para el servicio de 500 horas de mi Caterpillar 3208?"
+              style={{...s.input,flex:1,padding:"10px 14px"}}
+            />
+            <button onClick={askAI} disabled={aiLoading} style={{...s.btnPrimary,padding:"10px 20px",opacity:aiLoading?0.7:1,minWidth:100}}>
+              {aiLoading?"⏳ Buscando...":"🔍 Buscar"}
+            </button>
+          </div>
+
+          {/* AI Result */}
+          {aiLoading&&(
+            <div style={{background:"#f0f9ff",borderRadius:12,padding:24,textAlign:"center",border:"1px solid #bae6fd"}}>
+              <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+              <div style={{fontSize:14,color:"#0369a1",fontWeight:600}}>Analizando tu embarcación y buscando repuestos...</div>
+              <div style={{fontSize:12,color:"#64748b",marginTop:6}}>Esto puede tomar unos segundos</div>
             </div>
-          ))}
+          )}
+
+          {aiResult&&!aiLoading&&(
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 6px rgba(0,0,0,0.06)"}}>
+              <div style={{background:"#f0f9ff",padding:"12px 20px",borderBottom:"1px solid #bae6fd",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#0369a1"}}>🤖 Respuesta del Asistente</div>
+                <div style={{display:"flex",gap:8}}>
+                  <button style={{...s.btnOutline,padding:"4px 12px",fontSize:11}} onClick={()=>setAiResult(null)}>Nueva consulta</button>
+                  <button style={{...s.btnPrimary,padding:"4px 12px",fontSize:11,background:"#16a34a"}}>📦 Solicitar procura</button>
+                </div>
+              </div>
+              <div style={{padding:"20px 24px",whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.8,color:"#1e293b",maxHeight:400,overflowY:"auto"}}>{aiResult}</div>
+              <div style={{background:"#fefce8",padding:"12px 20px",borderTop:"1px solid #fde68a",fontSize:12,color:"#92400e"}}>
+                💡 <strong>Servicio de Procura:</strong> Podemos ordenar estos repuestos desde USA y coordinar el envío a Venezuela. Presiona "Solicitar procura" para enviarnos la lista.
+              </div>
+            </div>
+          )}
+
+          {!aiResult&&!aiLoading&&(
+            <div style={{background:"#f8fafc",borderRadius:12,padding:"32px 24px",textAlign:"center",border:"1px dashed #e2e8f0"}}>
+              <div style={{fontSize:40,marginBottom:12}}>🔧</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#475569",marginBottom:6}}>Consulta cualquier servicio o repuesto</div>
+              <div style={{fontSize:12,color:"#94a3b8"}}>El asistente conoce tu embarcación y te dará la lista exacta de partes con números de referencia</div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -1247,128 +1402,233 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
 function VesselDetailsModal({ vessel, updateVessel, onClose }) {
   const d = vessel.details || {};
 
-  // Crew state — each member has name, role, primary flag
-  const [crew, setCrew]         = useState(vessel.crew2 || vessel.crew?.map(c=>({name:c,role:"Marinero",primary:false}))||[]);
-  const [newCrew, setNewCrew]   = useState("");
-  const [newRole, setNewRole]   = useState("Marinero");
+  // Edit mode
+  const [editMode, setEditMode] = useState(false);
 
-  // Fuel tanks
+  // General info editable
+  const [gen, setGen] = useState({
+    manufacturer: d.manufacturer||"", model: d.model||"", year: d.year||"",
+    hullType: d.hullType||"", homePort: d.homePort||"", uscg: d.uscg||"",
+    built: d.built||"", hin: d.hin||"",
+  });
+
+  // Dimensions
+  const [dims, setDims] = useState({
+    displacement:d.displacement||"", grt:d.grt||"", nrt:d.nrt||"",
+    loa:d.loa||"", beam:d.beam||"", draft:d.draft||"",
+  });
+
+  // Tanks
   const [fuelTanks, setFuelTanks] = useState(d.fuelTanks||[{name:"Estribor",capacity:""},{name:"Babor",capacity:""}]);
   const [numFuelTanks, setNumFuelTanks] = useState((d.fuelTanks||[{},{}]).length);
+  const [freshWater, setFreshWater] = useState(d.freshWater||"");
+  const [wasteTank, setWasteTank]   = useState(d.wasteTank||"");
+  const [greyWater, setGreyWater]   = useState(d.greyWater||"");
+
+  // Anchor
+  const [anchor, setAnchor]     = useState(d.anchor||"");
+  const [anchorRode, setAnchorRode] = useState(d.anchorRode||"");
 
   // Motors
-  const [motors, setMotors]     = useState(d.motors2||[{name:"Motor Estribor",make:"Caterpillar",model:"3208",serial:""},{name:"Motor Babor",make:"Caterpillar",model:"3208",serial:""}]);
+  const [motors, setMotors]       = useState(d.motors2||[{name:"Motor Estribor",make:"Caterpillar",model:"3208",serial:""},{name:"Motor Babor",make:"Caterpillar",model:"3208",serial:""}]);
   const [numMotors, setNumMotors] = useState((d.motors2||[{},{}]).length);
 
   // Generators
-  const [gens, setGens]         = useState(d.generators2||[{name:"Generador Principal",make:"Kohler",model:"20kW",serial:""}]);
-  const [numGens, setNumGens]   = useState((d.generators2||[{}]).length);
+  const [gens, setGens]           = useState(d.generators2||[{name:"Generador Principal",make:"Kohler",model:"20kW",serial:""}]);
+  const [numGens, setNumGens]     = useState((d.generators2||[{}]).length);
 
   // Dinghy
   const [dinghyList, setDinghyList] = useState(d.dinghyList||[{type:"Dinghy",make:"Zodiac",model:"Pro 310",hullSerial:"",motorSerial:"",motorMake:"Yamaha",motorModel:"15 HP"}]);
 
-  const ROLES   = ["Capitán","Marinero","Stew","Otro"];
-  const DINGHY_TYPES = ["Auxiliar","Dinghy","Moto de Agua","Tender"];
+  // Crew
+  const [crew, setCrew]         = useState(vessel.crew2 || vessel.crew?.map(c=>({name:c,role:"Marinero",primary:false}))||[]);
+  const [newCrew, setNewCrew]   = useState("");
+  const [newRole, setNewRole]   = useState("Marinero");
+
+  // Vessel photo
+  const [vesselPhoto, setVesselPhoto] = useState(vessel.photo||null);
+
+  const ROLES  = ["Capitán","Marinero","Stew","Otro"];
+  const ROLE_ICON = {"Capitán":"⚓","Marinero":"🚢","Stew":"⭐","Otro":"👤"};
 
   const addCrew = () => {
     if (!newCrew.trim()) return;
-    const u = [...crew, {name:newCrew.trim(),role:newRole,primary:false}];
-    setCrew(u); updateVessel({...vessel, crew2:u, crew:u.map(x=>x.name)}); setNewCrew("");
+    const u = [...crew,{name:newCrew.trim(),role:newRole,primary:false}];
+    setCrew(u); setNewCrew("");
   };
-  const rmCrew  = (i) => { const u=crew.filter((_,idx)=>idx!==i); setCrew(u); updateVessel({...vessel,crew2:u,crew:u.map(x=>x.name)}); };
-  const setPrimary = (i) => { const u=crew.map((c,idx)=>({...c,primary:idx===i?!c.primary:false})); setCrew(u); updateVessel({...vessel,crew2:u}); };
-  const setCrewRole = (i,role) => { const u=crew.map((c,idx)=>idx===i?{...c,role}:c); setCrew(u); updateVessel({...vessel,crew2:u}); };
+  const rmCrew     = (i) => setCrew(crew.filter((_,j)=>j!==i));
+  const setPrimary = (i) => setCrew(crew.map((c,j)=>({...c,primary:j===i?!c.primary:false})));
+  const setCrewRole= (i,r)=> setCrew(crew.map((c,j)=>j===i?{...c,role:r}:c));
+
+  const handlePhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setVesselPhoto(ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const saveAll = () => {
-    // Sync fuel tanks, motors, gens, dinghy to vessel details
     updateVessel({...vessel,
-      crew2:crew, crew:crew.map(x=>x.name),
-      motors:motors.map(m=>m.name),
-      generators:gens.map(g=>g.name).filter(Boolean),
-      details:{...d, fuelTanks, motors2:motors, generators2:gens, dinghyList}
+      photo: vesselPhoto,
+      crew2: crew, crew: crew.map(x=>x.name),
+      motors: motors.slice(0,numMotors).map(m=>m.name),
+      generators: gens.slice(0,numGens).map(g=>g.name).filter(Boolean),
+      details:{
+        ...d, ...gen, ...dims,
+        fuelTanks: fuelTanks.slice(0,numFuelTanks),
+        freshWater, wasteTank, greyWater,
+        anchor, anchorRode,
+        motors2: motors.slice(0,numMotors),
+        generators2: gens.slice(0,numGens),
+        dinghyList,
+      }
     });
+    setEditMode(false);
   };
 
-  const ROLE_ICON = {"Capitán":"⚓","Marinero":"🚢","Stew":"⭐","Otro":"👤"};
+  const EditField = ({label, value, onChange, placeholder}) => editMode
+    ? <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder||""} style={{...s.input,padding:"5px 8px",fontSize:12}}/>
+    : <span style={s.detailVal}>{value||"—"}</span>;
+
+  const Row = ({label, value, onChange, placeholder}) => (
+    <div style={s.detailRow}>
+      <span style={s.detailKey}>{label}</span>
+      <EditField label={label} value={value} onChange={onChange} placeholder={placeholder}/>
+    </div>
+  );
 
   return (
     <div style={s.modalOverlay} onClick={onClose}>
-      <div style={{...s.modalBox,maxWidth:620}} onClick={e=>e.stopPropagation()}>
+      <div style={{...s.modalBox,maxWidth:640}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>Detalles de la Embarcación</div></div>
-          <button onClick={onClose} style={s.modalClose}>✕</button>
+          <div>
+            <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Detalles de la Embarcación</div>
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={()=>setEditMode(!editMode)} style={{...s.btnOutline,padding:"5px 12px",fontSize:12,borderColor:editMode?"#2563eb":"#e2e8f0",color:editMode?"#2563eb":"#475569"}}>
+              {editMode?"✕ Cancelar edición":"✏️ Editar"}
+            </button>
+            <button onClick={onClose} style={s.modalClose}>✕</button>
+          </div>
         </div>
+
         <div style={s.modalBody}>
+
+          {/* FOTO DEL BARCO */}
+          <div style={{marginBottom:20,textAlign:"center"}}>
+            <div style={{position:"relative",display:"inline-block"}}>
+              {vesselPhoto
+                ? <img src={vesselPhoto} alt="Barco" style={{width:"100%",maxWidth:560,height:200,objectFit:"cover",borderRadius:10,border:"1px solid #e2e8f0"}}/>
+                : <div style={{width:"100%",maxWidth:560,height:160,background:"linear-gradient(135deg,#0f2744,#1e3a8a)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,border:"1px solid #e2e8f0"}}>
+                    <svg width="48" height="32" viewBox="0 0 60 40" fill="none"><path d="M5 28 Q15 10 30 8 Q45 10 55 28 Z" fill="#1e40af" opacity=".4"/><rect x="25" y="8" width="2" height="14" fill="#93c5fd"/><path d="M27 8 L42 16 L27 16 Z" fill="#bfdbfe" opacity=".8"/></svg>
+                    <span style={{color:"#93c5fd",fontSize:12}}>Sin foto</span>
+                  </div>
+              }
+              {editMode&&(
+                <label style={{position:"absolute",bottom:8,right:8,background:"#1d4ed8",color:"#fff",fontSize:11,fontWeight:600,padding:"5px 10px",borderRadius:6,cursor:"pointer",border:"none"}}>
+                  📷 Cambiar foto
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={handlePhoto}/>
+                </label>
+              )}
+            </div>
+          </div>
 
           {/* INFORMACIÓN GENERAL */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Información General</div>
-            {[["Fabricante",d.manufacturer],["Modelo",d.model],["Año",d.year],["Tipo de Casco",d.hullType],["Puerto Base",d.homePort],["USCG #",d.uscg],["Construido en",d.built],["Serial del Casco (HIN)",d.hin||"—"]].map(([k,v])=>(
-              <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
-            ))}
+            <Row label="Fabricante"           value={gen.manufacturer}  onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
+            <Row label="Modelo"               value={gen.model}         onChange={v=>setGen(g=>({...g,model:v}))}/>
+            <Row label="Año"                  value={gen.year}          onChange={v=>setGen(g=>({...g,year:v}))}/>
+            <Row label="Tipo de Casco"        value={gen.hullType}      onChange={v=>setGen(g=>({...g,hullType:v}))}/>
+            <Row label="Puerto Base"          value={gen.homePort}      onChange={v=>setGen(g=>({...g,homePort:v}))}/>
+            <Row label="USCG #"              value={gen.uscg}           onChange={v=>setGen(g=>({...g,uscg:v}))}/>
+            <Row label="Construido en"        value={gen.built}         onChange={v=>setGen(g=>({...g,built:v}))}/>
+            <Row label="Serial del Casco (HIN)" value={gen.hin}         onChange={v=>setGen(g=>({...g,hin:v}))} placeholder="Ej: HTRS1234A898"/>
           </div>
 
           {/* DIMENSIONES */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Dimensiones</div>
-            {[["Desplazamiento",d.displacement],["TRB",d.grt],["TRN",d.nrt],["Eslora Total",d.loa],["Manga",d.beam],["Calado",d.draft]].map(([k,v])=>(
-              <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
-            ))}
+            <Row label="Desplazamiento" value={dims.displacement} onChange={v=>setDims(d=>({...d,displacement:v}))}/>
+            <Row label="TRB"            value={dims.grt}          onChange={v=>setDims(d=>({...d,grt:v}))}/>
+            <Row label="TRN"            value={dims.nrt}          onChange={v=>setDims(d=>({...d,nrt:v}))}/>
+            <Row label="Eslora Total"   value={dims.loa}          onChange={v=>setDims(d=>({...d,loa:v}))}/>
+            <Row label="Manga"          value={dims.beam}         onChange={v=>setDims(d=>({...d,beam:v}))}/>
+            <Row label="Calado"         value={dims.draft}        onChange={v=>setDims(d=>({...d,draft:v}))}/>
           </div>
 
           {/* TANQUES */}
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={s.secTitle}>Tanques de Combustible</div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° tanques:</span>
                 <select value={numFuelTanks} onChange={e=>{const n=parseInt(e.target.value);setNumFuelTanks(n);setFuelTanks(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Tanque ${arr.length+1}`,capacity:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
                   {[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}
                 </select>
-              </div>
+              </div>}
             </div>
             {fuelTanks.slice(0,numFuelTanks).map((tank,i)=>(
-              <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                <div><label style={{...s.label,fontSize:11}}>Nombre tanque {i+1}</label><input value={tank.name} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
-                <div><label style={{...s.label,fontSize:11}}>Capacidad</label><input value={tank.capacity} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,capacity:e.target.value}:x))} placeholder="Ej: 300 gal" style={s.input}/></div>
-              </div>
+              editMode
+                ? <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                    <div><label style={{...s.label,fontSize:11}}>Nombre tanque {i+1}</label><input value={tank.name} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
+                    <div><label style={{...s.label,fontSize:11}}>Capacidad</label><input value={tank.capacity} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,capacity:e.target.value}:x))} placeholder="Ej: 300 gal" style={s.input}/></div>
+                  </div>
+                : <div key={i} style={s.detailRow}><span style={s.detailKey}>{tank.name}</span><span style={s.detailVal}>{tank.capacity||"—"}</span></div>
             ))}
-            <div style={{marginTop:10}}>
-              {[["Agua Potable",d.freshWater],["Aguas Negras",d.wasteTank],["Aguas Grises",d.greyWater||"—"]].map(([k,v])=>(
-                <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
-              ))}
-            </div>
+            {editMode
+              ? <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:8}}>
+                    <div><label style={{...s.label,fontSize:11}}>Agua Potable</label><input value={freshWater} onChange={e=>setFreshWater(e.target.value)} style={s.input}/></div>
+                    <div><label style={{...s.label,fontSize:11}}>Aguas Negras</label><input value={wasteTank} onChange={e=>setWasteTank(e.target.value)} style={s.input}/></div>
+                    <div><label style={{...s.label,fontSize:11}}>Aguas Grises</label><input value={greyWater} onChange={e=>setGreyWater(e.target.value)} style={s.input}/></div>
+                  </div>
+                </>
+              : <>
+                  {[["Agua Potable",freshWater],["Aguas Negras",wasteTank],["Aguas Grises",greyWater]].map(([k,v])=>(
+                    <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+                  ))}
+                </>
+            }
           </div>
 
           {/* FONDEO */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Fondeo</div>
-            {[["Ancla",d.anchor],["Cadena/Fondeo",d.anchorRode]].map(([k,v])=>(
-              <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
-            ))}
+            <Row label="Ancla"         value={anchor}     onChange={setAnchor}/>
+            <Row label="Cadena/Fondeo" value={anchorRode} onChange={setAnchorRode}/>
           </div>
 
-          {/* PROPULSIÓN — MOTORES */}
+          {/* MOTORES */}
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={s.secTitle}>Motores</div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° motores:</span>
                 <select value={numMotors} onChange={e=>{const n=parseInt(e.target.value);setNumMotors(n);setMotors(t=>{const arr=[...t];const names=["Motor Estribor","Motor Babor","Motor Centro","Motor 4","Motor 5","Motor 6"];while(arr.length<n)arr.push({name:names[arr.length]||`Motor ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
                   {[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}
                 </select>
-              </div>
+              </div>}
             </div>
             {motors.slice(0,numMotors).map((m,i)=>(
-              <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
-                <div style={{fontWeight:600,fontSize:12,color:"#2563eb",marginBottom:8}}>{m.name}</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={m.name} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={m.make} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} placeholder="Ej: Caterpillar" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={m.model} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} placeholder="Ej: 3208" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={m.serial} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} placeholder="Número de serial" style={s.input}/></div>
-                </div>
-              </div>
+              editMode
+                ? <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontWeight:600,fontSize:12,color:"#2563eb",marginBottom:8}}>{m.name}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={m.name} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={m.make} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={m.model} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={m.serial} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} style={s.input}/></div>
+                    </div>
+                  </div>
+                : <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontWeight:600,fontSize:12,color:"#2563eb",marginBottom:6}}>{m.name}</div>
+                    {[["Marca",m.make],["Modelo",m.model],["Serial",m.serial]].map(([k,v])=>(
+                      <div key={k} style={{...s.detailRow,padding:"4px 0"}}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+                    ))}
+                  </div>
             ))}
           </div>
 
@@ -1376,23 +1636,30 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={s.secTitle}>Generadores</div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° generadores:</span>
-                <select value={numGens} onChange={e=>{const n=parseInt(e.target.value);setNumGens(n);setGens(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Generador ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
+                <select value={numGens} onChange={e=>{const n=parseInt(e.target.value);setNumGens(n);setGens(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Generador ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:70,padding:"4px 8px"}}>
                   {[0,1,2,3].map(n=><option key={n} value={n}>{n===0?"Ninguno":n}</option>)}
                 </select>
-              </div>
+              </div>}
             </div>
             {gens.slice(0,numGens).map((g,i)=>(
-              <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
-                <div style={{fontWeight:600,fontSize:12,color:"#7c3aed",marginBottom:8}}>{g.name}</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={g.name} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={g.make} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} placeholder="Ej: Kohler" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={g.model} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} placeholder="Ej: 20kW" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={g.serial} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} placeholder="Número de serial" style={s.input}/></div>
-                </div>
-              </div>
+              editMode
+                ? <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontWeight:600,fontSize:12,color:"#7c3aed",marginBottom:8}}>{g.name}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={g.name} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={g.make} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={g.model} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={g.serial} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} style={s.input}/></div>
+                    </div>
+                  </div>
+                : <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontWeight:600,fontSize:12,color:"#7c3aed",marginBottom:6}}>{g.name}</div>
+                    {[["Marca",g.make],["Modelo",g.model],["Serial",g.serial]].map(([k,v])=>(
+                      <div key={k} style={{...s.detailRow,padding:"4px 0"}}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+                    ))}
+                  </div>
             ))}
           </div>
 
@@ -1400,25 +1667,32 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={s.secTitle}>Dinghy / Tender / Auxiliar</div>
-              <button onClick={()=>setDinghyList(l=>[...l,{type:"Dinghy",make:"",model:"",hullSerial:"",motorSerial:"",motorMake:"",motorModel:""}])} style={{fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>＋ Agregar</button>
+              {editMode&&<button onClick={()=>setDinghyList(l=>[...l,{type:"Dinghy",make:"",model:"",hullSerial:"",motorSerial:"",motorMake:"",motorModel:""}])} style={{fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>＋ Agregar</button>}
             </div>
             {dinghyList.map((d2,i)=>(
-              <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <select value={d2.type} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,type:e.target.value}:x))} style={{...s.input,width:140,padding:"4px 8px",fontSize:12}}>
-                    {["Auxiliar","Dinghy","Moto de Agua","Tender"].map(t=><option key={t} value={t}>{t}</option>)}
-                  </select>
-                  <button onClick={()=>setDinghyList(l=>l.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div><label style={{...s.label,fontSize:11}}>Marca casco</label><input value={d2.make} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,make:e.target.value}:x))} placeholder="Ej: Zodiac" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Modelo casco</label><input value={d2.model} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,model:e.target.value}:x))} placeholder="Ej: Pro 310" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Serial casco (HIN)</label><input value={d2.hullSerial} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,hullSerial:e.target.value}:x))} style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Motor marca</label><input value={d2.motorMake} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorMake:e.target.value}:x))} placeholder="Ej: Yamaha" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Motor modelo</label><input value={d2.motorModel} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorModel:e.target.value}:x))} placeholder="Ej: 15 HP" style={s.input}/></div>
-                  <div><label style={{...s.label,fontSize:11}}>Serial motor</label><input value={d2.motorSerial} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorSerial:e.target.value}:x))} style={s.input}/></div>
-                </div>
-              </div>
+              editMode
+                ? <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                      <select value={d2.type} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,type:e.target.value}:x))} style={{...s.input,width:140,padding:"4px 8px",fontSize:12}}>
+                        {["Auxiliar","Dinghy","Moto de Agua","Tender"].map(t=><option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <button onClick={()=>setDinghyList(l=>l.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div><label style={{...s.label,fontSize:11}}>Marca casco</label><input value={d2.make} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Modelo casco</label><input value={d2.model} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Serial casco (HIN)</label><input value={d2.hullSerial} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,hullSerial:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Motor marca</label><input value={d2.motorMake} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorMake:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Motor modelo</label><input value={d2.motorModel} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorModel:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>Serial motor</label><input value={d2.motorSerial} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorSerial:e.target.value}:x))} style={s.input}/></div>
+                    </div>
+                  </div>
+                : <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                    <div style={{fontWeight:600,fontSize:12,color:"#0891b2",marginBottom:6}}>{d2.type} — {d2.make} {d2.model}</div>
+                    {[["Serial casco",d2.hullSerial],["Motor",`${d2.motorMake} ${d2.motorModel}`],["Serial motor",d2.motorSerial]].map(([k,v])=>(
+                      <div key={k} style={{...s.detailRow,padding:"4px 0"}}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+                    ))}
+                  </div>
             ))}
           </div>
 
@@ -1429,26 +1703,27 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
               <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:c.primary?"#f0f9ff":"#f8fafc",borderRadius:8,marginBottom:6,border:`1px solid ${c.primary?"#bae6fd":"#e2e8f0"}`}}>
                 <span style={{fontSize:16}}>{ROLE_ICON[c.role]||"👤"}</span>
                 <span style={{flex:1,fontWeight:600,fontSize:13,color:"#0f172a"}}>{c.name}</span>
-                <select value={c.role} onChange={e=>setCrewRole(i,e.target.value)} style={{...s.input,width:110,padding:"3px 6px",fontSize:11}}>
+                {editMode&&<select value={c.role} onChange={e=>setCrewRole(i,e.target.value)} style={{...s.input,width:110,padding:"3px 6px",fontSize:11}}>
                   {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
-                </select>
+                </select>}
+                {!editMode&&<span style={{fontSize:11,color:"#64748b",background:"#e2e8f0",padding:"2px 8px",borderRadius:20}}>{c.role}</span>}
                 <button onClick={()=>setPrimary(i)} title={c.primary?"Quitar como principal":"Marcar como principal"} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:c.primary?"#f59e0b":"#d1d5db"}}>★</button>
-                <button onClick={()=>rmCrew(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>
+                {editMode&&<button onClick={()=>rmCrew(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>}
               </div>
             ))}
-            <div style={{display:"flex",gap:8,marginTop:10}}>
+            {editMode&&<div style={{display:"flex",gap:8,marginTop:10}}>
               <input value={newCrew} onChange={e=>setNewCrew(e.target.value)} placeholder="Nombre del tripulante..." style={{...s.input,flex:1}}/>
               <select value={newRole} onChange={e=>setNewRole(e.target.value)} style={{...s.input,width:110}}>
                 {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
               </select>
               <button style={s.btnPrimary} onClick={addCrew}>Agregar</button>
-            </div>
+            </div>}
           </div>
 
         </div>
         <div style={s.modalFooter}>
-          <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
-          <button style={s.btnPrimary} onClick={()=>{saveAll();onClose();}}>Guardar Cambios</button>
+          <button style={s.btnOutline} onClick={onClose}>Cerrar</button>
+          {editMode&&<button style={s.btnPrimary} onClick={saveAll}>💾 Guardar Cambios</button>}
         </div>
       </div>
     </div>
