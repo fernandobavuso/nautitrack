@@ -1105,19 +1105,77 @@ function ReportModal({ vessel, onClose }) {
 }
 
 function DocsPage() {
+  const [links,setLinks]       = useState([
+    {id:1,title:"Carpeta Google Drive - La Gaviota",url:"https://drive.google.com",icon:"☁️"},
+    {id:2,title:"Manual Motor Caterpillar 3208",url:"https://drive.google.com",icon:"📄"},
+  ]);
+  const [showAdd,setShowAdd]   = useState(false);
+  const [newTitle,setNewTitle] = useState("");
+  const [newUrl,setNewUrl]     = useState("");
+
+  const addLink = () => {
+    if (!newTitle.trim()||!newUrl.trim()) return;
+    const url = newUrl.startsWith("http")?newUrl:"https://"+newUrl;
+    setLinks(l=>[...l,{id:Date.now(),title:newTitle.trim(),url,icon:"🔗"}]);
+    setNewTitle(""); setNewUrl(""); setShowAdd(false);
+  };
+  const removeLink = (id) => setLinks(l=>l.filter(x=>x.id!==id));
+
   return (
-    <div style={{padding:"40px 28px",maxWidth:700,margin:"0 auto"}}>
-      <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:8}}>📄 Documentos</h2>
-      <p style={{color:"#64748b",fontSize:14,marginBottom:24}}>Almacenamiento seguro de documentos de la embarcación.</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        {[{icon:"☁️",title:"Google Drive",desc:"Integración directa. Tus archivos siguen en Google — sin costo adicional.",tag:"Recomendado",tagColor:"#16a34a"},{icon:"📁",title:"Almacenamiento interno",desc:"Sube archivos directamente a NautiTrack. Implica costo de servidor.",tag:"En desarrollo",tagColor:"#d97706"}].map(opt=>(
-          <div key={opt.title} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:20}}>
-            <div style={{fontSize:32,marginBottom:10}}>{opt.icon}</div>
-            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:6}}>{opt.title}</div>
-            <div style={{fontSize:12,color:"#64748b",lineHeight:1.6,marginBottom:12}}>{opt.desc}</div>
-            <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:opt.tagColor+"18",color:opt.tagColor}}>{opt.tag}</span>
+    <div style={{padding:"32px 28px",maxWidth:800,margin:"0 auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div>
+          <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4}}>📄 Documentos</h2>
+          <p style={{color:"#64748b",fontSize:13}}>Links y acceso directo a documentos de la embarcación</p>
+        </div>
+        <button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar Link</button>
+      </div>
+
+      {showAdd&&(
+        <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:24}}>
+          <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:14}}>Nuevo Documento / Link</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div><label style={s.label}>Título o nombre del documento *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Carpeta Google Drive - La Gaviota" style={s.input}/></div>
+            <div><label style={s.label}>URL o link *</label><input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="Ej: https://drive.google.com/..." style={s.input}/></div>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"flex-end"}}>
+            <button style={s.btnOutline} onClick={()=>{setShowAdd(false);setNewTitle("");setNewUrl("");}}>Cancelar</button>
+            <button style={s.btnPrimary} onClick={addLink}>Guardar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Links list */}
+      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:32}}>
+        {links.length===0&&<div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>No hay documentos guardados. Agrega un link arriba.</div>}
+        {links.map(link=>(
+          <div key={link.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+            <span style={{fontSize:24,flexShrink:0}}>{link.icon}</span>
+            <div style={{flex:1}}>
+              <a href={link.url} target="_blank" rel="noreferrer" style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none"}}>{link.title}</a>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:400}}>{link.url}</div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <a href={link.url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>↗ Abrir</a>
+              <button onClick={()=>removeLink(link.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"4px 8px"}}>✕</button>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Storage options */}
+      <div style={{borderTop:"1px solid #e2e8f0",paddingTop:24}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#64748b",marginBottom:12,letterSpacing:"0.06em"}}>OPCIONES DE ALMACENAMIENTO</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          {[{icon:"☁️",title:"Google Drive",desc:"Integración directa. Tus archivos siguen en Google — sin costo adicional.",tag:"Recomendado",tagColor:"#16a34a"},{icon:"📁",title:"Almacenamiento interno",desc:"Sube archivos directamente a NautiTrack. Implica costo de servidor.",tag:"En desarrollo",tagColor:"#d97706"}].map(opt=>(
+            <div key={opt.title} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:16}}>
+              <div style={{fontSize:26,marginBottom:8}}>{opt.icon}</div>
+              <div style={{fontSize:14,fontWeight:700,color:"#0f172a",marginBottom:4}}>{opt.title}</div>
+              <div style={{fontSize:12,color:"#64748b",lineHeight:1.6,marginBottom:10}}>{opt.desc}</div>
+              <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:opt.tagColor+"18",color:opt.tagColor}}>{opt.tag}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1187,46 +1245,211 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
 }
 
 function VesselDetailsModal({ vessel, updateVessel, onClose }) {
-  const d=vessel.details;
-  const [crew,setCrew]       = useState(vessel.crew||[]);
-  const [newCrew,setNewCrew] = useState("");
-  const addCrew=()=>{if(newCrew.trim()){const u=[...crew,newCrew.trim()];setCrew(u);updateVessel({...vessel,crew:u});setNewCrew("");}};
-  const rmCrew=(i)=>{const u=crew.filter((_,idx)=>idx!==i);setCrew(u);updateVessel({...vessel,crew:u});};
-  const sections=[
-    {title:"Información General",fields:[["Fabricante",d.manufacturer],["Modelo",d.model],["Año",d.year],["Tipo de Casco",d.hullType],["Puerto Base",d.homePort],["USCG #",d.uscg],["Construido en",d.built]]},
-    {title:"Dimensiones",fields:[["Desplazamiento",d.displacement],["TRB",d.grt],["TRN",d.nrt],["Eslora Total",d.loa],["Manga",d.beam],["Calado",d.draft]]},
-    {title:"Espacios Libres",fields:[["Instrumento de Viento",d.clearanceWindInstrument],["Domo de Radar",d.clearanceRadar],["Antena VHF",d.clearanceVHF],["Bimini",d.clearanceBimini],["Parabrisas",d.clearanceWindshield]]},
-    {title:"Tanques",fields:[["Combustible Estribor",d.stbdFuelTank],["Combustible Babor",d.portFuelTank],["Combustible Inferior",d.lowerFuelTank],["Agua Potable",d.freshWater],["Aguas Negras",d.wasteTank]]},
-    {title:"Fondeo",fields:[["Ancla",d.anchor],["Cadena/Fondeo",d.anchorRode]]},
-    {title:"Propulsión",fields:[["Motor Estribor",d.stbdEngine],["Transmisión Estribor",d.stbdTransmission],["Motor Babor",d.portEngine],["Transmisión Babor",d.portTransmission],["Hélices",d.propeller],["Generador",d.generator]]},
-    {title:"Dinghy / Tender",fields:[["Dinghy",d.dinghy],["Motor Dinghy",d.dinghyOutboard]]},
-  ];
+  const d = vessel.details || {};
+
+  // Crew state — each member has name, role, primary flag
+  const [crew, setCrew]         = useState(vessel.crew2 || vessel.crew?.map(c=>({name:c,role:"Marinero",primary:false}))||[]);
+  const [newCrew, setNewCrew]   = useState("");
+  const [newRole, setNewRole]   = useState("Marinero");
+
+  // Fuel tanks
+  const [fuelTanks, setFuelTanks] = useState(d.fuelTanks||[{name:"Estribor",capacity:""},{name:"Babor",capacity:""}]);
+  const [numFuelTanks, setNumFuelTanks] = useState((d.fuelTanks||[{},{}]).length);
+
+  // Motors
+  const [motors, setMotors]     = useState(d.motors2||[{name:"Motor Estribor",make:"Caterpillar",model:"3208",serial:""},{name:"Motor Babor",make:"Caterpillar",model:"3208",serial:""}]);
+  const [numMotors, setNumMotors] = useState((d.motors2||[{},{}]).length);
+
+  // Generators
+  const [gens, setGens]         = useState(d.generators2||[{name:"Generador Principal",make:"Kohler",model:"20kW",serial:""}]);
+  const [numGens, setNumGens]   = useState((d.generators2||[{}]).length);
+
+  // Dinghy
+  const [dinghyList, setDinghyList] = useState(d.dinghyList||[{type:"Dinghy",make:"Zodiac",model:"Pro 310",hullSerial:"",motorSerial:"",motorMake:"Yamaha",motorModel:"15 HP"}]);
+
+  const ROLES   = ["Capitán","Marinero","Stew","Otro"];
+  const DINGHY_TYPES = ["Auxiliar","Dinghy","Moto de Agua","Tender"];
+
+  const addCrew = () => {
+    if (!newCrew.trim()) return;
+    const u = [...crew, {name:newCrew.trim(),role:newRole,primary:false}];
+    setCrew(u); updateVessel({...vessel, crew2:u, crew:u.map(x=>x.name)}); setNewCrew("");
+  };
+  const rmCrew  = (i) => { const u=crew.filter((_,idx)=>idx!==i); setCrew(u); updateVessel({...vessel,crew2:u,crew:u.map(x=>x.name)}); };
+  const setPrimary = (i) => { const u=crew.map((c,idx)=>({...c,primary:idx===i?!c.primary:false})); setCrew(u); updateVessel({...vessel,crew2:u}); };
+  const setCrewRole = (i,role) => { const u=crew.map((c,idx)=>idx===i?{...c,role}:c); setCrew(u); updateVessel({...vessel,crew2:u}); };
+
+  const saveAll = () => {
+    // Sync fuel tanks, motors, gens, dinghy to vessel details
+    updateVessel({...vessel,
+      crew2:crew, crew:crew.map(x=>x.name),
+      motors:motors.map(m=>m.name),
+      generators:gens.map(g=>g.name).filter(Boolean),
+      details:{...d, fuelTanks, motors2:motors, generators2:gens, dinghyList}
+    });
+  };
+
+  const ROLE_ICON = {"Capitán":"⚓","Marinero":"🚢","Stew":"⭐","Otro":"👤"};
+
   return (
     <div style={s.modalOverlay} onClick={onClose}>
-      <div style={{...s.modalBox,maxWidth:560}} onClick={e=>e.stopPropagation()}>
-        <div style={s.modalHeader}><div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>Detalles de la Embarcación</div></div><button onClick={onClose} style={s.modalClose}>✕</button></div>
+      <div style={{...s.modalBox,maxWidth:620}} onClick={e=>e.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>Detalles de la Embarcación</div></div>
+          <button onClick={onClose} style={s.modalClose}>✕</button>
+        </div>
         <div style={s.modalBody}>
-          {sections.map(sec=>(
-            <div key={sec.title} style={{marginBottom:18}}>
-              <div style={s.secTitle}>{sec.title}</div>
-              {sec.fields.map(([k,v])=><div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>)}
+
+          {/* INFORMACIÓN GENERAL */}
+          <div style={{marginBottom:18}}>
+            <div style={s.secTitle}>Información General</div>
+            {[["Fabricante",d.manufacturer],["Modelo",d.model],["Año",d.year],["Tipo de Casco",d.hullType],["Puerto Base",d.homePort],["USCG #",d.uscg],["Construido en",d.built],["Serial del Casco (HIN)",d.hin||"—"]].map(([k,v])=>(
+              <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+            ))}
+          </div>
+
+          {/* DIMENSIONES */}
+          <div style={{marginBottom:18}}>
+            <div style={s.secTitle}>Dimensiones</div>
+            {[["Desplazamiento",d.displacement],["TRB",d.grt],["TRN",d.nrt],["Eslora Total",d.loa],["Manga",d.beam],["Calado",d.draft]].map(([k,v])=>(
+              <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+            ))}
+          </div>
+
+          {/* TANQUES */}
+          <div style={{marginBottom:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={s.secTitle}>Tanques de Combustible</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:11,color:"#64748b"}}>N° tanques:</span>
+                <select value={numFuelTanks} onChange={e=>{const n=parseInt(e.target.value);setNumFuelTanks(n);setFuelTanks(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Tanque ${arr.length+1}`,capacity:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
+                  {[1,2,3,4].map(n=><option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
             </div>
-          ))}
+            {fuelTanks.slice(0,numFuelTanks).map((tank,i)=>(
+              <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div><label style={{...s.label,fontSize:11}}>Nombre tanque {i+1}</label><input value={tank.name} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
+                <div><label style={{...s.label,fontSize:11}}>Capacidad</label><input value={tank.capacity} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,capacity:e.target.value}:x))} placeholder="Ej: 300 gal" style={s.input}/></div>
+              </div>
+            ))}
+            <div style={{marginTop:10}}>
+              {[["Agua Potable",d.freshWater],["Aguas Negras",d.wasteTank],["Aguas Grises",d.greyWater||"—"]].map(([k,v])=>(
+                <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+              ))}
+            </div>
+          </div>
+
+          {/* FONDEO */}
+          <div style={{marginBottom:18}}>
+            <div style={s.secTitle}>Fondeo</div>
+            {[["Ancla",d.anchor],["Cadena/Fondeo",d.anchorRode]].map(([k,v])=>(
+              <div key={k} style={s.detailRow}><span style={s.detailKey}>{k}</span><span style={s.detailVal}>{v||"—"}</span></div>
+            ))}
+          </div>
+
+          {/* PROPULSIÓN — MOTORES */}
+          <div style={{marginBottom:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={s.secTitle}>Motores</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:11,color:"#64748b"}}>N° motores:</span>
+                <select value={numMotors} onChange={e=>{const n=parseInt(e.target.value);setNumMotors(n);setMotors(t=>{const arr=[...t];const names=["Motor Estribor","Motor Babor","Motor Centro","Motor 4","Motor 5","Motor 6"];while(arr.length<n)arr.push({name:names[arr.length]||`Motor ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
+                  {[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+            {motors.slice(0,numMotors).map((m,i)=>(
+              <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                <div style={{fontWeight:600,fontSize:12,color:"#2563eb",marginBottom:8}}>{m.name}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={m.name} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={m.make} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} placeholder="Ej: Caterpillar" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={m.model} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} placeholder="Ej: 3208" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={m.serial} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} placeholder="Número de serial" style={s.input}/></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* GENERADORES */}
+          <div style={{marginBottom:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={s.secTitle}>Generadores</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:11,color:"#64748b"}}>N° generadores:</span>
+                <select value={numGens} onChange={e=>{const n=parseInt(e.target.value);setNumGens(n);setGens(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Generador ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
+                  {[0,1,2,3].map(n=><option key={n} value={n}>{n===0?"Ninguno":n}</option>)}
+                </select>
+              </div>
+            </div>
+            {gens.slice(0,numGens).map((g,i)=>(
+              <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                <div style={{fontWeight:600,fontSize:12,color:"#7c3aed",marginBottom:8}}>{g.name}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={g.name} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={g.make} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} placeholder="Ej: Kohler" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={g.model} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} placeholder="Ej: 20kW" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={g.serial} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} placeholder="Número de serial" style={s.input}/></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* DINGHY */}
+          <div style={{marginBottom:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={s.secTitle}>Dinghy / Tender / Auxiliar</div>
+              <button onClick={()=>setDinghyList(l=>[...l,{type:"Dinghy",make:"",model:"",hullSerial:"",motorSerial:"",motorMake:"",motorModel:""}])} style={{fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>＋ Agregar</button>
+            </div>
+            {dinghyList.map((d2,i)=>(
+              <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #e2e8f0"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <select value={d2.type} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,type:e.target.value}:x))} style={{...s.input,width:140,padding:"4px 8px",fontSize:12}}>
+                    {["Auxiliar","Dinghy","Moto de Agua","Tender"].map(t=><option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <button onClick={()=>setDinghyList(l=>l.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div><label style={{...s.label,fontSize:11}}>Marca casco</label><input value={d2.make} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,make:e.target.value}:x))} placeholder="Ej: Zodiac" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Modelo casco</label><input value={d2.model} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,model:e.target.value}:x))} placeholder="Ej: Pro 310" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Serial casco (HIN)</label><input value={d2.hullSerial} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,hullSerial:e.target.value}:x))} style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Motor marca</label><input value={d2.motorMake} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorMake:e.target.value}:x))} placeholder="Ej: Yamaha" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Motor modelo</label><input value={d2.motorModel} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorModel:e.target.value}:x))} placeholder="Ej: 15 HP" style={s.input}/></div>
+                  <div><label style={{...s.label,fontSize:11}}>Serial motor</label><input value={d2.motorSerial} onChange={e=>setDinghyList(l=>l.map((x,j)=>j===i?{...x,motorSerial:e.target.value}:x))} style={s.input}/></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* TRIPULACIÓN */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Tripulación</div>
             {crew.map((c,i)=>(
-              <div key={i} style={{...s.detailRow,alignItems:"center"}}>
-                <span style={s.detailVal}>👤 {c}</span>
-                <button onClick={()=>rmCrew(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12}}>✕</button>
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:c.primary?"#f0f9ff":"#f8fafc",borderRadius:8,marginBottom:6,border:`1px solid ${c.primary?"#bae6fd":"#e2e8f0"}`}}>
+                <span style={{fontSize:16}}>{ROLE_ICON[c.role]||"👤"}</span>
+                <span style={{flex:1,fontWeight:600,fontSize:13,color:"#0f172a"}}>{c.name}</span>
+                <select value={c.role} onChange={e=>setCrewRole(i,e.target.value)} style={{...s.input,width:110,padding:"3px 6px",fontSize:11}}>
+                  {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+                </select>
+                <button onClick={()=>setPrimary(i)} title={c.primary?"Quitar como principal":"Marcar como principal"} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:c.primary?"#f59e0b":"#d1d5db"}}>★</button>
+                <button onClick={()=>rmCrew(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>
               </div>
             ))}
-            <div style={{display:"flex",gap:8,marginTop:8}}>
+            <div style={{display:"flex",gap:8,marginTop:10}}>
               <input value={newCrew} onChange={e=>setNewCrew(e.target.value)} placeholder="Nombre del tripulante..." style={{...s.input,flex:1}}/>
+              <select value={newRole} onChange={e=>setNewRole(e.target.value)} style={{...s.input,width:110}}>
+                {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
+              </select>
               <button style={s.btnPrimary} onClick={addCrew}>Agregar</button>
             </div>
           </div>
+
         </div>
-        <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>Cerrar</button><button style={s.btnPrimary}>✏️ Editar</button></div>
+        <div style={s.modalFooter}>
+          <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
+          <button style={s.btnPrimary} onClick={()=>{saveAll();onClose();}}>Guardar Cambios</button>
+        </div>
       </div>
     </div>
   );
