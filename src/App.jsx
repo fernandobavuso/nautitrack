@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import React from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
@@ -704,7 +705,9 @@ function TasksPage({ vessel, updateVessel, addTask }) {
   );
 }
 
-function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
+function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
+  const vesselRef = useRef(vesselProp);
+  const vessel = vesselRef.current;
   const allSystems = getAllSystems(vessel);
   const [systemId, setSystemId]       = useState("");
   const [equipment, setEquipment]     = useState("");
@@ -723,8 +726,10 @@ function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
 
   const selectedSystem = allSystems.find(s => s.id===systemId);
   const equipList      = systemId ? getEquipmentList(vessel, systemId) : [];
-  const providerNames  = (vessel.providers||[]).map(p => `${p.firstName} ${p.lastName}`);
-  const allAssigned    = [vessel.captain, ...providerNames].filter(Boolean);
+  const crew2Names     = (vessel.crew2||vessel.crew?.map(c=>typeof c==="string"?{name:c,role:"Marinero"}:c)||[]);
+  const allAssigned    = crew2Names.length > 0
+    ? crew2Names.map(c=>`${c.name} (${c.role||"Tripulación"})`)
+    : vessel.captain ? [vessel.captain] : [];
 
   const addCustomSystem = () => {
     if (!newSysLabel.trim()||!newSysEquip.trim()) return;
@@ -842,7 +847,9 @@ function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
             <div>
               <label style={s.label}>Asignado a</label>
               <select value={assigned} onChange={e=>setAssigned(e.target.value)} style={s.input}>
+                <option value="">Seleccionar...</option>
                 {allAssigned.map(p=><option key={p} value={p}>{p}</option>)}
+                <option value="Otro">Otro</option>
               </select>
             </div>
             <div>
@@ -875,23 +882,63 @@ function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
   );
 }
 function LogPage({ vessel, updateVessel, addLogEntry }) {
-  const [showModal, setShowModal] = useState(false);
-  const [editEntry, setEditEntry] = useState(null);
-  const [filter, setFilter]       = useState("Todos");
+  const [showModal, setShowModal]       = useState(false);
+  const [editEntry, setEditEntry]       = useState(null);
+  const [filter, setFilter]             = useState("Todos");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteReason, setDeleteReason] = useState("");
+
   const filtered = filter==="Todos" ? (vessel.log||[]) : (vessel.log||[]).filter(e=>e.type===filter);
 
   const saveEntry = useCallback((entry) => {
     if (editEntry) {
-      // Update local state for edits
-      updateVessel({...vessel, log: vessel.log.map(e => e.id === entry.id ? entry : e)});
+      updateVessel({...vessel, log: (vessel.log||[]).map(e => e.id === entry.id ? entry : e)});
     } else {
       addLogEntry(entry);
     }
     setShowModal(false); setEditEntry(null);
   }, [vessel, editEntry, updateVessel, addLogEntry]);
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    // Delete from Supabase
+    await supabase.from("log_entries").delete().eq("id", deleteTarget.id);
+    updateVessel({...vessel, log: (vessel.log||[]).filter(e => e.id !== deleteTarget.id)});
+    setDeleteTarget(null); setDeleteReason("");
+  };
+
   return (
     <div style={{padding:"24px 28px"}}>
+      {/* Delete confirmation modal */}
+      {deleteTarget&&(
+        <div style={s.modalOverlay} onClick={()=>{setDeleteTarget(null);setDeleteReason("");}}>
+          <div style={{...s.modalBox,maxWidth:440}} onClick={e=>e.stopPropagation()}>
+            <div style={s.modalHeader}>
+              <div style={{fontSize:15,fontWeight:700,color:"#dc2626"}}>🗑 Eliminar Entrada</div>
+              <button onClick={()=>{setDeleteTarget(null);setDeleteReason("");}} style={s.modalClose}>✕</button>
+            </div>
+            <div style={{padding:"20px 24px"}}>
+              <div style={{background:"#fff5f5",border:"1px solid #fecaca",borderRadius:8,padding:"12px 14px",marginBottom:16,fontSize:13,color:"#7f1d1d"}}>
+                <strong>{deleteTarget.type}</strong> — {deleteTarget.date ? fmtDate(deleteTarget.date) : ""}<br/>
+                <span style={{color:"#64748b"}}>{deleteTarget.desc||deleteTarget.item||deleteTarget.dest||""}</span>
+              </div>
+              <label style={s.label}>Razón de eliminación <span style={{color:"#dc2626"}}>*</span></label>
+              <textarea value={deleteReason} onChange={e=>setDeleteReason(e.target.value)}
+                placeholder="Ej: Error al ingresar, duplicado, datos incorrectos..."
+                rows={3} style={{...s.input,resize:"vertical",marginTop:4}}/>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>Esta acción no se puede deshacer.</div>
+            </div>
+            <div style={s.modalFooter}>
+              <button style={s.btnOutline} onClick={()=>{setDeleteTarget(null);setDeleteReason("");}}>Cancelar</button>
+              <button style={{...s.btnPrimary,background:"#dc2626",opacity:deleteReason.trim().length<3?0.4:1}}
+                onClick={()=>{if(deleteReason.trim().length>=3)confirmDelete();}}>
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={s.toolbar}>
         <h2 style={s.toolbarTitle}>Bitácora — {vessel.name}</h2>
         <div style={{display:"flex",gap:6,flex:1,alignItems:"center",flexWrap:"wrap"}}>
@@ -908,15 +955,18 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
           <tbody>
             {filtered.length===0&&<tr><td colSpan={6} style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>Sin entradas</td></tr>}
             {filtered.map((e,i)=>(
-              <tr key={i} style={s.trow}>
+              <tr key={i} style={{...s.trow,":hover":{background:"#f8fafc"}}}>
                 <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>
                 <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{e.type}{e.serviceType?` · ${e.serviceType}`:""}</span></td>
-                <td style={{...s.td,color:"#334155",maxWidth:360}}>
+                <td style={{...s.td,color:"#334155",maxWidth:320}}>
                   {e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||"Pendiente"}`:e.type==="Compra"?`${e.item||""} · $${e.costUSD||0}`:e.desc||""}
                 </td>
                 <td style={s.td}>{(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}</td>
                 <td style={{...s.td,color:"#64748b"}}>{e.performedBy||"—"}</td>
-                <td style={s.td}><button onClick={()=>{setEditEntry(e);setShowModal(true);}} style={{...s.btnOutline,padding:"3px 10px",fontSize:11}}>Editar</button></td>
+                <td style={{...s.td,display:"flex",gap:6}}>
+                  <button onClick={()=>{setEditEntry(e);setShowModal(true);}} style={{...s.btnOutline,padding:"3px 10px",fontSize:11}}>✏️</button>
+                  <button onClick={()=>{setDeleteTarget(e);setDeleteReason("");}} style={{padding:"3px 10px",border:"1.5px solid #fecaca",borderRadius:6,background:"#fff",color:"#dc2626",cursor:"pointer",fontSize:11}}>🗑</button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -928,7 +978,9 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
 }
 
 // KEY FIX: LogEntryModal — all state at top, no nested component definitions
-function LogEntryModal({ vessel, initial, onSave, onClose }) {
+function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
+  const vesselRef = useRef(vesselProp);
+  const vessel = vesselRef.current;
   const today = todayISO();
   const [type,setType]               = useState(initial?.type||"");
   const [date,setDate]               = useState(initial?.date||today);
@@ -970,7 +1022,12 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
   const equipList     = systemId ? getEquipmentList(vessel, systemId) : [];
   const needsHours    = selectedSys?.trackHours && equipment && equipment!=="Otro";
   const provNames     = (vessel.providers||[]).map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
-  const allPerformed  = [vessel.captain,...provNames].filter(Boolean);
+  const crew2Names    = (vessel.crew2||vessel.crew?.map(c=>typeof c==="string"?{name:c,role:"Marinero"}:c)||[]);
+  const crewOptions   = crew2Names.map(c=>`${c.name} (${c.role||"Tripulación"})`).filter(Boolean);
+  // Servicio: crew + providers. Rest: crew only
+  const allPerformed  = type==="Servicio"
+    ? [...crewOptions, ...provNames, "Otro"].filter(Boolean)
+    : [...crewOptions, "Otro"].filter(Boolean);
 
   const validate = () => {
     const e={};
@@ -995,6 +1052,10 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
     if (type==="Salida")      entry={...entry,ownerAboard,crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
     if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment};
+    // Update engine/gen hours from inspection
+    if (type==="Inspección"&&(systemId==="motores"||systemId==="generador")) {
+      entry={...entry,engineHrsOut:engOut,genHrsOut:genOut};
+    }
     onSave(entry);
   };
 
@@ -1036,12 +1097,28 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
               <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
+            {/* Engine/Gen hours for inspection */}
+            {(systemId==="motores"||systemId==="generador")&&(
+              <div>
+                <label style={s.label}>Horas actuales del equipo</label>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                  {systemId==="motores"&&getMotorLabels(vessel).map(m=>(
+                    <div key={m}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{m}</label>
+                    <input type="number" value={engOut[m]||""} onChange={e=>setEngOut(v=>({...v,[m]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
+                  ))}
+                  {systemId==="generador"&&getGenLabels(vessel).map(g=>(
+                    <div key={g}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{g}</label>
+                    <input type="number" value={genOut[g]||""} onChange={e=>setGenOut(v=>({...v,[g]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
+                  ))}
+                </div>
+                <div style={{fontSize:11,color:"#0369a1",marginTop:4}}>💡 Las horas se actualizarán en el dashboard automáticamente</div>
+              </div>
+            )}
             <div>
               <label style={s.label}>Realizado por</label>
               <select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}>
                 <option value="">Seleccionar...</option>
                 {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
-                <option value="Otro">Otro</option>
               </select>
             </div>
             <PhotoFld count={photos} setCount={setPhotos} err={errors.photos}/>
@@ -2235,7 +2312,26 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
   );
 }
 
-function VesselDetailsModal({ vessel, updateVessel, onClose }) {
+// ── VesselField: single stable component, no wrappers, no re-mounting ──────────
+// KEY FIX: This is a named function at module scope.
+// React sees the same component type every render → input is never remounted → cursor stays
+function VesselField({ editMode, label, value, onChange, placeholder }) {
+  const inputStyle = {width:"100%",padding:"6px 10px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"};
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"160px 1fr",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f1f5f9",gap:12}}>
+      <span style={{fontSize:12,color:"#94a3b8",flexShrink:0}}>{label}</span>
+      {editMode
+        ? <input value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder||""} style={inputStyle}/>
+        : <span style={{fontSize:13,fontWeight:600,color:"#1e293b"}}>{value||"—"}</span>
+      }
+    </div>
+  );
+}
+
+function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
+  // ── CRITICAL: freeze vessel on mount so parent re-renders don't kill input focus
+  const vesselRef = useRef(vesselProp);
+  const vessel = vesselRef.current;
   const d = vessel.details || {};
 
   // Edit mode
@@ -2346,16 +2442,7 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
     setEditMode(false);
   };
 
-  const EditField = ({value, onChange, placeholder}) => editMode
-    ? <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder||""} style={{...s.input,padding:"5px 8px",fontSize:12}}/>
-    : <span style={s.detailVal}>{value||"—"}</span>;
 
-  const Row = ({label, value, onChange, placeholder}) => (
-    <div style={s.detailRow}>
-      <span style={s.detailKey}>{label}</span>
-      <EditField value={value} onChange={onChange} placeholder={placeholder}/>
-    </div>
-  );
 
   return (
     <div style={s.modalOverlay} onClick={onClose}>
@@ -2400,7 +2487,7 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
           {/* INFORMACIÓN GENERAL */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Información General</div>
-            <Row label="Nombre del Barco"     value={gen.name}          onChange={v=>setGen(g=>({...g,name:v}))}        placeholder="Ej: La Gaviota"/>
+            <VesselField key="name" editMode={editMode} label="Nombre del Barco" value={gen.name} onChange={v=>setGen(g=>({...g,name:v}))} placeholder="Ej: La Gaviota"/>
             {/* Tipo — dropdown */}
             <div style={s.detailRow}>
               <span style={s.detailKey}>Tipo de Embarcación</span>
@@ -2413,25 +2500,25 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
               }
             </div>
             {/* Eslora — separate field */}
-            <Row label="Eslora"               value={gen.eslora}        onChange={v=>setGen(g=>({...g,eslora:v}))}      placeholder="Ej: 48', 60', 14m"/>
-            <Row label="Marina / Puerto"      value={gen.marina}        onChange={v=>setGen(g=>({...g,marina:v}))}      placeholder="Ej: Puerto La Cruz"/>
-            <Row label="Capitán"              value={gen.captain}       onChange={v=>setGen(g=>({...g,captain:v}))}     placeholder="Nombre del capitán"/>
-            <Row label="Fabricante"           value={gen.manufacturer}  onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
-            <Row label="Modelo"               value={gen.model}         onChange={v=>setGen(g=>({...g,model:v}))}/>
-            <Row label="Año"                  value={gen.year}          onChange={v=>setGen(g=>({...g,year:v}))}/>
-            <Row label="Tipo de Casco"        value={gen.hullType}      onChange={v=>setGen(g=>({...g,hullType:v}))}/>
-            <Row label="Serial del Casco (HIN)" value={gen.hin}         onChange={v=>setGen(g=>({...g,hin:v}))} placeholder="Ej: HTRS1234A898"/>
+            <VesselField key="eslora" editMode={editMode} label="Eslora" value={gen.eslora} onChange={v=>setGen(g=>({...g,eslora:v}))} placeholder="Ej: 48', 60', 14m"/>
+            <VesselField key="marina" editMode={editMode} label="Marina / Puerto" value={gen.marina} onChange={v=>setGen(g=>({...g,marina:v}))} placeholder="Ej: Puerto La Cruz"/>
+            <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
+            <VesselField key="manuf" editMode={editMode} label="Fabricante" value={gen.manufacturer} onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
+            <VesselField key="model" editMode={editMode} label="Modelo" value={gen.model} onChange={v=>setGen(g=>({...g,model:v}))}/>
+            <VesselField key="year" editMode={editMode} label="Año" value={gen.year} onChange={v=>setGen(g=>({...g,year:v}))}/>
+            <VesselField key="hull" editMode={editMode} label="Tipo de Casco" value={gen.hullType} onChange={v=>setGen(g=>({...g,hullType:v}))}/>
+            <VesselField key="hin" editMode={editMode} label="Serial del Casco (HIN)" value={gen.hin} onChange={v=>setGen(g=>({...g,hin:v}))} placeholder="Ej: HTRS1234A898"/>
           </div>
 
           {/* DIMENSIONES */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Dimensiones</div>
-            <Row label="Desplazamiento"           value={dims.displacement} onChange={v=>setDims(d=>({...d,displacement:v}))} placeholder="Ej: 55,000 lbs"/>
-            <Row label="TRB — Tonelaje Registro Bruto"  value={dims.grt}   onChange={v=>setDims(d=>({...d,grt:v}))}          placeholder="Ej: 42"/>
-            <Row label="TRN — Tonelaje Registro Neto"   value={dims.nrt}   onChange={v=>setDims(d=>({...d,nrt:v}))}          placeholder="Ej: 28"/>
-            <Row label="Eslora Total (LOA)"        value={dims.loa}         onChange={v=>setDims(d=>({...d,loa:v}))}          placeholder="Ej: 64'6&quot;"/>
-            <Row label="Manga"                     value={dims.beam}        onChange={v=>setDims(d=>({...d,beam:v}))}         placeholder="Ej: 18'"/>
-            <Row label="Calado"                    value={dims.draft}       onChange={v=>setDims(d=>({...d,draft:v}))}        placeholder="Ej: 5'2&quot;"/>
+            <VesselField key="disp" editMode={editMode} label="Desplazamiento" value={dims.displacement} onChange={v=>setDims(d=>({...d,displacement:v}))} placeholder="Ej: 55,000 lbs"/>
+            <VesselField key="grt" editMode={editMode} label="TRB — Tonelaje Registro Bruto" value={dims.grt} onChange={v=>setDims(d=>({...d,grt:v}))} placeholder="Ej: 42"/>
+            <VesselField key="nrt" editMode={editMode} label="TRN — Tonelaje Registro Neto" value={dims.nrt} onChange={v=>setDims(d=>({...d,nrt:v}))} placeholder="Ej: 28"/>
+            <VesselField key="loa" editMode={editMode} label="Eslora Total (LOA)" value={dims.loa} onChange={v=>setDims(d=>({...d,loa:v}))} placeholder="Ej: 64'6&quot;"/>
+            <VesselField key="beam" editMode={editMode} label="Manga" value={dims.beam} onChange={v=>setDims(d=>({...d,beam:v}))} placeholder="Ej: 18'"/>
+            <VesselField key="draft" editMode={editMode} label="Calado" value={dims.draft} onChange={v=>setDims(d=>({...d,draft:v}))} placeholder="Ej: 5'2&quot;"/>
           </div>
 
           {/* TANQUES */}
@@ -2472,8 +2559,8 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
           {/* FONDEO */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Fondeo</div>
-            <Row label="Ancla"         value={anchor}     onChange={setAnchor}/>
-            <Row label="Cadena/Fondeo" value={anchorRode} onChange={setAnchorRode}/>
+            <VesselField key="anchor" editMode={editMode} label="Ancla" value={anchor} onChange={setAnchor}/>
+            <VesselField key="anchorRode" editMode={editMode} label="Cadena/Fondeo" value={anchorRode} onChange={setAnchorRode}/>
           </div>
 
           {/* MOTORES */}
