@@ -2714,9 +2714,10 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
     type:         vessel.details?.vesselType || vessel.type?.split(" ")[0] || "",
     eslora:       vessel.details?.eslora || vessel.type?.split(" ").slice(1).join(" ") || "",
     marina:       vessel.marina  || "",
-    city:         vessel.details?.city    || "",
-    state:        vessel.details?.state   || "",
-    country:      vessel.details?.country || "Venezuela",
+    city:         vessel.details?.city         || "",
+    state:        vessel.details?.state        || "",
+    country:      vessel.details?.country      || "Venezuela",
+    notifyPhone:  vessel.details?.notify_phone  || "",
     captain:      vessel.captain || "",
     manufacturer: d.manufacturer || "",
     model:        d.model        || "",
@@ -2797,9 +2798,10 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
       dinghyList,
       // preserve profile/config
       _profile:      d._profile      || {},
-      city:          gen.city    || d.city    || "",
-      state:         gen.state   || d.state   || "",
-      country:       gen.country || d.country || "",
+      city:          gen.city        || d.city         || "",
+      state:         gen.state       || d.state        || "",
+      country:       gen.country     || d.country      || "",
+      notify_phone:  gen.notifyPhone  || d.notify_phone  || "",
       _config:       d._config       || {},
       _subscription: d._subscription || {},
     };
@@ -2882,6 +2884,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
             <VesselField key="city"    editMode={editMode} label="Ciudad 🌤"  value={gen.city}    onChange={v=>setGen(g=>({...g,city:v}))}    placeholder="Ej: Tucacas, Miami, Porlamar"/>
             <VesselField key="state"   editMode={editMode} label="Estado"     value={gen.state}   onChange={v=>setGen(g=>({...g,state:v}))}   placeholder="Ej: Falcón, Florida, Nueva Esparta"/>
             <VesselField key="country" editMode={editMode} label="País"       value={gen.country} onChange={v=>setGen(g=>({...g,country:v}))} placeholder="Ej: Venezuela, USA"/>
+            <VesselField key="notifyPhone" editMode={editMode} label="📲 WhatsApp Alertas" value={gen.notifyPhone} onChange={v=>setGen(g=>({...g,notifyPhone:v}))} placeholder="Ej: +584141234567 o +13051234567"/>
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
             <VesselField key="manuf" editMode={editMode} label="Fabricante" value={gen.manufacturer} onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
             <VesselField key="model" editMode={editMode} label="Modelo" value={gen.model} onChange={v=>setGen(g=>({...g,model:v}))}/>
