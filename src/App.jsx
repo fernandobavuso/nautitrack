@@ -333,7 +333,7 @@ export default function App() {
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); }}
       />
       <div style={s.body}>
-        {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} />}
+        {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
@@ -414,7 +414,7 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
   );
 }
 
-function HomePage({ vessel, setPage, vessels }) {
+function HomePage({ vessel, setPage, vessels, updateVessel }) {
   const upcoming = [...vessel.tasks].filter(t => t.status!=="done").sort((a,b) => new Date(a.nextDue)-new Date(b.nextDue)).slice(0,5);
   return (
     <div style={s.home}>
