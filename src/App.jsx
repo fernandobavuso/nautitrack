@@ -597,16 +597,55 @@ function LogCard({ vessel, setPage }) {
 }
 
 function WeatherBar({ vessel }) {
-  const w = vessel.weather || { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" };
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const marina = vessel.marina || vessel.details?.homePort || "Caracas";
+    fetch(`/api/weather?city=${encodeURIComponent(marina)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.main) {
+          const icons = {
+            "01":"☀️","02":"⛅","03":"☁️","04":"☁️",
+            "09":"🌧","10":"🌦","11":"⛈","13":"❄️","50":"🌫"
+          };
+          const code = (data.weather?.[0]?.icon||"01").slice(0,2);
+          setWeather({
+            temp:   Math.round(data.main.temp),
+            feels:  Math.round(data.main.feels_like),
+            humidity: data.main.humidity,
+            wind:   Math.round((data.wind?.speed||0)*1.944), // m/s to kn
+            condition: data.weather?.[0]?.description || "",
+            icon:   icons[code] || "🌤",
+            city:   data.name || marina,
+          });
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [vessel.marina, vessel.details?.homePort]);
+
+  const w = weather || { temp:"—", wind:"—", humidity:"—", condition:"Cargando...", icon:"🌤", city: vessel.marina||"" };
+
   return (
     <div style={{...s.card,display:"flex",alignItems:"center",gap:24,padding:"14px 24px",flexWrap:"wrap"}}>
       <div style={{display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-        <span style={{fontSize:36}}>{w.icon}</span>
-        <div><div style={{fontSize:24,fontWeight:700,color:"#0f172a"}}>{w.temp}°C</div><div style={{fontSize:12,color:"#64748b"}}>{w.condition}</div><div style={{fontSize:11,color:"#94a3b8"}}>📍 {vessel.marina}</div></div>
+        <span style={{fontSize:36}}>{loading?"⏳":w.icon}</span>
+        <div>
+          <div style={{fontSize:24,fontWeight:700,color:"#0f172a"}}>{w.temp}{weather?"°C":""}</div>
+          <div style={{fontSize:12,color:"#64748b",textTransform:"capitalize"}}>{w.condition}</div>
+          <div style={{fontSize:11,color:"#94a3b8"}}>📍 {w.city}</div>
+        </div>
       </div>
       <div style={{width:1,height:44,background:"#e2e8f0"}} />
       <div style={{display:"flex",gap:20,flex:1,flexWrap:"wrap"}}>
-        {[["💨",`${w.wind} kn`,"Viento"],["🌊","0.4 m","Oleaje"],["💧","78%","Humedad"],["☀️","UV 7","Índice UV"]].map(([ic,val,lbl]) => (
+        {[
+          ["💨", weather?`${w.wind} kn`:"—", "Viento"],
+          ["💧", weather?`${w.humidity}%`:"—", "Humedad"],
+          ["🌡", weather?`${w.feels}°C`:"—", "Sensación"],
+          ["📍", vessel.marina||"—", "Marina"],
+        ].map(([ic,val,lbl]) => (
           <div key={lbl} style={{textAlign:"center"}}>
             <div style={{fontSize:13,fontWeight:600}}>{ic} {val}</div>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{lbl}</div>
@@ -961,7 +1000,16 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
                 <td style={{...s.td,color:"#334155",maxWidth:320}}>
                   {e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||"Pendiente"}`:e.type==="Compra"?`${e.item||""} · $${e.costUSD||0}`:e.desc||""}
                 </td>
-                <td style={s.td}>{(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}</td>
+                <td style={s.td}>{(e.photos||[]).length>0?(
+  <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+    {(e.photos||[]).slice(0,3).map((p,i)=>(
+      <a key={i} href={p.url||p} target="_blank" rel="noreferrer">
+        <img src={p.url||p} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:4,border:"1px solid #e2e8f0"}}/>
+      </a>
+    ))}
+    {(e.photos||[]).length>3&&<span style={{fontSize:10,color:"#64748b",alignSelf:"center"}}>+{(e.photos||[]).length-3}</span>}
+  </div>
+):"—"}</td>
                 <td style={{...s.td,color:"#64748b"}}>{e.performedBy||"—"}</td>
                 <td style={{...s.td,display:"flex",gap:6}}>
                   <button onClick={()=>{setEditEntry(e);setShowModal(true);}} style={{...s.btnOutline,padding:"3px 10px",fontSize:11}}>✏️</button>
@@ -986,7 +1034,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [date,setDate]               = useState(initial?.date||today);
   const [desc,setDesc]               = useState(initial?.desc||"");
   const [performedBy,setPerformedBy] = useState(initial?.performedBy||"");
-  const [photos,setPhotos]           = useState(initial?.photos?.length||0);
+  const [photos,setPhotos]           = useState(initial?.photos||[]);
   const [errors,setErrors]           = useState({});
   const [showInfo,setShowInfo]       = useState(false);
   const [serviceType,setServiceType] = useState(initial?.serviceType||"");
@@ -1038,7 +1086,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     if (type==="Servicio"&&!equipment)   e.equipment="Requerido";
     if (type==="Combustible"&&!fuelQty)  e.fuelQty="Requerido";
     if (["Inspección","Servicio","Combustible"].includes(type)&&!desc.trim()) e.desc="Descripción requerida";
-    if (["Inspección","Servicio"].includes(type)&&photos<1) e.photos="Mínimo 1 foto";
+    // photos optional now — real uploads
     if (type==="Compra"&&!item.trim()) e.item="Requerido";
     setErrors(e); return Object.keys(e).length===0;
   };
@@ -1046,7 +1094,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const handleSave = () => {
     if (!validate()) return;
     const finalEquip = equipment==="Otro"?otherEquip:equipment;
-    const base = {id:initial?.id||Date.now(),date,type,desc,performedBy,photos:Array.from({length:photos},(_,i)=>`foto${i+1}`)};
+    const base = {id:initial?.id||Date.now(),date,type,desc,performedBy,photos:photos||[]};
     let entry = {...base};
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
@@ -1121,7 +1169,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                 {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-            <PhotoFld count={photos} setCount={setPhotos} err={errors.photos}/>
+            <PhotoFld photos={photos} setPhotos={setPhotos} err={errors.photos} userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
 
           {type==="Servicio"&&(<>
@@ -1169,7 +1217,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                 <option value="Otro">Otro</option>
               </select>
             </div>
-            <PhotoFld count={photos} setCount={setPhotos} err={errors.photos}/>
+            <PhotoFld photos={photos} setPhotos={setPhotos} err={errors.photos} userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
 
           {type==="Combustible"&&(<>
@@ -1241,7 +1289,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               </div>
             </div>
             <div><label style={s.label}>Observaciones</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} style={{...s.input,resize:"vertical"}}/></div>
-            <PhotoFld count={photos} setCount={setPhotos}/>
+            <PhotoFld photos={photos} setPhotos={setPhotos} userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
 
           {type==="Compra"&&(<>
@@ -1257,7 +1305,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             </div>
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
             <div><label style={s.label}>Notas adicionales</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
-            <PhotoFld count={photos} setCount={setPhotos} label="Foto del recibo"/>
+            <PhotoFld photos={photos} setPhotos={setPhotos} label="Foto del recibo" userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
 
         </div>
@@ -1270,17 +1318,56 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   );
 }
 
-function PhotoFld({ count, setCount, err, label="Fotos" }) {
+function PhotoFld({ photos, setPhotos, err, label="Fotos", userId, vesselId }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files||[]);
+    if (!files.length) return;
+    setUploading(true);
+    const uploaded = [...(photos||[])];
+    for (const file of files) {
+      const ext = file.name.split(".").pop();
+      const path = `${userId||"anon"}/${vesselId||"boat"}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("bitacora-fotos").upload(path, file);
+      if (!error) {
+        const { data: urlData } = supabase.storage.from("bitacora-fotos").getPublicUrl(path);
+        uploaded.push({ url: urlData.publicUrl, path, name: file.name });
+      }
+    }
+    setPhotos(uploaded);
+    setUploading(false);
+  };
+
+  const removePhoto = async (idx) => {
+    const photo = photos[idx];
+    if (photo?.path) await supabase.storage.from("bitacora-fotos").remove([photo.path]);
+    setPhotos((photos||[]).filter((_,i)=>i!==idx));
+  };
+
   return (
     <div>
-      <label style={s.label}>{label} <span style={{color:"#dc2626"}}>*</span> <span style={{color:"#94a3b8",fontWeight:400}}>(mínimo 1)</span></label>
-      <div style={{...s.photoUpload,borderColor:err?"#dc2626":"#bae6fd"}}>
-        <div style={{fontSize:24,marginBottom:6}}>📷</div>
-        <div style={{fontSize:12,color:"#0369a1",fontWeight:600,marginBottom:8}}>Número de fotos a adjuntar</div>
-        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-          {[1,2,3,4,5,6].map(n=><button key={n} onClick={()=>setCount(n)} style={{padding:"4px 11px",border:"1.5px solid",borderRadius:6,fontSize:12,cursor:"pointer",background:count>=n?"#0ea5e9":"#f8fafc",color:count>=n?"#fff":"#64748b",borderColor:count>=n?"#0ea5e9":"#e2e8f0"}}>{n}</button>)}
+      <label style={s.label}>{label} <span style={{color:"#94a3b8",fontWeight:400}}>(opcional)</span></label>
+      {/* Preview grid */}
+      {(photos||[]).length > 0 && (
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+          {(photos||[]).map((p,i) => (
+            <div key={i} style={{position:"relative",width:72,height:72}}>
+              <img src={p.url||p} alt="" style={{width:72,height:72,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+              <button onClick={()=>removePhoto(i)} style={{position:"absolute",top:-6,right:-6,background:"#dc2626",color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+      {/* Upload button */}
+      <label style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",border:`2px dashed ${err?"#dc2626":"#bae6fd"}`,borderRadius:10,cursor:"pointer",background:"#f0f9ff",color:"#0369a1"}}>
+        <span style={{fontSize:20}}>{uploading?"⏳":"📷"}</span>
+        <div>
+          <div style={{fontSize:12,fontWeight:600}}>{uploading?"Subiendo fotos...":"Agregar fotos"}</div>
+          <div style={{fontSize:10,color:"#64748b",marginTop:1}}>JPG, PNG, HEIC · Múltiples</div>
+        </div>
+        <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={handleFiles} disabled={uploading}/>
+      </label>
       {err&&<div style={s.errMsg}>{err}</div>}
     </div>
   );
@@ -1944,7 +2031,7 @@ Responde en español con información técnica detallada. Si preguntan por repue
         }];
       }
 
-      const resp = await fetch("/api/claude", {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2000, messages })
