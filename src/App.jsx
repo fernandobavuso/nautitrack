@@ -601,8 +601,8 @@ function WeatherBar({ vessel }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const marina = vessel.marina || vessel.details?.homePort || "Caracas";
-    fetch(`/api/weather?city=${encodeURIComponent(marina)}`)
+    const city = vessel.details?.city || vessel.marina || "Caracas";
+    fetch(`/api/weather?city=${encodeURIComponent(city)}`)
       .then(r => r.json())
       .then(data => {
         if (data.main) {
@@ -624,7 +624,7 @@ function WeatherBar({ vessel }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [vessel.marina, vessel.details?.homePort]);
+  }, [vessel.details?.city, vessel.marina]);
 
   const w = weather || { temp:"—", wind:"—", humidity:"—", condition:"Cargando...", icon:"🌤", city: vessel.marina||"" };
 
@@ -644,7 +644,8 @@ function WeatherBar({ vessel }) {
           ["💨", weather?`${w.wind} kn`:"—", "Viento"],
           ["💧", weather?`${w.humidity}%`:"—", "Humedad"],
           ["🌡", weather?`${w.feels}°C`:"—", "Sensación"],
-          ["📍", vessel.marina||"—", "Marina"],
+          ["📍", vessel.details?.city||vessel.marina||"—", "Ciudad"],
+          ["⚓", vessel.marina||"—", "Marina"],
         ].map(([ic,val,lbl]) => (
           <div key={lbl} style={{textAlign:"center"}}>
             <div style={{fontSize:13,fontWeight:600}}>{ic} {val}</div>
@@ -2430,6 +2431,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
     type:         vessel.details?.vesselType || vessel.type?.split(" ")[0] || "",
     eslora:       vessel.details?.eslora || vessel.type?.split(" ").slice(1).join(" ") || "",
     marina:       vessel.marina  || "",
+    city:         vessel.details?.city || vessel.marina?.split(',').pop()?.trim() || "",
     captain:      vessel.captain || "",
     manufacturer: d.manufacturer || "",
     model:        d.model        || "",
@@ -2510,6 +2512,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
       dinghyList,
       // preserve profile/config
       _profile:      d._profile      || {},
+      city:          gen.city || d.city || "",
       _config:       d._config       || {},
       _subscription: d._subscription || {},
     };
@@ -2588,7 +2591,8 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
             </div>
             {/* Eslora — separate field */}
             <VesselField key="eslora" editMode={editMode} label="Eslora" value={gen.eslora} onChange={v=>setGen(g=>({...g,eslora:v}))} placeholder="Ej: 48', 60', 14m"/>
-            <VesselField key="marina" editMode={editMode} label="Marina / Puerto" value={gen.marina} onChange={v=>setGen(g=>({...g,marina:v}))} placeholder="Ej: Puerto La Cruz"/>
+            <VesselField key="marina" editMode={editMode} label="Nombre de la Marina" value={gen.marina} onChange={v=>setGen(g=>({...g,marina:v}))} placeholder="Ej: Marina Morrocoy, Club Náutico"/>
+            <VesselField key="city" editMode={editMode} label="Ciudad (para el clima 🌤)" value={gen.city} onChange={v=>setGen(g=>({...g,city:v}))} placeholder="Ej: Tucacas, Caraballeda, Porlamar"/>
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
             <VesselField key="manuf" editMode={editMode} label="Fabricante" value={gen.manufacturer} onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
             <VesselField key="model" editMode={editMode} label="Modelo" value={gen.model} onChange={v=>setGen(g=>({...g,model:v}))}/>
