@@ -371,7 +371,7 @@ export default function App() {
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
-        {page==="docs"    && <DocsPage />}
+        {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
       {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
@@ -1375,24 +1375,23 @@ function ReportModal({ vessel, onClose }) {
 
     // ── FUEL ──────────────────────────────────────────────────────────────────
     if (sel.includes("fuel") && fuelLog.length > 0) {
-      sections += sectionHeader("⛽","Historial de Combustible",`${fuelLog.length} repostajes · Total: ${totalFuel.toFixed(0)} ${fuelLog[0]?.fuelUnit||"gal"}`,"#fef3c7","#d97706");
+      sections += sectionHeader("⛽","Historial de Combustible",`${fuelLog.length} repostajes · Total acumulado: ${totalFuel.toFixed(0)} ${fuelLog[0]?.fuelUnit||"gal"}`,"#fef3c7","#d97706");
       sections += `<table>
         <thead><tr>
-          <th>Fecha</th><th>Cantidad</th><th>Unidad</th><th>Realizado por</th><th>Notas</th>
+          <th>Fecha</th><th>Cantidad</th><th>Unidad</th><th>Notas / Proveedor</th>
         </tr></thead>
         <tbody>
           ${fuelLog.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
             <td class="td-date">${fmtD(e.date)}</td>
             <td class="td-bold" style="font-size:15px;">${e.fuelQty||"—"}</td>
             <td>${e.fuelUnit||"—"}</td>
-            <td>${e.performedBy||"—"}</td>
             <td style="color:#64748b;">${e.desc||"—"}</td>
           </tr>`).join("")}
-          <tr style="background:#f0f9ff;">
-            <td colspan="1" style="font-weight:700;color:#0369a1;padding:12px 16px;">TOTAL</td>
-            <td class="td-bold" style="font-size:16px;color:#0369a1;">${totalFuel.toFixed(0)}</td>
-            <td style="color:#0369a1;">${fuelLog[0]?.fuelUnit||"gal"}</td>
-            <td colspan="2"></td>
+          <tr style="background:#fff7ed;border-top:2px solid #f59e0b;">
+            <td style="font-weight:700;color:#d97706;padding:12px 16px;">TOTAL</td>
+            <td class="td-bold" style="font-size:18px;color:#d97706;">${totalFuel.toFixed(0)}</td>
+            <td style="color:#d97706;font-weight:600;">${fuelLog[0]?.fuelUnit||"gal"}</td>
+            <td></td>
           </tr>
         </tbody>
       </table>`;
@@ -1718,85 +1717,386 @@ function ReportModal({ vessel, onClose }) {
   );
 }
 
-function DocsPage() {
-  const [links,setLinks]       = useState([
-    {id:1,title:"Carpeta Google Drive - La Gaviota",url:"https://drive.google.com",icon:"☁️"},
-    {id:2,title:"Manual Motor Caterpillar 3208",url:"https://drive.google.com",icon:"📄"},
-  ]);
-  const [showAddLink,setShowAddLink] = useState(false);
-  const [newTitle,setNewTitle]       = useState("");
-  const [newUrl,setNewUrl]           = useState("");
-  const [activeTab,setActiveTab]     = useState("links");
-  const [aiQuery,setAiQuery]         = useState("");
-  const [aiLoading,setAiLoading]     = useState(false);
-  const [aiResult,setAiResult]       = useState(null);
-  const [manuals,setManuals]         = useState([
-    {id:1,category:"Mecánica / Motores",name:"Manual Caterpillar 3208",file:"CAT_3208_Manual.pdf",size:"12.4 MB"},
-    {id:2,category:"Refrigeración / A/C",name:"Manual Compresor Carrier",file:"Carrier_AC.pdf",size:"8.2 MB"},
-    {id:3,category:"Sistemas de Agua",name:"Manual Watermaker Spectra",file:"Spectra_WM.pdf",size:"5.1 MB"},
-  ]);
-  const [selectedCat,setSelectedCat] = useState("Todos");
+function DocsPage({ vessel, user }) {
+  const [activeTab, setActiveTab]     = useState("links");
+  const [links, setLinks]             = useState([]);
+  const [showAddLink, setShowAddLink] = useState(false);
+  const [newTitle, setNewTitle]       = useState("");
+  const [newUrl, setNewUrl]           = useState("");
+
+  // Manuals state
+  const [manuals, setManuals]         = useState([]);
+  const [manualsLoading, setManualsLoading] = useState(false);
+  const [uploading, setUploading]     = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
+  const [selectedCat, setSelectedCat] = useState("Todos");
+  const [newManualCat, setNewManualCat] = useState("Mecánica / Motores");
+  const [showUpload, setShowUpload]   = useState(false);
+
+  // AI state
+  const [aiQuery, setAiQuery]         = useState("");
+  const [aiLoading, setAiLoading]     = useState(false);
+  const [aiResult, setAiResult]       = useState(null);
+  const [selectedManual, setSelectedManual] = useState(null);
+  const [pdfText, setPdfText]         = useState("");
+  const [pdfLoading, setPdfLoading]   = useState(false);
 
   const MANUAL_CATS = [
     "Mecánica / Motores","Generadores","Refrigeración / A/C","Sistemas de Agua",
     "Electrónica / Navegación","Eléctrico","Hidráulico","Seguridad","Velas y Jarcia","Otro"
   ];
 
-  const addLink = () => {
-    if (!newTitle.trim()||!newUrl.trim()) return;
-    const url = newUrl.startsWith("http")?newUrl:"https://"+newUrl;
-    setLinks(l=>[...l,{id:Date.now(),title:newTitle.trim(),url,icon:"🔗"}]);
-    setNewTitle(""); setNewUrl(""); setShowAddLink(false);
+  const CAT_ICONS = {
+    "Mecánica / Motores":"🔧","Generadores":"⚡","Refrigeración / A/C":"❄️",
+    "Sistemas de Agua":"💧","Electrónica / Navegación":"🧭","Eléctrico":"🔌",
+    "Hidráulico":"🔩","Seguridad":"🛡️","Velas y Jarcia":"⛵","Otro":"📄"
   };
 
+  // Load manuals from Supabase
+  useEffect(() => {
+    if (!vessel?.id) return;
+    fetchManuals();
+  }, [vessel?.id]);
+
+  const fetchManuals = async () => {
+    setManualsLoading(true);
+    const { data } = await supabase.from("manuals").select("*")
+      .eq("vessel_id", vessel.id).order("created_at", { ascending: false });
+    setManuals(data || []);
+    setManualsLoading(false);
+  };
+
+  // Upload PDF to Supabase Storage
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      alert("Solo se aceptan archivos PDF");
+      return;
+    }
+    setUploading(true);
+    setUploadProgress("Subiendo archivo...");
+    try {
+      const filePath = `${user.id}/${vessel.id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("manuales").upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("manuales").getPublicUrl(filePath);
+
+      setUploadProgress("Guardando en base de datos...");
+      const { data: manual } = await supabase.from("manuals").insert({
+        vessel_id: vessel.id,
+        owner_id:  user.id,
+        name:      file.name.replace(".pdf","").replace(/_/g," "),
+        category:  newManualCat,
+        file_url:  urlData.publicUrl,
+        file_path: filePath,
+        file_size: file.size,
+      }).select().single();
+
+      if (manual) setManuals(m => [manual, ...m]);
+      setUploadProgress("✓ Manual subido exitosamente");
+      setTimeout(() => { setUploadProgress(""); setShowUpload(false); }, 2000);
+    } catch(err) {
+      setUploadProgress("❌ Error: " + err.message);
+    }
+    setUploading(false);
+  };
+
+  const deleteManual = async (manual) => {
+    if (!confirm(`¿Eliminar "${manual.name}"?`)) return;
+    await supabase.storage.from("manuales").remove([manual.file_path]);
+    await supabase.from("manuals").delete().eq("id", manual.id);
+    setManuals(m => m.filter(x => x.id !== manual.id));
+    if (selectedManual?.id === manual.id) { setSelectedManual(null); setPdfText(""); }
+  };
+
+  // Load PDF text for AI
+  const loadPdfForAI = async (manual) => {
+    setSelectedManual(manual);
+    setActiveTab("ai");
+    setPdfLoading(true);
+    setPdfText("");
+    setAiResult(null);
+    try {
+      const resp = await fetch(manual.file_url);
+      const arrayBuffer = await resp.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      setPdfText(base64);
+      setAiQuery(`Analiza este manual y dime: ¿qué sistemas y equipos cubre? ¿Cuáles son los intervalos de mantenimiento principales?`);
+    } catch(err) {
+      setPdfText("error");
+      setAiQuery(`Buscar información sobre ${manual.name} - ${manual.category}`);
+    }
+    setPdfLoading(false);
+  };
+
+  // Ask AI — with PDF if available, without if not
   const askAI = async () => {
     if (!aiQuery.trim()) return;
     setAiLoading(true); setAiResult(null);
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-6",
-          max_tokens:1000,
-          messages:[{role:"user",content:`Eres un experto en mantenimiento marino. El usuario tiene un barco con los siguientes datos: La Gaviota, Hatteras 60 Convertible 1998, motores Caterpillar 3208 con 1243 horas, generador Kohler 20kW con 342 horas, A/C Quality Air Marine, Watermaker Spectra.
+      const vesselCtx = `Embarcación: ${vessel.name || ""}, Tipo: ${vessel.type || ""}, Marina: ${vessel.marina || ""}, Capitán: ${vessel.captain || ""}, Horas motor: ${vessel.engineHours || 0}, Horas generador: ${vessel.genHours || 0}.`;
 
-Consulta del usuario: ${aiQuery}
+      let messages;
+      if (selectedManual && pdfText && pdfText !== "error") {
+        // Send PDF to Claude
+        messages = [{
+          role: "user",
+          content: [
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfText } },
+            { type: "text", text: `Contexto del barco: ${vesselCtx}
+Manual: ${selectedManual.name} (${selectedManual.category})
 
-Responde en español con:
-1. Lista de repuestos necesarios con números de parte específicos
-2. Marcas recomendadas y alternativas
-3. Estimado de tiempo de trabajo
-4. Notas importantes de seguridad
+Pregunta: ${aiQuery}
 
-Formato tu respuesta de forma clara y estructurada.`}]
-        })
+Responde en español, de forma clara y estructurada. Si preguntan por repuestos incluye números de parte específicos.` }
+          ]
+        }];
+      } else {
+        // No PDF — use knowledge base
+        messages = [{
+          role: "user",
+          content: `Eres un experto en mantenimiento marino. ${vesselCtx}${selectedManual ? ` Manual consultado: ${selectedManual.name} (${selectedManual.category}).` : ""}
+
+Pregunta: ${aiQuery}
+
+Responde en español con información técnica detallada. Si preguntan por repuestos incluye números de parte específicos y marcas recomendadas.`
+        }];
+      }
+
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2000, messages })
       });
       const data = await resp.json();
-      setAiResult(data.content?.[0]?.text || "No se pudo obtener respuesta.");
+      setAiResult(data.content?.[0]?.text || "Sin respuesta.");
     } catch(e) {
-      setAiResult("Error al conectar con el asistente. Verifica tu conexión.");
+      setAiResult("Error al conectar. Verifica tu conexión.");
     }
     setAiLoading(false);
   };
 
-  const filteredManuals = selectedCat==="Todos" ? manuals : manuals.filter(m=>m.category===selectedCat);
+  const filteredManuals = selectedCat === "Todos" ? manuals : manuals.filter(m => m.category === selectedCat);
+  const fmtSize = (bytes) => bytes > 1000000 ? `${(bytes/1000000).toFixed(1)} MB` : `${Math.round(bytes/1000)} KB`;
+
+  const addLink = () => {
+    if (!newTitle.trim() || !newUrl.trim()) return;
+    const url = newUrl.startsWith("http") ? newUrl : "https://" + newUrl;
+    setLinks(l => [...l, { id: Date.now(), title: newTitle.trim(), url, icon: "🔗" }]);
+    setNewTitle(""); setNewUrl(""); setShowAddLink(false);
+  };
 
   return (
-    <div style={{padding:"24px 28px",maxWidth:1000,margin:"0 auto"}}>
+    <div style={{padding:"24px 28px",maxWidth:1100,margin:"0 auto"}}>
       <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4}}>📄 Documentos y Manuales</h2>
-      <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>Gestión de documentos, manuales técnicos y asistente AI de partes</p>
+      <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>Manuales técnicos con búsqueda de IA · Links y documentos</p>
 
       {/* Tabs */}
       <div style={{display:"flex",gap:0,marginBottom:24,borderBottom:"1px solid #e2e8f0"}}>
         {[
-          {key:"links",   label:"🔗 Links y Documentos"},
           {key:"manuals", label:"📚 Manuales de Equipos"},
-          {key:"ai",      label:"🤖 Asistente AI de Partes"},
+          {key:"ai",      label:"🤖 Asistente IA"},
+          {key:"links",   label:"🔗 Links y Documentos"},
         ].map(t=>(
           <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:activeTab===t.key?"2px solid #0ea5e9":"2px solid transparent",cursor:"pointer",fontSize:13,color:activeTab===t.key?"#0ea5e9":"#64748b",fontWeight:activeTab===t.key?600:400,whiteSpace:"nowrap"}}>{t.label}</button>
         ))}
       </div>
+
+      {/* ── MANUALS TAB ── */}
+      {activeTab==="manuals"&&(
+        <div>
+          {/* Upload section */}
+          <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:20}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:showUpload?16:0}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:"#0369a1"}}>📤 Subir Manual PDF</div>
+                <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Los manuales se guardan en la nube y el IA puede buscar dentro de ellos</div>
+              </div>
+              <button onClick={()=>setShowUpload(!showUpload)} style={{...s.btnPrimary,background:"#0369a1"}}>
+                {showUpload?"✕ Cancelar":"＋ Subir Manual"}
+              </button>
+            </div>
+            {showUpload&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:4}}>
+                <div>
+                  <label style={s.label}>Categoría</label>
+                  <select value={newManualCat} onChange={e=>setNewManualCat(e.target.value)} style={s.input}>
+                    {MANUAL_CATS.map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={s.label}>Archivo PDF</label>
+                  <label style={{display:"flex",alignItems:"center",gap:12,padding:"16px 20px",border:"2px dashed #bae6fd",borderRadius:10,cursor:"pointer",background:"#fff",color:"#0369a1"}}>
+                    <span style={{fontSize:28}}>📎</span>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13}}>Click para seleccionar PDF</div>
+                      <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Máximo 50MB</div>
+                    </div>
+                    <input type="file" accept=".pdf" style={{display:"none"}} onChange={handleUpload} disabled={uploading}/>
+                  </label>
+                </div>
+                {uploadProgress&&(
+                  <div style={{padding:"10px 14px",background:uploadProgress.includes("✓")?"#f0fdf4":uploadProgress.includes("❌")?"#fff5f5":"#f0f9ff",border:`1px solid ${uploadProgress.includes("✓")?"#bbf7d0":uploadProgress.includes("❌")?"#fecaca":"#bae6fd"}`,borderRadius:8,fontSize:13,color:uploadProgress.includes("✓")?"#16a34a":uploadProgress.includes("❌")?"#dc2626":"#0369a1",fontWeight:600}}>
+                    {uploading&&<span style={{marginRight:8}}>⏳</span>}{uploadProgress}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Category filters */}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+            {["Todos",...MANUAL_CATS].map(c=>(
+              <button key={c} onClick={()=>setSelectedCat(c)} style={{...s.filterBtn,background:selectedCat===c?"#1e3a5f":"transparent",color:selectedCat===c?"#fff":"#64748b",borderColor:selectedCat===c?"#4a9eff":"#e2e8f0",fontSize:11,padding:"4px 10px"}}>
+                {CAT_ICONS[c]||"📂"} {c}
+                {c!=="Todos"&&<span style={{marginLeft:4,fontSize:10,opacity:.7}}>({manuals.filter(m=>m.category===c).length})</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Manuals grid */}
+          {manualsLoading&&<div style={{textAlign:"center",padding:"40px",color:"#64748b"}}>⏳ Cargando manuales...</div>}
+          {!manualsLoading&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
+              {filteredManuals.map(m=>(
+                <div key={m.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
+                  {/* Card header by category */}
+                  <div style={{background:`linear-gradient(135deg,#1e3a5f,#2563eb)`,padding:"16px",color:"#fff"}}>
+                    <div style={{fontSize:28,marginBottom:6}}>{CAT_ICONS[m.category]||"📄"}</div>
+                    <div style={{fontSize:12,opacity:.7,letterSpacing:"0.06em",marginBottom:2}}>{m.category?.toUpperCase()}</div>
+                  </div>
+                  <div style={{padding:"14px 16px"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4,lineHeight:1.4}}>{m.name}</div>
+                    <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>{m.file_size ? fmtSize(m.file_size) : ""} · {new Date(m.created_at).toLocaleDateString("es-VE")}</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <a href={m.file_url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 10px",fontSize:11,textDecoration:"none",display:"flex",alignItems:"center",gap:4,flex:1,justifyContent:"center"}}>
+                        📖 Abrir
+                      </a>
+                      <button onClick={()=>loadPdfForAI(m)} style={{...s.btnPrimary,padding:"5px 10px",fontSize:11,flex:1,display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                        🤖 IA
+                      </button>
+                      <button onClick={()=>deleteManual(m)} style={{padding:"5px 8px",background:"none",border:"1.5px solid #fecaca",borderRadius:6,color:"#dc2626",cursor:"pointer",fontSize:12}}>
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {filteredManuals.length===0&&!manualsLoading&&(
+                <div style={{gridColumn:"1/-1",textAlign:"center",padding:"60px 0",color:"#94a3b8"}}>
+                  <div style={{fontSize:48,marginBottom:12}}>📚</div>
+                  <div style={{fontSize:15,fontWeight:600,color:"#475569",marginBottom:6}}>Sin manuales{selectedCat!=="Todos"?` en ${selectedCat}`:""}</div>
+                  <div style={{fontSize:12}}>Sube el primer manual con el botón de arriba</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AI TAB ── */}
+      {activeTab==="ai"&&(
+        <div>
+          {/* Selected manual context */}
+          {selectedManual&&(
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,marginBottom:16}}>
+              <span style={{fontSize:20}}>{CAT_ICONS[selectedManual.category]||"📄"}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#0369a1"}}>Manual activo: {selectedManual.name}</div>
+                <div style={{fontSize:11,color:"#64748b"}}>{pdfLoading?"⏳ Cargando PDF para IA...":pdfText&&pdfText!=="error"?"✓ PDF cargado — la IA puede leer el contenido completo":"⚠ PDF no disponible — la IA usará su conocimiento base"}</div>
+              </div>
+              <button onClick={()=>{setSelectedManual(null);setPdfText("");setAiResult(null);}} style={{...s.btnOutline,padding:"4px 10px",fontSize:11}}>✕ Quitar</button>
+            </div>
+          )}
+
+          {!selectedManual&&(
+            <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:14,padding:"20px 24px",marginBottom:20,color:"#fff"}}>
+              <div style={{fontSize:22,marginBottom:6}}>🤖 Asistente IA de Manuales y Partes</div>
+              <div style={{fontSize:13,opacity:.85,lineHeight:1.6}}>
+                Selecciona un manual desde la pestaña 📚 para que la IA lo lea y responda preguntas específicas sobre él.
+                Sin manual, la IA usa su conocimiento técnico marino general.
+              </div>
+              <button onClick={()=>setActiveTab("manuals")} style={{marginTop:12,padding:"7px 14px",background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:8,color:"#fff",fontSize:12,cursor:"pointer"}}>
+                📚 Ver mis manuales →
+              </button>
+            </div>
+          )}
+
+          {/* Quick queries */}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#64748b",letterSpacing:"0.08em",marginBottom:8}}>CONSULTAS RÁPIDAS</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {(selectedManual ? [
+                `¿Qué sistemas cubre este manual?`,
+                `¿Cuáles son los intervalos de mantenimiento?`,
+                `Lista de repuestos para el próximo servicio`,
+                `Procedimiento de arranque`,
+                `Códigos de error comunes`,
+              ] : [
+                `Repuestos para servicio 500h ${vessel.captain||"motor"}`,
+                `Kit impeller ${vessel.type||"motor marino"}`,
+                `Zinc anodes para ${vessel.type||"barco"}`,
+                `Servicio anual A/C marino`,
+                `Filtros de aceite y combustible`,
+              ]).map(q=>(
+                <button key={q} onClick={()=>setAiQuery(q)} style={{padding:"5px 11px",border:"1.5px solid",borderRadius:20,fontSize:11,cursor:"pointer",background:aiQuery===q?"#eff6ff":"#fff",borderColor:aiQuery===q?"#2563eb":"#e2e8f0",color:aiQuery===q?"#2563eb":"#64748b",fontWeight:aiQuery===q?600:400}}>{q}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Query input */}
+          <div style={{display:"flex",gap:10,marginBottom:16}}>
+            <input value={aiQuery} onChange={e=>setAiQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&askAI()}
+              placeholder={selectedManual?"Pregunta sobre este manual...":"¿Qué repuestos necesito para el servicio de 500 horas?"}
+              style={{...s.input,flex:1,padding:"10px 14px"}}/>
+            <button onClick={askAI} disabled={aiLoading||pdfLoading} style={{...s.btnPrimary,padding:"10px 20px",opacity:(aiLoading||pdfLoading)?0.6:1,minWidth:110,background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)"}}>
+              {aiLoading?"⏳ Pensando...":"🔍 Preguntar"}
+            </button>
+          </div>
+
+          {/* Loading */}
+          {aiLoading&&(
+            <div style={{background:"#f0f9ff",borderRadius:12,padding:24,textAlign:"center",border:"1px solid #bae6fd"}}>
+              <div style={{fontSize:32,marginBottom:8}}>🤖</div>
+              <div style={{fontSize:14,color:"#0369a1",fontWeight:600}}>{selectedManual&&pdfText?"Leyendo el manual y preparando respuesta...":"Buscando información técnica..."}</div>
+              <div style={{fontSize:12,color:"#64748b",marginTop:4}}>Esto puede tomar unos segundos</div>
+            </div>
+          )}
+
+          {/* Result */}
+          {aiResult&&!aiLoading&&(
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <div style={{background:"linear-gradient(90deg,#f0f9ff,#e0f2fe)",padding:"12px 20px",borderBottom:"1px solid #bae6fd",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#0369a1"}}>
+                  🤖 {selectedManual?`Respuesta basada en: ${selectedManual.name}`:"Respuesta del Asistente IA"}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button style={{...s.btnOutline,padding:"4px 12px",fontSize:11}} onClick={()=>{setAiResult(null);setAiQuery("");}}>Nueva consulta</button>
+                  <button style={{...s.btnPrimary,padding:"4px 12px",fontSize:11,background:"#16a34a"}}>📦 Solicitar procura</button>
+                </div>
+              </div>
+              <div style={{padding:"20px 24px",whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.9,color:"#1e293b",maxHeight:500,overflowY:"auto"}}>{aiResult}</div>
+              <div style={{background:"#fefce8",padding:"12px 20px",borderTop:"1px solid #fde68a",fontSize:12,color:"#92400e"}}>
+                💡 <strong>Servicio de Procura NautiTrack:</strong> Ordenamos estos repuestos desde USA y coordinamos el envío a Venezuela.
+              </div>
+            </div>
+          )}
+
+          {!aiResult&&!aiLoading&&(
+            <div style={{background:"#f8fafc",borderRadius:12,padding:"40px 24px",textAlign:"center",border:"1px dashed #e2e8f0"}}>
+              <div style={{fontSize:44,marginBottom:12}}>🔧</div>
+              <div style={{fontSize:14,fontWeight:600,color:"#475569",marginBottom:6}}>Haz una pregunta arriba</div>
+              <div style={{fontSize:12,color:"#94a3b8"}}>
+                {selectedManual?"La IA leerá el manual completo y responderá basándose en su contenido":"Sube un manual para preguntas específicas, o consulta directamente sobre tu embarcación"}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── LINKS TAB ── */}
       {activeTab==="links"&&(
@@ -1808,7 +2108,7 @@ Formato tu respuesta de forma clara y estructurada.`}]
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:20}}>
               <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Nuevo Documento / Link</div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <div><label style={s.label}>Título *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Manual Motor Caterpillar" style={s.input}/></div>
+                <div><label style={s.label}>Título *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Carpeta Google Drive" style={s.input}/></div>
                 <div><label style={s.label}>URL *</label><input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="https://drive.google.com/..." style={s.input}/></div>
               </div>
               <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
@@ -1818,6 +2118,7 @@ Formato tu respuesta de forma clara y estructurada.`}]
             </div>
           )}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {links.length===0&&<div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}><div style={{fontSize:32,marginBottom:8}}>🔗</div>Agrega links a Google Drive, Dropbox u otros documentos online</div>}
             {links.map(link=>(
               <div key={link.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                 <span style={{fontSize:22,flexShrink:0}}>{link.icon}</span>
@@ -1826,7 +2127,7 @@ Formato tu respuesta de forma clara y estructurada.`}]
                   <div style={{fontSize:11,color:"#94a3b8",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:500}}>{link.url}</div>
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <a href={link.url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:4}}>↗ Abrir</a>
+                  <a href={link.url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none",display:"inline-flex",alignItems:"center"}}>↗ Abrir</a>
                   <button onClick={()=>setLinks(l=>l.filter(x=>x.id!==link.id))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"4px 8px"}}>✕</button>
                 </div>
               </div>
@@ -1834,121 +2135,10 @@ Formato tu respuesta de forma clara y estructurada.`}]
           </div>
         </div>
       )}
-
-      {/* ── MANUALS TAB ── */}
-      {activeTab==="manuals"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {["Todos",...MANUAL_CATS].map(c=>(
-                <button key={c} onClick={()=>setSelectedCat(c)} style={{...s.filterBtn,background:selectedCat===c?"#1e3a5f":"transparent",color:selectedCat===c?"#fff":"#64748b",borderColor:selectedCat===c?"#4a9eff":"#e2e8f0",fontSize:11,padding:"4px 10px"}}>{c}</button>
-              ))}
-            </div>
-            <button style={s.btnPrimary}>＋ Subir Manual</button>
-          </div>
-
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
-            {filteredManuals.map(m=>(
-              <div key={m.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:16,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-                <div style={{fontSize:28,marginBottom:8}}>📖</div>
-                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>{m.name}</div>
-                <div style={{fontSize:11,color:"#0ea5e9",marginBottom:6}}>{m.category}</div>
-                <div style={{fontSize:10,color:"#94a3b8",marginBottom:12}}>{m.file} · {m.size}</div>
-                <div style={{display:"flex",gap:6}}>
-                  <button style={{...s.btnOutline,padding:"4px 10px",fontSize:11,flex:1}}>↗ Abrir</button>
-                  <button style={{...s.btnPrimary,padding:"4px 10px",fontSize:11,flex:1}} onClick={()=>{setActiveTab("ai");setAiQuery(`Lista de repuestos para servicio de ${m.name}`);}}>🤖 Buscar partes</button>
-                </div>
-              </div>
-            ))}
-            {filteredManuals.length===0&&(
-              <div style={{gridColumn:"1/-1",textAlign:"center",padding:"40px",color:"#94a3b8"}}>
-                <div style={{fontSize:40,marginBottom:12}}>📚</div>
-                <div style={{fontSize:14,fontWeight:600,color:"#475569",marginBottom:4}}>No hay manuales en esta categoría</div>
-                <div style={{fontSize:12}}>Sube un manual con el botón de arriba</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── AI ASSISTANT TAB ── */}
-      {activeTab==="ai"&&(
-        <div>
-          {/* Hero */}
-          <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:14,padding:"24px 28px",marginBottom:24,color:"#fff"}}>
-            <div style={{fontSize:28,marginBottom:8}}>🤖</div>
-            <div style={{fontSize:18,fontWeight:700,marginBottom:6}}>Asistente AI de Partes y Servicios</div>
-            <div style={{fontSize:13,opacity:.85,lineHeight:1.6}}>Pregunta sobre cualquier servicio y recibirás la lista exacta de repuestos con números de parte. Nosotros nos encargamos de la procura desde USA.</div>
-          </div>
-
-          {/* Quick suggestions */}
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#64748b",letterSpacing:"0.06em",marginBottom:10}}>CONSULTAS RÁPIDAS</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {[
-                "Repuestos para servicio 1000h Caterpillar 3208",
-                "Kit de impeller para Kohler 20kW",
-                "Filtros para Watermaker Spectra",
-                "Servicio anual A/C marino",
-                "Zinc anodes 60ft yacht",
-                "Correas y poleas Caterpillar 3208",
-              ].map(q=>(
-                <button key={q} onClick={()=>setAiQuery(q)} style={{padding:"6px 12px",border:"1.5px solid #e2e8f0",borderRadius:20,fontSize:11,cursor:"pointer",background:aiQuery===q?"#eff6ff":"#fff",borderColor:aiQuery===q?"#2563eb":"#e2e8f0",color:aiQuery===q?"#2563eb":"#64748b",fontWeight:aiQuery===q?600:400}}>{q}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Query input */}
-          <div style={{display:"flex",gap:10,marginBottom:20}}>
-            <input
-              value={aiQuery}
-              onChange={e=>setAiQuery(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&askAI()}
-              placeholder="Ej: ¿Qué repuestos necesito para el servicio de 500 horas de mi Caterpillar 3208?"
-              style={{...s.input,flex:1,padding:"10px 14px"}}
-            />
-            <button onClick={askAI} disabled={aiLoading} style={{...s.btnPrimary,padding:"10px 20px",opacity:aiLoading?0.7:1,minWidth:100}}>
-              {aiLoading?"⏳ Buscando...":"🔍 Buscar"}
-            </button>
-          </div>
-
-          {/* AI Result */}
-          {aiLoading&&(
-            <div style={{background:"#f0f9ff",borderRadius:12,padding:24,textAlign:"center",border:"1px solid #bae6fd"}}>
-              <div style={{fontSize:32,marginBottom:12}}>⏳</div>
-              <div style={{fontSize:14,color:"#0369a1",fontWeight:600}}>Analizando tu embarcación y buscando repuestos...</div>
-              <div style={{fontSize:12,color:"#64748b",marginTop:6}}>Esto puede tomar unos segundos</div>
-            </div>
-          )}
-
-          {aiResult&&!aiLoading&&(
-            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 6px rgba(0,0,0,0.06)"}}>
-              <div style={{background:"#f0f9ff",padding:"12px 20px",borderBottom:"1px solid #bae6fd",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#0369a1"}}>🤖 Respuesta del Asistente</div>
-                <div style={{display:"flex",gap:8}}>
-                  <button style={{...s.btnOutline,padding:"4px 12px",fontSize:11}} onClick={()=>setAiResult(null)}>Nueva consulta</button>
-                  <button style={{...s.btnPrimary,padding:"4px 12px",fontSize:11,background:"#16a34a"}}>📦 Solicitar procura</button>
-                </div>
-              </div>
-              <div style={{padding:"20px 24px",whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.8,color:"#1e293b",maxHeight:400,overflowY:"auto"}}>{aiResult}</div>
-              <div style={{background:"#fefce8",padding:"12px 20px",borderTop:"1px solid #fde68a",fontSize:12,color:"#92400e"}}>
-                💡 <strong>Servicio de Procura:</strong> Podemos ordenar estos repuestos desde USA y coordinar el envío a Venezuela. Presiona "Solicitar procura" para enviarnos la lista.
-              </div>
-            </div>
-          )}
-
-          {!aiResult&&!aiLoading&&(
-            <div style={{background:"#f8fafc",borderRadius:12,padding:"32px 24px",textAlign:"center",border:"1px dashed #e2e8f0"}}>
-              <div style={{fontSize:40,marginBottom:12}}>🔧</div>
-              <div style={{fontSize:14,fontWeight:600,color:"#475569",marginBottom:6}}>Consulta cualquier servicio o repuesto</div>
-              <div style={{fontSize:12,color:"#94a3b8"}}>El asistente conoce tu embarcación y te dará la lista exacta de partes con números de referencia</div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
+
 
 function ProfileModal({ vessel, updateVessel, onClose }) {
   const [tab,setTab]   = useState("profile");
@@ -2053,10 +2243,18 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
 
   // General info editable
   const [gen, setGen] = useState({
-    name: vessel.name||"",
-    manufacturer: d.manufacturer||"", model: d.model||"", year: d.year||"",
-    hullType: d.hullType||"", homePort: d.homePort||"", uscg: d.uscg||"",
-    built: d.built||"", hin: d.hin||"",
+    name:         vessel.name    || "",
+    type:         vessel.type    || "",
+    marina:       vessel.marina  || "",
+    captain:      vessel.captain || "",
+    manufacturer: d.manufacturer || "",
+    model:        d.model        || "",
+    year:         d.year         || "",
+    hullType:     d.hullType     || "",
+    homePort:     d.homePort     || vessel.marina || "",
+    uscg:         d.uscg         || "",
+    built:        d.built        || "",
+    hin:          d.hin          || "",
   });
 
   // Dimensions
@@ -2133,8 +2331,10 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
     };
     updateVessel({
       ...vessel,
-      name:       gen.name || vessel.name,
-      marina:     gen.homePort || vessel.marina,
+      name:       gen.name    || vessel.name,
+      type:       gen.type    || vessel.type    || "",
+      marina:     gen.marina  || vessel.marina  || "",
+      captain:    gen.captain || vessel.captain || "",
       photo:      vesselPhoto,
       crew2:      crew,
       crew:       crew.map(x => x.name),
@@ -2199,25 +2399,26 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
           {/* INFORMACIÓN GENERAL */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Información General</div>
+            <Row label="Nombre del Barco"     value={gen.name}          onChange={v=>setGen(g=>({...g,name:v}))}        placeholder="Ej: La Gaviota"/>
+            <Row label="Tipo / Eslora"        value={gen.type}          onChange={v=>setGen(g=>({...g,type:v}))}        placeholder="Ej: Yate Motor 48'"/>
+            <Row label="Marina / Puerto"      value={gen.marina}        onChange={v=>setGen(g=>({...g,marina:v}))}      placeholder="Ej: Puerto La Cruz"/>
+            <Row label="Capitán"              value={gen.captain}       onChange={v=>setGen(g=>({...g,captain:v}))}     placeholder="Nombre del capitán"/>
             <Row label="Fabricante"           value={gen.manufacturer}  onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
             <Row label="Modelo"               value={gen.model}         onChange={v=>setGen(g=>({...g,model:v}))}/>
             <Row label="Año"                  value={gen.year}          onChange={v=>setGen(g=>({...g,year:v}))}/>
             <Row label="Tipo de Casco"        value={gen.hullType}      onChange={v=>setGen(g=>({...g,hullType:v}))}/>
-            <Row label="Puerto Base"          value={gen.homePort}      onChange={v=>setGen(g=>({...g,homePort:v}))}/>
-            <Row label="USCG #"              value={gen.uscg}           onChange={v=>setGen(g=>({...g,uscg:v}))}/>
-            <Row label="Construido en"        value={gen.built}         onChange={v=>setGen(g=>({...g,built:v}))}/>
             <Row label="Serial del Casco (HIN)" value={gen.hin}         onChange={v=>setGen(g=>({...g,hin:v}))} placeholder="Ej: HTRS1234A898"/>
           </div>
 
           {/* DIMENSIONES */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Dimensiones</div>
-            <Row label="Desplazamiento" value={dims.displacement} onChange={v=>setDims(d=>({...d,displacement:v}))}/>
-            <Row label="TRB"            value={dims.grt}          onChange={v=>setDims(d=>({...d,grt:v}))}/>
-            <Row label="TRN"            value={dims.nrt}          onChange={v=>setDims(d=>({...d,nrt:v}))}/>
-            <Row label="Eslora Total"   value={dims.loa}          onChange={v=>setDims(d=>({...d,loa:v}))}/>
-            <Row label="Manga"          value={dims.beam}         onChange={v=>setDims(d=>({...d,beam:v}))}/>
-            <Row label="Calado"         value={dims.draft}        onChange={v=>setDims(d=>({...d,draft:v}))}/>
+            <Row label="Desplazamiento"           value={dims.displacement} onChange={v=>setDims(d=>({...d,displacement:v}))} placeholder="Ej: 55,000 lbs"/>
+            <Row label="TRB — Tonelaje Registro Bruto"  value={dims.grt}   onChange={v=>setDims(d=>({...d,grt:v}))}          placeholder="Ej: 42"/>
+            <Row label="TRN — Tonelaje Registro Neto"   value={dims.nrt}   onChange={v=>setDims(d=>({...d,nrt:v}))}          placeholder="Ej: 28"/>
+            <Row label="Eslora Total (LOA)"        value={dims.loa}         onChange={v=>setDims(d=>({...d,loa:v}))}          placeholder="Ej: 64'6&quot;"/>
+            <Row label="Manga"                     value={dims.beam}        onChange={v=>setDims(d=>({...d,beam:v}))}         placeholder="Ej: 18'"/>
+            <Row label="Calado"                    value={dims.draft}       onChange={v=>setDims(d=>({...d,draft:v}))}        placeholder="Ej: 5'2&quot;"/>
           </div>
 
           {/* TANQUES */}
