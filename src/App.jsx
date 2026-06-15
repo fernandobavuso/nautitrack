@@ -1944,7 +1944,7 @@ Responde en español con información técnica detallada. Si preguntan por repue
         }];
       }
 
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2000, messages })
