@@ -2244,7 +2244,8 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
   // General info editable
   const [gen, setGen] = useState({
     name:         vessel.name    || "",
-    type:         vessel.type    || "",
+    type:         vessel.details?.vesselType || vessel.type?.split(" ")[0] || "",
+    eslora:       vessel.details?.eslora || vessel.type?.split(" ").slice(1).join(" ") || "",
     marina:       vessel.marina  || "",
     captain:      vessel.captain || "",
     manufacturer: d.manufacturer || "",
@@ -2332,7 +2333,7 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
     updateVessel({
       ...vessel,
       name:       gen.name    || vessel.name,
-      type:       gen.type    || vessel.type    || "",
+      type:       [gen.type, gen.eslora].filter(Boolean).join(" ") || vessel.type || "",
       marina:     gen.marina  || vessel.marina  || "",
       captain:    gen.captain || vessel.captain || "",
       photo:      vesselPhoto,
@@ -2400,7 +2401,19 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Información General</div>
             <Row label="Nombre del Barco"     value={gen.name}          onChange={v=>setGen(g=>({...g,name:v}))}        placeholder="Ej: La Gaviota"/>
-            <Row label="Tipo / Eslora"        value={gen.type}          onChange={v=>setGen(g=>({...g,type:v}))}        placeholder="Ej: Yate Motor 48'"/>
+            {/* Tipo — dropdown */}
+            <div style={s.detailRow}>
+              <span style={s.detailKey}>Tipo de Embarcación</span>
+              {editMode
+                ? <select value={gen.type} onChange={e=>setGen(g=>({...g,type:e.target.value}))} style={{...s.input,padding:"5px 8px",fontSize:12}}>
+                    <option value="">Seleccionar...</option>
+                    {["Yate Motor","Velero","Catamarán","Lancha","Bote de Pesca","Barco de Trabajo","Otro"].map(t=><option key={t} value={t}>{t}</option>)}
+                  </select>
+                : <span style={s.detailVal}>{gen.type||"—"}</span>
+              }
+            </div>
+            {/* Eslora — separate field */}
+            <Row label="Eslora"               value={gen.eslora}        onChange={v=>setGen(g=>({...g,eslora:v}))}      placeholder="Ej: 48', 60', 14m"/>
             <Row label="Marina / Puerto"      value={gen.marina}        onChange={v=>setGen(g=>({...g,marina:v}))}      placeholder="Ej: Puerto La Cruz"/>
             <Row label="Capitán"              value={gen.captain}       onChange={v=>setGen(g=>({...g,captain:v}))}     placeholder="Nombre del capitán"/>
             <Row label="Fabricante"           value={gen.manufacturer}  onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
