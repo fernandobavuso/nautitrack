@@ -2065,20 +2065,10 @@ function DocsPage({ vessel, user }) {
   const loadPdfForAI = async (manual) => {
     setSelectedManual(manual);
     setActiveTab("ai");
-    setPdfLoading(true);
-    setPdfText("");
-    setAiResult(null);
-    try {
-      const resp = await fetch(manual.file_url);
-      const arrayBuffer = await resp.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      setPdfText(base64);
-      setAiQuery(`Analiza este manual y dime: ¿qué sistemas y equipos cubre? ¿Cuáles son los intervalos de mantenimiento principales?`);
-    } catch(err) {
-      setPdfText("error");
-      setAiQuery(`Buscar información sobre ${manual.name} - ${manual.category}`);
-    }
     setPdfLoading(false);
+    setPdfText(manual.file_url); // just store URL — server will fetch it
+    setAiResult(null);
+    setAiQuery(`Analiza este manual y dime: ¿qué sistemas y equipos cubre? ¿Cuáles son los intervalos de mantenimiento principales?`);
   };
 
   // Ask AI — with PDF if available, without if not
@@ -2088,37 +2078,22 @@ function DocsPage({ vessel, user }) {
     try {
       const vesselCtx = `Embarcación: ${vessel.name || ""}, Tipo: ${vessel.type || ""}, Marina: ${vessel.marina || ""}, Capitán: ${vessel.captain || ""}, Horas motor: ${vessel.engineHours || 0}, Horas generador: ${vessel.genHours || 0}.`;
 
-      let messages;
-      if (selectedManual && pdfText && pdfText !== "error") {
-        // Send PDF to Claude
-        messages = [{
-          role: "user",
-          content: [
-            { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfText } },
-            { type: "text", text: `Contexto del barco: ${vesselCtx}
-Manual: ${selectedManual.name} (${selectedManual.category})
+      // Always send text prompt — server fetches PDF if pdfUrl provided
+      const textPrompt = selectedManual && pdfText && pdfText !== "error"
+        ? `Eres un experto en mantenimiento marino. ${vesselCtx}\nManual cargado: ${selectedManual.name} (${selectedManual.category})\n\nPregunta: ${aiQuery}\n\nResponde en español, de forma clara y estructurada. Basa tu respuesta en el contenido del manual. Si preguntan por repuestos incluye números de parte específicos.`
+        : `Eres un experto en mantenimiento marino. ${vesselCtx}${selectedManual ? ` Manual consultado: ${selectedManual.name} (${selectedManual.category}).` : ""}\n\nPregunta: ${aiQuery}\n\nResponde en español con información técnica detallada. Si preguntan por repuestos incluye números de parte específicos y marcas recomendadas.`;
 
-Pregunta: ${aiQuery}
+      const messages = [{ role: "user", content: textPrompt }];
 
-Responde en español, de forma clara y estructurada. Si preguntan por repuestos incluye números de parte específicos.` }
-          ]
-        }];
-      } else {
-        // No PDF — use knowledge base
-        messages = [{
-          role: "user",
-          content: `Eres un experto en mantenimiento marino. ${vesselCtx}${selectedManual ? ` Manual consultado: ${selectedManual.name} (${selectedManual.category}).` : ""}
-
-Pregunta: ${aiQuery}
-
-Responde en español con información técnica detallada. Si preguntan por repuestos incluye números de parte específicos y marcas recomendadas.`
-        }];
-      }
-
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2000, messages })
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 2000,
+          messages,
+          pdfUrl: selectedManual && pdfText && pdfText !== "error" ? pdfText : undefined,
+        })
       });
       const data = await resp.json();
       setAiResult(data.content?.[0]?.text || "Sin respuesta.");
