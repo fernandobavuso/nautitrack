@@ -608,7 +608,12 @@ function WeatherBar({ vessel }) {
     const city    = vessel.details?.city    || "";
     const state   = vessel.details?.state   || "";
     const country = vessel.details?.country || "";
-    const query   = [city, state, country].filter(Boolean).join(",") || vessel.marina || "Caracas";
+    // Normalize country and state for OpenWeatherMap
+    const COUNTRY_CODES = {"venezuela":"VE","estados unidos":"US","usa":"US","united states":"US","colombia":"CO","panama":"PA","mexico":"MX","españa":"ES","spain":"ES","france":"FR","brazil":"BR","brasil":"BR","argentina":"AR","peru":"PE","chile":"CL","ecuador":"EC","cuba":"CU","dominican republic":"DO","república dominicana":"DO"};
+    const STATE_CODES = {"florida":"FL","california":"CA","texas":"TX","new york":"NY","miami":"FL","new jersey":"NJ","georgia":"GA","north carolina":"NC","south carolina":"SC","virginia":"VA","maryland":"MD"};
+    const countryNorm = COUNTRY_CODES[country.toLowerCase()] || country;
+    const stateNorm   = STATE_CODES[state.toLowerCase()]   || state;
+    const query   = [city, stateNorm, countryNorm].filter(Boolean).join(",") || vessel.marina || "Caracas";
     const isLocal = window.location.hostname === "localhost";
     const KEY     = "756f12d0c20d29f76808839251369ef7";
 
