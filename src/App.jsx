@@ -3,6 +3,19 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 
+
+// ── DATE FORMAT — DD/MM/AAAA (Venezuela) ─────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return "—";
+  if (d.includes("/")) return d; // already formatted
+  const [y,m,day] = d.split("-");
+  if (!y||!m||!day) return d;
+  return `${day}/${m}/${y}`;
+}
+function todayISO() {
+  return new Date().toISOString().split("T")[0];
+}
+
 const DEFAULT_SYSTEMS = [
   { id:"motores",    label:"Motores",                  icon:"🔧", trackHours:true,
     equipment:["Motor Estribor","Motor Babor","Motor Centro","Todos los Motores","Transmisión Estribor","Transmisión Babor","Filtro de Combustible","Filtro de Aceite","Impeller","Correas y Poleas","Heat Exchanger","Turbo Cargador","Inyectores","Mounts de Motor","Termostato"] },
@@ -415,7 +428,7 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
 }
 
 function HomePage({ vessel, setPage, vessels, updateVessel }) {
-  const upcoming = [...vessel.tasks].filter(t => t.status!=="done").sort((a,b) => new Date(a.nextDue)-new Date(b.nextDue)).slice(0,5);
+  const upcoming = [...(vessel.tasks||[])].filter(t => t.status!=="done").sort((a,b) => new Date(a.nextDue)-new Date(b.nextDue)).slice(0,5);
   return (
     <div style={s.home}>
       <div style={s.row}>
@@ -477,7 +490,7 @@ function FleetCard({ vessels, vessel, updateVessel }) {
 }
 
 function AlertsCard({ vessel, setPage }) {
-  const od = vessel.tasks.filter(t => t.status==="overdue");
+  const od = (vessel.tasks||[]).filter(t => t.status==="overdue");
   return (
     <div style={{...s.card,flex:1}}>
       <div style={s.cardHdr}><span style={s.cardTitle}>🚨 Alertas</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver →</button></div>
@@ -532,7 +545,7 @@ function CalendarCard({ tasks, setPage }) {
             <div style={{flex:1}}><div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{t.name}</div><div style={{fontSize:11,color:"#64748b"}}>{t.system} · {t.equipment}</div></div>
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:12,fontWeight:700,color:bc}}>{od?`Vencido ${Math.abs(diff)}d`:`En ${diff}d`}</div>
-              <div style={{fontSize:10,color:"#94a3b8"}}>{t.nextDue}</div>
+              <div style={{fontSize:10,color:"#94a3b8"}}>{fmtDate(t.nextDue)}</div>
             </div>
           </div>
         );
@@ -545,7 +558,7 @@ function LogCard({ vessel, setPage }) {
   return (
     <div style={{...s.card,flex:1}}>
       <div style={s.cardHdr}><span style={s.cardTitle}>📓 Bitácora Reciente</span><button onClick={() => setPage("log")} style={s.linkBtn}>Ver todo →</button></div>
-      {vessel.log.slice(0,4).map((e,i) => (
+      {(vessel.log||[]).slice(0,4).map((e,i) => (
         <div key={i} style={s.logRow}>
           <span style={{...s.logBadge,background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type]}}>{e.type}</span>
           <span style={{fontSize:12,color:"#334155",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
@@ -553,7 +566,7 @@ function LogCard({ vessel, setPage }) {
           </span>
           <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
             {(e.photos||[]).length>0&&<span style={{fontSize:11}}>📷</span>}
-            <span style={{fontSize:10,color:"#94a3b8"}}>{e.date}</span>
+            <span style={{fontSize:10,color:"#94a3b8"}}>{fmtDate(e.date)}</span>
           </div>
         </div>
       ))}
@@ -562,7 +575,7 @@ function LogCard({ vessel, setPage }) {
 }
 
 function WeatherBar({ vessel }) {
-  const w = vessel.weather;
+  const w = vessel.weather || { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" };
   return (
     <div style={{...s.card,display:"flex",alignItems:"center",gap:24,padding:"14px 24px",flexWrap:"wrap"}}>
       <div style={{display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
@@ -586,7 +599,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
   const [expanded, setExpanded] = useState(null);
   const [showAdd, setShowAdd]   = useState(false);
   const FILTERS = ["Todas","Por vencer","Vencidas","Completadas"];
-  const filtered = vessel.tasks.filter(t => {
+  const filtered = (vessel.tasks||[]).filter(t => {
     if (filter==="Vencidas")    return t.status==="overdue";
     if (filter==="Por vencer")  return t.status==="due";
     if (filter==="Completadas") return t.status==="done";
@@ -604,7 +617,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
             <button key={f} onClick={() => setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0"}}>
               {f}
               <span style={{marginLeft:4,fontSize:10,background:filter===f?"rgba(255,255,255,0.2)":"#e2e8f0",color:filter===f?"#fff":"#64748b",padding:"1px 6px",borderRadius:10}}>
-                {f==="Todas"?vessel.tasks.length:f==="Vencidas"?vessel.tasks.filter(t=>t.status==="overdue").length:f==="Por vencer"?vessel.tasks.filter(t=>t.status==="due").length:vessel.tasks.filter(t=>t.status==="done").length}
+                {f==="Todas"?(vessel.tasks||[]).length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
               </span>
             </button>
           ))}
@@ -628,7 +641,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
                     <td style={{...s.td,fontWeight:500,color:"#1e293b"}}>{task.name}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.assigned?.split(" ")[0]}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.interval}</td>
-                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{task.nextDue}</td>
+                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{fmtDate(task.nextDue)}</td>
                     <td style={s.td}><span style={{...s.statusPill,background:p.bg,color:p.c}}>{p.l}</span></td>
                     <td style={{...s.td,color:"#94a3b8",fontSize:12,maxWidth:180}}>{task.notes||"—"}</td>
                   </tr>
@@ -644,9 +657,17 @@ function TasksPage({ vessel, updateVessel, addTask }) {
                           ))}
                         </div>
                         <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
-                          {["Completar","Reprogramar","Editar","Eliminar"].map(a => (
-                            <button key={a} style={{padding:"6px 14px",border:"1.5px solid",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:a==="Completar"?"#1d4ed8":"#fff",color:a==="Completar"?"#fff":a==="Eliminar"?"#dc2626":"#1e293b",borderColor:a==="Completar"?"#1d4ed8":a==="Eliminar"?"#fecaca":"#e2e8f0"}}>{a}</button>
-                          ))}
+                          <button onClick={()=>{
+                            const updated={...vessel,tasks:(vessel.tasks||[]).map(t=>t.id===task.id?{...t,status:"done"}:t)};
+                            updateVessel(updated);setExpanded(null);
+                          }} style={{padding:"6px 14px",border:"1.5px solid #1d4ed8",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:"#1d4ed8",color:"#fff"}}>✓ Completar</button>
+                          <button onClick={()=>{
+                            const nd=prompt("Nueva fecha (AAAA-MM-DD):",task.nextDue);
+                            if(nd){const updated={...vessel,tasks:(vessel.tasks||[]).map(t=>t.id===task.id?{...t,nextDue:nd,status:"ok"}:t)};updateVessel(updated);}
+                          }} style={{padding:"6px 14px",border:"1.5px solid #e2e8f0",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>📅 Reprogramar</button>
+                          <button onClick={()=>{
+                            if(confirm("¿Eliminar esta tarea?")){const updated={...vessel,tasks:(vessel.tasks||[]).filter(t=>t.id!==task.id)};updateVessel(updated);setExpanded(null);}
+                          }} style={{padding:"6px 14px",border:"1.5px solid #fecaca",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>🗑 Eliminar</button>
                         </div>
                       </td>
                     </tr>
@@ -668,7 +689,7 @@ function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
   const [equipment, setEquipment]     = useState("");
   const [otherEquip, setOtherEquip]   = useState("");
   const [name, setName]               = useState("");
-  const [assigned, setAssigned]       = useState(vessel.captain);
+  const [assigned, setAssigned]       = useState(vessel.captain||vessel.captain||'');
   const [interval, setInterval]       = useState("");
   const [nextDue, setNextDue]         = useState("");
   const [notes, setNotes]             = useState("");
@@ -681,8 +702,8 @@ function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
 
   const selectedSystem = allSystems.find(s => s.id===systemId);
   const equipList      = systemId ? getEquipmentList(vessel, systemId) : [];
-  const providerNames  = vessel.providers.map(p => `${p.firstName} ${p.lastName}`);
-  const allAssigned    = [vessel.captain, ...providerNames];
+  const providerNames  = (vessel.providers||[]).map(p => `${p.firstName} ${p.lastName}`);
+  const allAssigned    = [vessel.captain, ...providerNames].filter(Boolean);
 
   const addCustomSystem = () => {
     if (!newSysLabel.trim()||!newSysEquip.trim()) return;
@@ -836,7 +857,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
   const [showModal, setShowModal] = useState(false);
   const [editEntry, setEditEntry] = useState(null);
   const [filter, setFilter]       = useState("Todos");
-  const filtered = filter==="Todos" ? vessel.log : vessel.log.filter(e=>e.type===filter);
+  const filtered = filter==="Todos" ? (vessel.log||[]) : (vessel.log||[]).filter(e=>e.type===filter);
 
   const saveEntry = useCallback((entry) => {
     if (editEntry) {
@@ -867,7 +888,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
             {filtered.length===0&&<tr><td colSpan={6} style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>Sin entradas</td></tr>}
             {filtered.map((e,i)=>(
               <tr key={i} style={s.trow}>
-                <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{e.date}</td>
+                <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>
                 <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{e.type}{e.serviceType?` · ${e.serviceType}`:""}</span></td>
                 <td style={{...s.td,color:"#334155",maxWidth:360}}>
                   {e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||"Pendiente"}`:e.type==="Compra"?`${e.item||""} · $${e.costUSD||0}`:e.desc||""}
@@ -887,7 +908,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
 
 // KEY FIX: LogEntryModal — all state at top, no nested component definitions
 function LogEntryModal({ vessel, initial, onSave, onClose }) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayISO();
   const [type,setType]               = useState(initial?.type||"");
   const [date,setDate]               = useState(initial?.date||today);
   const [desc,setDesc]               = useState(initial?.desc||"");
@@ -927,8 +948,8 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
   const selectedSys   = allSystems.find(s=>s.id===systemId);
   const equipList     = systemId ? getEquipmentList(vessel, systemId) : [];
   const needsHours    = selectedSys?.trackHours && equipment && equipment!=="Otro";
-  const provNames     = vessel.providers.map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
-  const allPerformed  = [vessel.captain,...provNames];
+  const provNames     = (vessel.providers||[]).map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
+  const allPerformed  = [vessel.captain,...provNames].filter(Boolean);
 
   const validate = () => {
     const e={};
@@ -1078,7 +1099,7 @@ function LogEntryModal({ vessel, initial, onSave, onClose }) {
                   <div><label style={s.label}>N° Personas</label><input type="number" value={persons} onChange={e=>setPersons(e.target.value)} style={s.input}/></div>
                 </div>
                 <div><label style={s.label}>Dueño a bordo</label><div style={{display:"flex",gap:8,marginTop:4}}>{[true,false].map(v=><button key={String(v)} onClick={()=>setOwnerAboard(v)} style={{...s.typeChip,background:ownerAboard===v?"#2563eb22":"#f8fafc",borderColor:ownerAboard===v?"#2563eb":"#e2e8f0",color:ownerAboard===v?"#2563eb":"#64748b",fontWeight:ownerAboard===v?700:400}}>{v?"Sí":"No"}</button>)}</div></div>
-                <div><label style={s.label}>Tripulación</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>{vessel.crew.map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}</div></div>
+                <div><label style={s.label}>Tripulación</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>{(vessel.crew||[]).map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}</div></div>
                 <div>
                   <label style={s.label}>Combustible al salir</label>
                   <div style={{display:"flex",gap:10}}>
@@ -1170,11 +1191,11 @@ function RecordsPage({ vessel }) {
   const [mainFilter,setMainFilter] = useState("Servicio");
   const [subFilter,setSubFilter]   = useState("Todos");
   const [showReport,setShowReport] = useState(false);
-  const serviceLog  = vessel.log.filter(e=>e.type==="Servicio");
-  const inspLog     = vessel.log.filter(e=>e.type==="Inspección");
-  const fuelLog     = vessel.log.filter(e=>e.type==="Combustible");
-  const purchaseLog = vessel.log.filter(e=>e.type==="Compra");
-  const totalCost   = vessel.records.reduce((a,r)=>a+r.cost,0);
+  const serviceLog  = (vessel.log||[]).filter(e=>e.type==="Servicio");
+  const inspLog     = (vessel.log||[]).filter(e=>e.type==="Inspección");
+  const fuelLog     = (vessel.log||[]).filter(e=>e.type==="Combustible");
+  const purchaseLog = (vessel.log||[]).filter(e=>e.type==="Compra");
+  const totalCost   = (vessel.records||[]).reduce((a,r)=>a+r.cost,0);
   const totalPurch  = purchaseLog.reduce((a,e)=>a+(e.costUSD||0),0);
   const filteredSvc = subFilter==="Todos"?serviceLog:serviceLog.filter(e=>e.serviceType===subFilter);
   return (
@@ -1184,7 +1205,7 @@ function RecordsPage({ vessel }) {
         <button style={{...s.btnPrimary,background:"#7c3aed"}} onClick={()=>setShowReport(true)}>📊 Generar Reporte</button>
       </div>
       <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-        {[{label:"Servicios",val:serviceLog.length,color:"#2563eb",key:"Servicio"},{label:"Inspecciones",val:inspLog.length,color:"#16a34a",key:"Inspecciones"},{label:"Combustible",val:fuelLog.length,color:"#d97706",key:"Combustible"},{label:"Compras",val:purchaseLog.length,color:"#0891b2",sub:`$${totalPurch.toFixed(2)}`,key:"Compras"},{label:"Histórico",val:vessel.records.length,color:"#7c3aed",sub:`$${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}`,key:"Historico"}].map(item=>(
+        {[{label:"Servicios",val:serviceLog.length,color:"#2563eb",key:"Servicio"},{label:"Inspecciones",val:inspLog.length,color:"#16a34a",key:"Inspecciones"},{label:"Combustible",val:fuelLog.length,color:"#d97706",key:"Combustible"},{label:"Compras",val:purchaseLog.length,color:"#0891b2",sub:`$${totalPurch.toFixed(2)}`,key:"Compras"},{label:"Histórico",val:(vessel.records||[]).length,color:"#7c3aed",sub:`$${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}`,key:"Historico"}].map(item=>(
           <div key={item.label} onClick={()=>{setMainFilter(item.key);setSubFilter("Todos");}} style={{padding:"12px 16px",background:mainFilter===item.key?"#eff6ff":"#fff",border:`1.5px solid ${mainFilter===item.key?"#2563eb":"#e2e8f0"}`,borderRadius:10,flex:1,minWidth:110,textAlign:"center",cursor:"pointer"}}>
             <div style={{fontSize:20,fontWeight:700,color:item.color}}>{item.val}</div>
             <div style={{fontSize:12,fontWeight:600,color:"#1e293b",marginTop:2}}>{item.label}</div>
@@ -1211,7 +1232,7 @@ function RecordsPage({ vessel }) {
       </>)}
       {mainFilter==="Historico"&&(<>
         <div style={{marginBottom:12,padding:"10px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,fontSize:13}}>Costo total histórico: <strong style={{color:"#16a34a"}}>${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}</strong></div>
-        <RecordTable rows={vessel.records.map(r=>({Fecha:r.date,Tipo:r.type,Equipo:r.equipment,Horas:r.hours,Descripción:r.desc,"Realizado por":r.performedBy,Costo:`$${r.cost.toLocaleString("en-US",{minimumFractionDigits:2})}`}))}/>
+        <RecordTable rows={(vessel.records||[]).map(r=>({Fecha:r.date,Tipo:r.type,Equipo:r.equipment,Horas:r.hours,Descripción:r.desc,"Realizado por":r.performedBy,Costo:`$${r.cost.toLocaleString("en-US",{minimumFractionDigits:2})}`}))}/>
       </>)}
       {showReport&&<ReportModal vessel={vessel} onClose={()=>setShowReport(false)}/>}
     </div>
@@ -1268,194 +1289,334 @@ function ReportModal({ vessel, onClose }) {
   };
 
   const generateHTML = () => {
-    const today = new Date().toLocaleDateString("es-VE");
+    const today = new Date().toLocaleDateString("es-VE", {day:"2-digit",month:"2-digit",year:"numeric"});
     const d = vessel.details || {};
-    const filteredLog  = filterByDate(vessel.log||[], "date");
+    const filteredLog   = filterByDate(vessel.log||[], "date");
     const filteredTasks = vessel.tasks || [];
-    const services     = filteredLog.filter(e=>e.type==="Servicio");
-    const inspections  = filteredLog.filter(e=>e.type==="Inspección");
-    const fuelLog      = filteredLog.filter(e=>e.type==="Combustible");
-    const salidas      = filteredLog.filter(e=>e.type==="Salida");
-    const compras      = filteredLog.filter(e=>e.type==="Compra");
-    const totalCost    = compras.reduce((a,e)=>a+(e.costUSD||0),0);
+    const services      = filteredLog.filter(e=>e.type==="Servicio");
+    const inspections   = filteredLog.filter(e=>e.type==="Inspección");
+    const fuelLog       = filteredLog.filter(e=>e.type==="Combustible");
+    const salidas       = filteredLog.filter(e=>e.type==="Salida");
+    const compras       = filteredLog.filter(e=>e.type==="Compra");
+    const totalCost     = compras.reduce((a,e)=>a+(e.costUSD||0),0);
+    const totalFuel     = fuelLog.reduce((a,e)=>a+(parseFloat(e.fuelQty)||0),0);
+    const fmtD = (d) => { if(!d)return"—"; const p=d.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; };
 
-    const tableStyle = `border-collapse:collapse;width:100%;margin-bottom:24px;font-size:12px;`;
-    const thStyle    = `background:#1e3a5f;color:#93c5fd;padding:8px 12px;text-align:left;font-size:11px;letter-spacing:0.05em;`;
-    const tdStyle    = `padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#475569;`;
-    const tdBold     = `${tdStyle}font-weight:600;color:#0f172a;`;
-    const secTitle   = `font-size:10px;font-weight:700;color:#0ea5e9;letter-spacing:0.12em;text-transform:uppercase;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid #0ea5e9;`;
+    const CSS = `
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;background:#fff;font-size:13px;line-height:1.5;}
+      @media print{.no-print{display:none!important;}@page{margin:0;size:A4;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+      table{width:100%;border-collapse:collapse;margin-bottom:32px;border-radius:10px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.07);}
+      thead tr{background:linear-gradient(90deg,#1e3a5f,#1d4ed8);}
+      th{padding:11px 16px;text-align:left;color:#bfdbfe;font-size:10.5px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
+      td{padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:12.5px;vertical-align:middle;}
+      tr:last-child td{border-bottom:none;}
+      tr:hover td{background:#f8fafc;}
+      .sec-header{display:flex;align-items:center;gap:10px;margin:36px 0 16px;}
+      .sec-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+      .sec-label{font-size:13px;font-weight:700;color:#0f172a;letter-spacing:0.02em;}
+      .sec-count{font-size:11px;color:#64748b;margin-top:1px;}
+      .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+      .badge-red{background:#fee2e2;color:#dc2626;}
+      .badge-yellow{background:#fef3c7;color:#d97706;}
+      .badge-green{background:#dcfce7;color:#16a34a;}
+      .badge-blue{background:#dbeafe;color:#1d4ed8;}
+      .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:16px;}
+      .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px;}
+      .stat{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;text-align:center;}
+      .stat-val{font-size:26px;font-weight:800;color:#1e3a8a;line-height:1;}
+      .stat-lbl{font-size:11px;color:#64748b;margin-top:6px;font-weight:500;}
+      .fuel-bar-wrap{background:#e2e8f0;border-radius:4px;height:6px;margin-top:6px;overflow:hidden;}
+      .fuel-bar{height:6px;border-radius:4px;background:linear-gradient(90deg,#0ea5e9,#2563eb);}
+      .td-bold{font-weight:600;color:#0f172a;}
+      .td-money{font-weight:700;color:#16a34a;}
+      .td-date{color:#64748b;white-space:nowrap;}
+      .divider{height:1px;background:#f1f5f9;margin:8px 0;}
+    `;
+
+    const sectionHeader = (icon, label, count, color="#dbeafe", iconBg="#1d4ed8") =>
+      `<div class="sec-header">
+        <div class="sec-icon" style="background:${color};color:${iconBg};">${icon}</div>
+        <div>
+          <div class="sec-label">${label}</div>
+          <div class="sec-count">${count}</div>
+        </div>
+      </div>`;
 
     let sections = "";
 
-    if (sel.includes("service") && services.length > 0) {
-      sections += `<div style="${secTitle}">🔧 Servicios (${services.length})</div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Tipo</th>
-        <th style="${thStyle}">Equipo</th><th style="${thStyle}">Descripción</th>
-        <th style="${thStyle}">Realizado por</th>
-      </tr></thead><tbody>
-      ${services.map(e=>`<tr>
-        <td style="${tdStyle}">${e.date||""}</td>
-        <td style="${tdStyle}">${e.serviceType||""}</td>
-        <td style="${tdBold}">${e.equipment||""}</td>
-        <td style="${tdStyle}">${e.desc||""}</td>
-        <td style="${tdStyle}">${e.performedBy||""}</td>
-      </tr>`).join("")}</tbody></table>`;
-    }
-
-    if (sel.includes("inspect") && inspections.length > 0) {
-      sections += `<div style="${secTitle}">🔍 Inspecciones (${inspections.length})</div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Equipo</th>
-        <th style="${thStyle}">Descripción</th><th style="${thStyle}">Realizado por</th>
-      </tr></thead><tbody>
-      ${inspections.map(e=>`<tr>
-        <td style="${tdStyle}">${e.date||""}</td>
-        <td style="${tdBold}">${e.equipment||""}</td>
-        <td style="${tdStyle}">${e.desc||""}</td>
-        <td style="${tdStyle}">${e.performedBy||""}</td>
-      </tr>`).join("")}</tbody></table>`;
-    }
-
+    // ── FUEL ──────────────────────────────────────────────────────────────────
     if (sel.includes("fuel") && fuelLog.length > 0) {
-      sections += `<div style="${secTitle}">⛽ Combustible (${fuelLog.length} repostajes)</div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Cantidad</th>
-        <th style="${thStyle}">Unidad</th><th style="${thStyle}">Notas</th>
-      </tr></thead><tbody>
-      ${fuelLog.map(e=>`<tr>
-        <td style="${tdStyle}">${e.date||""}</td>
-        <td style="${tdBold}">${e.fuelQty||""}</td>
-        <td style="${tdStyle}">${e.fuelUnit||""}</td>
-        <td style="${tdStyle}">${e.desc||""}</td>
-      </tr>`).join("")}</tbody></table>`;
+      sections += sectionHeader("⛽","Historial de Combustible",`${fuelLog.length} repostajes · Total: ${totalFuel.toFixed(0)} ${fuelLog[0]?.fuelUnit||"gal"}`,"#fef3c7","#d97706");
+      sections += `<table>
+        <thead><tr>
+          <th>Fecha</th><th>Cantidad</th><th>Unidad</th><th>Realizado por</th><th>Notas</th>
+        </tr></thead>
+        <tbody>
+          ${fuelLog.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+            <td class="td-date">${fmtD(e.date)}</td>
+            <td class="td-bold" style="font-size:15px;">${e.fuelQty||"—"}</td>
+            <td>${e.fuelUnit||"—"}</td>
+            <td>${e.performedBy||"—"}</td>
+            <td style="color:#64748b;">${e.desc||"—"}</td>
+          </tr>`).join("")}
+          <tr style="background:#f0f9ff;">
+            <td colspan="1" style="font-weight:700;color:#0369a1;padding:12px 16px;">TOTAL</td>
+            <td class="td-bold" style="font-size:16px;color:#0369a1;">${totalFuel.toFixed(0)}</td>
+            <td style="color:#0369a1;">${fuelLog[0]?.fuelUnit||"gal"}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>`;
     }
 
+    // ── SERVICES ──────────────────────────────────────────────────────────────
+    if (sel.includes("service") && services.length > 0) {
+      const prev = services.filter(e=>e.serviceType==="Preventivo").length;
+      const reac = services.filter(e=>e.serviceType==="Reactivo").length;
+      const rep  = services.filter(e=>e.serviceType==="Reparación").length;
+      sections += sectionHeader("🔧","Registro de Servicios",`${services.length} servicios — ${prev} preventivos · ${reac} reactivos · ${rep} reparaciones`,"#dbeafe","#1d4ed8");
+      sections += `<table>
+        <thead><tr>
+          <th>Fecha</th><th>Tipo</th><th>Sistema / Equipo</th><th>Descripción</th><th>Realizado por</th>
+        </tr></thead>
+        <tbody>
+          ${services.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+            <td class="td-date">${fmtD(e.date)}</td>
+            <td><span class="badge ${e.serviceType==="Preventivo"?"badge-green":e.serviceType==="Reactivo"?"badge-yellow":"badge-red"}">${e.serviceType||"—"}</span></td>
+            <td class="td-bold">${e.equipment||"—"}</td>
+            <td style="max-width:280px;">${e.desc||"—"}</td>
+            <td style="color:#64748b;">${e.performedBy||"—"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    // ── INSPECTIONS ───────────────────────────────────────────────────────────
+    if (sel.includes("inspect") && inspections.length > 0) {
+      sections += sectionHeader("🔍","Inspecciones Realizadas",`${inspections.length} inspecciones`,"#dcfce7","#16a34a");
+      sections += `<table>
+        <thead><tr><th>Fecha</th><th>Equipo / Sistema</th><th>Descripción</th><th>Realizado por</th></tr></thead>
+        <tbody>
+          ${inspections.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+            <td class="td-date">${fmtD(e.date)}</td>
+            <td class="td-bold">${e.equipment||"—"}</td>
+            <td>${e.desc||"—"}</td>
+            <td style="color:#64748b;">${e.performedBy||"—"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    // ── SALIDAS ───────────────────────────────────────────────────────────────
     if (sel.includes("salidas") && salidas.length > 0) {
-      sections += `<div style="${secTitle}">🚢 Salidas al Mar (${salidas.length})</div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Destino</th>
-        <th style="${thStyle}">Personas</th><th style="${thStyle}">Salida</th>
-        <th style="${thStyle}">Regreso</th><th style="${thStyle}">Clima</th>
-      </tr></thead><tbody>
-      ${salidas.map(e=>`<tr>
-        <td style="${tdStyle}">${e.date||""}</td>
-        <td style="${tdBold}">${e.dest||""}</td>
-        <td style="${tdStyle}">${e.persons||""}</td>
-        <td style="${tdStyle}">${e.deptTime||""}</td>
-        <td style="${tdStyle}">${e.arrTime||"Pendiente"}</td>
-        <td style="${tdStyle}">${e.salidaClima||""}</td>
-      </tr>`).join("")}</tbody></table>`;
+      const totalPersons = salidas.reduce((a,e)=>a+(parseInt(e.persons)||0),0);
+      sections += sectionHeader("🚢","Salidas al Mar",`${salidas.length} salidas · ${totalPersons} personas-viaje`,"#ede9fe","#7c3aed");
+      sections += `<table>
+        <thead><tr><th>Fecha</th><th>Destino</th><th>Personas</th><th>Salida</th><th>Regreso</th><th>Clima</th><th>Dueño</th></tr></thead>
+        <tbody>
+          ${salidas.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+            <td class="td-date">${fmtD(e.date)}</td>
+            <td class="td-bold">${e.dest||"—"}</td>
+            <td style="text-align:center;font-weight:600;">${e.persons||"—"}</td>
+            <td>${e.deptTime||"—"}</td>
+            <td>${e.arrTime||"<span style='color:#d97706'>Pendiente</span>"}</td>
+            <td style="color:#64748b;">${e.salidaClima||"—"}</td>
+            <td style="text-align:center;">${e.ownerAboard?"<span class='badge badge-green'>Sí</span>":"<span class='badge' style='background:#f1f5f9;color:#64748b;'>No</span>"}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
     }
 
+    // ── COSTS ─────────────────────────────────────────────────────────────────
     if (sel.includes("costs") && compras.length > 0) {
-      sections += `<div style="${secTitle}">💰 Compras y Costos — Total: $${totalCost.toFixed(2)}</div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Descripción</th>
-        <th style="${thStyle}">Marca</th><th style="${thStyle}">N° Parte</th>
-        <th style="${thStyle}">USD</th><th style="${thStyle}">Pago</th>
-      </tr></thead><tbody>
-      ${compras.map(e=>`<tr>
-        <td style="${tdStyle}">${e.date||""}</td>
-        <td style="${tdBold}">${e.item||""}</td>
-        <td style="${tdStyle}">${e.brand||""}</td>
-        <td style="${tdStyle}">${e.partNum||""}</td>
-        <td style="${tdBold};color:#16a34a;">$${e.costUSD||0}</td>
-        <td style="${tdStyle}">${e.payment||""}</td>
-      </tr>`).join("")}</tbody></table>`;
+      sections += sectionHeader("💰","Compras y Gastos",`${compras.length} ítems · Total: $${totalCost.toFixed(2)} USD`,"#dcfce7","#16a34a");
+      sections += `<table>
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Marca</th><th>Modelo</th><th>N° Parte</th><th>USD</th><th>Pago</th></tr></thead>
+        <tbody>
+          ${compras.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+            <td class="td-date">${fmtD(e.date)}</td>
+            <td class="td-bold">${e.item||"—"}</td>
+            <td style="color:#64748b;">${e.brand||"—"}</td>
+            <td style="color:#64748b;">${e.model2||"—"}</td>
+            <td style="font-family:monospace;font-size:11px;color:#475569;">${e.partNum||"—"}</td>
+            <td class="td-money">$${(e.costUSD||0).toFixed(2)}</td>
+            <td><span class="badge badge-blue">${e.payment||"—"}</span></td>
+          </tr>`).join("")}
+          <tr style="background:#f0fdf4;">
+            <td colspan="5" style="font-weight:700;color:#15803d;padding:12px 16px;">TOTAL</td>
+            <td class="td-money" style="font-size:16px;">$${totalCost.toFixed(2)}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>`;
     }
 
+    // ── TASKS ─────────────────────────────────────────────────────────────────
     if (sel.includes("tasks")) {
       const overdue = filteredTasks.filter(t=>t.status==="overdue");
       const due     = filteredTasks.filter(t=>t.status==="due");
       const ok      = filteredTasks.filter(t=>t.status==="ok");
-      sections += `<div style="${secTitle}">☑ Estado de Tareas (${filteredTasks.length} total)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#dc2626;">${overdue.length}</div><div style="font-size:11px;color:#dc2626;">Vencidas</div></div>
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#d97706;">${due.length}</div><div style="font-size:11px;color:#d97706;">Por vencer</div></div>
-        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#16a34a;">${ok.length}</div><div style="font-size:11px;color:#16a34a;">Al día</div></div>
-      </div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Sistema</th><th style="${thStyle}">Tarea</th>
-        <th style="${thStyle}">Próx. Venc.</th><th style="${thStyle}">Estado</th>
-      </tr></thead><tbody>
-      ${filteredTasks.map(t=>`<tr>
-        <td style="${tdStyle}">${t.system||""}</td>
-        <td style="${tdBold}">${t.name||""}</td>
-        <td style="${tdStyle}">${t.nextDue||""}</td>
-        <td style="${tdStyle};color:${t.status==="overdue"?"#dc2626":t.status==="due"?"#d97706":"#16a34a"};font-weight:600;">${t.status==="overdue"?"Vencido":t.status==="due"?"Por vencer":"Al día"}</td>
-      </tr>`).join("")}</tbody></table>`;
-    }
-
-    if (sel.includes("log")) {
-      sections += `<div style="${secTitle}">📓 Bitácora Completa (${filteredLog.length} entradas)</div>
-      <table style="${tableStyle}"><thead><tr>
-        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Tipo</th>
-        <th style="${thStyle}">Detalle</th><th style="${thStyle}">Realizado por</th>
-      </tr></thead><tbody>
-      ${filteredLog.map(e=>`<tr>
-        <td style="${tdStyle}">${e.date||""}</td>
-        <td style="${tdStyle}">${e.type||""}${e.serviceType?` · ${e.serviceType}`:""}</td>
-        <td style="${tdBold}">${e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p`:e.type==="Compra"?e.item||"":e.desc||""}</td>
-        <td style="${tdStyle}">${e.performedBy||""}</td>
-      </tr>`).join("")}</tbody></table>`;
-    }
-
-    if (sel.includes("sale") || sel.includes("insurance")) {
-      sections += `<div style="${secTitle}">📋 Información Técnica del Barco</div>
-      <table style="${tableStyle}"><tbody>
-        ${[["Fabricante / Modelo",`${d.manufacturer||""} ${d.model||""}`],["Año",d.year||""],["Tipo de Casco",d.hullType||""],["Puerto Base",d.homePort||""],["Serial (HIN)",d.hin||""],["Eslora",d.loa||""],["Manga",d.beam||""],["Desplazamiento",d.displacement||""]].map(([k,v])=>`<tr><td style="${tdStyle}">${k}</td><td style="${tdBold}">${v||"—"}</td></tr>`).join("")}
-      </tbody></table>`;
-    }
-
-    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-    <title>Reporte NautiTrack — ${vessel.name}</title>
-    <style>
-      * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; background:#fff; }
-      @media print { .no-print { display:none; } body { padding:0; } }
-    </style></head>
-    <body style="padding:0;">
-      <!-- Header -->
-      <div style="background:linear-gradient(135deg,#0f2744,#1e3a8a);padding:32px 48px;color:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-          <div>
-            <div style="font-size:11px;letter-spacing:0.15em;opacity:0.7;margin-bottom:6px;">REPORTE OFICIAL</div>
-            <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">NautiTrack<span style="color:#38bdf8;">.VZ</span></div>
-            <div style="font-size:13px;opacity:0.8;margin-top:4px;">Gestión inteligente de embarcaciones</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:22px;font-weight:700;">${vessel.name}</div>
-            <div style="font-size:13px;opacity:0.8;margin-top:4px;">${vessel.type||""} · ${vessel.marina||""}</div>
-            <div style="font-size:11px;opacity:0.6;margin-top:8px;">Generado: ${today}</div>
-            ${from||to?`<div style="font-size:11px;opacity:0.6;">Período: ${from||"inicio"} → ${to||"hoy"}</div>`:""}
-          </div>
+      sections += sectionHeader("☑","Estado de Mantenimiento",`${filteredTasks.length} tareas programadas`,"#dbeafe","#1d4ed8");
+      sections += `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+        <div class="card" style="border-left:4px solid #dc2626;text-align:center;">
+          <div style="font-size:32px;font-weight:800;color:#dc2626;">${overdue.length}</div>
+          <div style="font-size:12px;color:#dc2626;font-weight:600;margin-top:4px;">Vencidas</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Requieren atención inmediata</div>
+        </div>
+        <div class="card" style="border-left:4px solid #d97706;text-align:center;">
+          <div style="font-size:32px;font-weight:800;color:#d97706;">${due.length}</div>
+          <div style="font-size:12px;color:#d97706;font-weight:600;margin-top:4px;">Por Vencer</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Próximos 14 días</div>
+        </div>
+        <div class="card" style="border-left:4px solid #16a34a;text-align:center;">
+          <div style="font-size:32px;font-weight:800;color:#16a34a;">${ok.length}</div>
+          <div style="font-size:12px;color:#16a34a;font-weight:600;margin-top:4px;">Al Día</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Sin pendientes</div>
         </div>
       </div>
-      <!-- Summary bar -->
-      <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:16px 48px;display:flex;gap:32px;">
-        ${[
-          ["📋 Bitácora",(vessel.log||[]).length+" entradas"],
-          ["☑ Tareas",(vessel.tasks||[]).length+" registradas"],
-          ["💰 Compras","$"+totalCost.toFixed(2)+" USD"],
-          ["🚢 Salidas",salidas.length+" salidas"],
-        ].map(([k,v])=>`<div><div style="font-size:18px;font-weight:700;color:#1e3a8a;">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px;">${k}</div></div>`).join('<div style="width:1px;background:#e2e8f0;"></div>')}
+      <table>
+        <thead><tr><th>Sistema</th><th>Equipo</th><th>Tarea</th><th>Intervalo</th><th>Próx. Venc.</th><th>Estado</th></tr></thead>
+        <tbody>
+          ${filteredTasks.sort((a,b)=>a.status==="overdue"?-1:b.status==="overdue"?1:0).map((t,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+            <td style="color:#64748b;">${t.system||"—"}</td>
+            <td class="td-bold">${t.equipment||"—"}</td>
+            <td>${t.name||"—"}</td>
+            <td style="color:#64748b;">${t.interval||"—"}</td>
+            <td class="td-date">${fmtD(t.nextDue)}</td>
+            <td><span class="badge ${t.status==="overdue"?"badge-red":t.status==="due"?"badge-yellow":"badge-green"}">${t.status==="overdue"?"Vencido":t.status==="due"?"Por vencer":"Al día"}</span></td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    // ── FULL LOG ──────────────────────────────────────────────────────────────
+    if (sel.includes("log")) {
+      sections += sectionHeader("📓","Bitácora Completa",`${filteredLog.length} entradas registradas`,"#f1f5f9","#475569");
+      sections += `<table>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Realizado por</th></tr></thead>
+        <tbody>
+          ${filteredLog.map((e,i)=>{
+            const typeColors = {Servicio:"badge-blue",Inspección:"badge-green",Combustible:"badge-yellow",Salida:"#ede9fe color:#7c3aed",Compra:"badge-blue"};
+            const detail = e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p`:e.type==="Compra"?e.item||"":e.desc||"";
+            return `<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+              <td class="td-date">${fmtD(e.date)}</td>
+              <td><span class="badge badge-blue">${e.type}${e.serviceType?` · ${e.serviceType}`:""}</span></td>
+              <td class="td-bold">${detail}</td>
+              <td style="color:#64748b;">${e.performedBy||"—"}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    // ── VESSEL INFO (for sale/insurance) ─────────────────────────────────────
+    if (sel.includes("sale") || sel.includes("insurance")) {
+      sections += sectionHeader("📋","Información Técnica de la Embarcación","Datos del registro oficial","#f1f5f9","#475569");
+      sections += `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:#0ea5e9;letter-spacing:0.1em;margin-bottom:12px;">IDENTIFICACIÓN</div>
+          ${[["Nombre",vessel.name],["Fabricante",d.manufacturer],["Modelo",d.model],["Año",d.year],["Serial (HIN)",d.hin],["USCG #",d.uscg]].map(([k,v])=>`
+            <div class="divider"></div>
+            <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;padding:4px 0;">
+              <span style="font-size:11px;color:#94a3b8;">${k}</span>
+              <span style="font-size:12px;font-weight:600;color:#0f172a;">${v||"—"}</span>
+            </div>`).join("")}
+        </div>
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:#0ea5e9;letter-spacing:0.1em;margin-bottom:12px;">DIMENSIONES</div>
+          ${[["Puerto Base",d.homePort],["Eslora",d.loa],["Manga",d.beam],["Calado",d.draft],["Desplazamiento",d.displacement],["Tipo de Casco",d.hullType]].map(([k,v])=>`
+            <div class="divider"></div>
+            <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;padding:4px 0;">
+              <span style="font-size:11px;color:#94a3b8;">${k}</span>
+              <span style="font-size:12px;font-weight:600;color:#0f172a;">${v||"—"}</span>
+            </div>`).join("")}
+        </div>
+      </div>`;
+    }
+
+    // ── FULL HTML ─────────────────────────────────────────────────────────────
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reporte — ${vessel.name} — ${today}</title>
+  <style>${CSS}</style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 60%,#0ea5e9 100%);padding:40px 56px;color:#fff;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.04);"></div>
+    <div style="position:absolute;bottom:-60px;left:200px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,0.03);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;">
+      <div>
+        <div style="font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:8px;text-transform:uppercase;">Reporte Oficial de Embarcación</div>
+        <div style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;">NautiTrack<span style="color:#38bdf8;">.VZ</span></div>
+        <div style="font-size:13px;opacity:0.7;">Gestión inteligente de embarcaciones marinas</div>
       </div>
-      <!-- Content -->
-      <div style="padding:32px 48px;">
-        ${sections || '<p style="color:#94a3b8;text-align:center;padding:40px;">No se seleccionaron secciones para este reporte.</p>'}
+      <div style="text-align:right;">
+        <div style="font-size:26px;font-weight:800;margin-bottom:4px;">${vessel.name}</div>
+        <div style="font-size:13px;opacity:0.75;margin-bottom:2px;">${vessel.type||""} · ${vessel.marina||""}</div>
+        ${vessel.captain?`<div style="font-size:12px;opacity:0.6;">Cap. ${vessel.captain}</div>`:""}
+        <div style="font-size:11px;opacity:0.5;margin-top:8px;">Generado: ${today}</div>
+        ${from||to?`<div style="font-size:11px;opacity:0.5;">Período: ${from?fmtD(from):"inicio"} → ${to?fmtD(to):"hoy"}</div>`:""}
       </div>
-      <!-- Footer -->
-      <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 48px;display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:11px;color:#94a3b8;">NautiTrack.VZ — nautitrack.vercel.app</div>
-        <div style="font-size:11px;color:#94a3b8;">Documento confidencial — ${vessel.name} — ${today}</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY STATS -->
+  <div style="padding:24px 56px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-val">${(vessel.log||[]).length}</div>
+        <div class="stat-lbl">📋 Entradas Bitácora</div>
       </div>
-      <!-- Print button -->
-      <div class="no-print" style="position:fixed;bottom:24px;right:24px;display:flex;gap:10px;">
-        <button onclick="window.print()" style="padding:12px 20px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(29,78,216,0.4);">🖨️ Imprimir / PDF</button>
-        <button onclick="window.close()" style="padding:12px 20px;background:#fff;color:#475569;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;cursor:pointer;">✕ Cerrar</button>
+      <div class="stat">
+        <div class="stat-val">${(vessel.tasks||[]).filter(t=>t.status==="overdue").length}</div>
+        <div class="stat-lbl" style="color:#dc2626;">⚠ Tareas Vencidas</div>
       </div>
-    </body></html>`;
+      <div class="stat">
+        <div class="stat-val" style="font-size:20px;">$${totalCost.toFixed(0)}</div>
+        <div class="stat-lbl">💰 Total Compras USD</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">${salidas.length}</div>
+        <div class="stat-lbl">🚢 Salidas al Mar</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div style="padding:32px 56px;">
+    ${sections || `<div style="text-align:center;padding:60px 0;color:#94a3b8;">
+      <div style="font-size:40px;margin-bottom:16px;">📄</div>
+      <div style="font-size:16px;font-weight:600;color:#475569;">Sin secciones seleccionadas</div>
+    </div>`}
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#0a1628;color:rgba(255,255,255,0.5);padding:20px 56px;display:flex;justify-content:space-between;align-items:center;margin-top:40px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="font-size:14px;font-weight:700;color:#38bdf8;">NautiTrack.VZ</div>
+      <div style="font-size:11px;">— nautitrack.vercel.app</div>
+    </div>
+    <div style="font-size:11px;">Documento confidencial · ${vessel.name} · ${today}</div>
+  </div>
+
+  <!-- PRINT BUTTON -->
+  <div class="no-print" style="position:fixed;bottom:28px;right:28px;display:flex;gap:10px;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.2));">
+    <button onclick="window.print()" style="padding:13px 22px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+      🖨️ Imprimir / Guardar PDF
+    </button>
+    <button onclick="window.close()" style="padding:13px 18px;background:#fff;color:#475569;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;cursor:pointer;">
+      ✕
+    </button>
+  </div>
+</body>
+</html>`;
   };
 
   const openReport = () => {
@@ -1750,8 +1911,10 @@ Formato tu respuesta de forma clara y estructurada.`}]
 function ProfileModal({ vessel, updateVessel, onClose }) {
   const [tab,setTab]   = useState("profile");
   const [form,setForm] = useState({...vessel.profile});
+  const [config,setConfig] = useState(vessel.config||{distUnit:"nm",speedUnit:"kn",fuelUnit:"gal",tempUnit:"C"});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const save=()=>{updateVessel({...vessel,profile:form});onClose();};
+  const setcfg=(k,v)=>setConfig(c=>({...c,[k]:v}));
+  const save=()=>{updateVessel({...vessel,profile:form,config});onClose();};
   const sub=vessel.subscription||{};
   const planFeatures={Basic:["1 embarcación","Bitácora básica","Tareas ilimitadas","Soporte email"],Pro:["Hasta 3 embarcaciones","Bitácora con fotos","Records y reportes","Proveedores","Soporte prioritario"],Fleet:["Embarcaciones ilimitadas","Todo lo de Pro","API access","Reportes automáticos","Gerente de cuenta"]};
   return (
@@ -1759,7 +1922,7 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
       <div style={{...s.modalBox,maxWidth:560}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>👤 Mi Cuenta</div><button onClick={onClose} style={s.modalClose}>✕</button></div>
         <div style={{display:"flex",borderBottom:"1px solid #e2e8f0",padding:"0 24px"}}>
-          {[{key:"profile",label:"Mi Perfil"},{key:"subscription",label:"Suscripción"}].map(t=>(
+          {[{key:"profile",label:"Mi Perfil"},{key:"config",label:"⚙️ Unidades"},{key:"subscription",label:"Suscripción"}].map(t=>(
             <button key={t.key} onClick={()=>setTab(t.key)} style={{padding:"10px 16px",background:"none",border:"none",borderBottom:tab===t.key?"2px solid #0ea5e9":"2px solid transparent",cursor:"pointer",fontSize:13,color:tab===t.key?"#0ea5e9":"#64748b",fontWeight:tab===t.key?600:400}}>{t.label}</button>
           ))}
         </div>
@@ -1777,6 +1940,30 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
               <div><label style={s.label}>Teléfono</label><input value={form.phone||""} onChange={e=>set("phone",e.target.value)} style={s.input}/></div>
               <div><label style={s.label}>Email</label><input type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} style={s.input}/></div>
               <div><label style={s.label}>Ubicación de la Marina</label><input value={form.marinaAddress||""} onChange={e=>set("marinaAddress",e.target.value)} style={s.input}/></div>
+            </div>
+          )}
+          {tab==="config"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:20}}>
+              <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#0369a1"}}>
+                ⚙️ Configura las unidades de medida que se usarán en toda la aplicación.
+              </div>
+              {[
+                {label:"Distancia", key:"distUnit", opts:[{v:"nm",l:"Millas Náuticas (nm)"},{v:"km",l:"Kilómetros (km)"},{v:"mi",l:"Millas terrestres (mi)"}]},
+                {label:"Velocidad", key:"speedUnit", opts:[{v:"kn",l:"Nudos (kn)"},{v:"kmh",l:"Km/h"},{v:"mph",l:"Mph"}]},
+                {label:"Combustible", key:"fuelUnit", opts:[{v:"gal",l:"Galones (gal)"},{v:"lts",l:"Litros (lts)"},{v:"%",l:"Porcentaje (%)"}]},
+                {label:"Temperatura", key:"tempUnit", opts:[{v:"C",l:"Celsius (°C)"},{v:"F",l:"Fahrenheit (°F)"}]},
+              ].map(({label,key,opts})=>(
+                <div key={key}>
+                  <label style={s.label}>{label}</label>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                    {opts.map(o=>(
+                      <button key={o.v} onClick={()=>setcfg(key,o.v)} style={{padding:"8px 14px",border:"1.5px solid",borderRadius:8,fontSize:12,cursor:"pointer",background:config[key]===o.v?"#eff6ff":"#f8fafc",borderColor:config[key]===o.v?"#2563eb":"#e2e8f0",color:config[key]===o.v?"#2563eb":"#64748b",fontWeight:config[key]===o.v?700:400}}>
+                        {o.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           {tab==="subscription"&&(
@@ -1818,6 +2005,7 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
 
   // General info editable
   const [gen, setGen] = useState({
+    name: vessel.name||"",
     manufacturer: d.manufacturer||"", model: d.model||"", year: d.year||"",
     hullType: d.hullType||"", homePort: d.homePort||"", uscg: d.uscg||"",
     built: d.built||"", hin: d.hin||"",
@@ -1881,6 +2069,7 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
 
   const saveAll = () => {
     updateVessel({...vessel,
+      name: gen.name||vessel.name,
       photo: vesselPhoto,
       crew2: crew, crew: crew.map(x=>x.name),
       motors: motors.slice(0,numMotors).map(m=>m.name),
@@ -1898,14 +2087,14 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
     setEditMode(false);
   };
 
-  const EditField = ({label, value, onChange, placeholder}) => editMode
+  const EditField = ({value, onChange, placeholder}) => editMode
     ? <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder||""} style={{...s.input,padding:"5px 8px",fontSize:12}}/>
     : <span style={s.detailVal}>{value||"—"}</span>;
 
   const Row = ({label, value, onChange, placeholder}) => (
     <div style={s.detailRow}>
       <span style={s.detailKey}>{label}</span>
-      <EditField label={label} value={value} onChange={onChange} placeholder={placeholder}/>
+      <EditField value={value} onChange={onChange} placeholder={placeholder}/>
     </div>
   );
 
@@ -1914,7 +2103,10 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
       <div style={{...s.modalBox,maxWidth:640}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div>
-            <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div>
+            {editMode
+              ? <input value={gen.name||vessel.name} onChange={e=>setGen(g=>({...g,name:e.target.value}))} style={{...s.input,fontSize:16,fontWeight:700,padding:"4px 8px",width:240}} placeholder="Nombre del barco"/>
+              : <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div>
+            }
             <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Detalles de la Embarcación</div>
           </div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -2018,7 +2210,7 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
               <div style={s.secTitle}>Motores</div>
               {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° motores:</span>
-                <select value={numMotors} onChange={e=>{const n=parseInt(e.target.value);setNumMotors(n);setMotors(t=>{const arr=[...t];const names=["Motor Estribor","Motor Babor","Motor Centro","Motor 4","Motor 5","Motor 6"];while(arr.length<n)arr.push({name:names[arr.length]||`Motor ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
+                <select value={numMotors} onChange={e=>{const n=parseInt(e.target.value);setNumMotors(n);setMotors(t=>{const arr=[...t];const names=["Motor Estribor","Motor Babor","Motor Centro","Motor Centro Estribor","Motor Centro Babor","Motor Central"];while(arr.length<n)arr.push({name:names[arr.length]||`Motor ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
                   {[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}
                 </select>
               </div>}
@@ -2261,9 +2453,9 @@ const s = {
   modalBody:  { flex:1, overflowY:"auto", padding:"20px 24px" },
   modalFooter: { display:"flex", justifyContent:"flex-end", gap:8, padding:"14px 24px", borderTop:"1px solid #e2e8f0", flexShrink:0 },
   secTitle:   { fontSize:10, fontWeight:700, letterSpacing:"0.12em", color:"#0ea5e9", textTransform:"uppercase", marginBottom:8, paddingBottom:6, borderBottom:"1px solid #e2e8f0" },
-  detailRow:  { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:"1px solid #f8fafc" },
-  detailKey:  { fontSize:12, color:"#94a3b8" },
-  detailVal:  { fontSize:12, fontWeight:600, color:"#1e293b", textAlign:"right" },
+  detailRow:  { display:"grid", gridTemplateColumns:"160px 1fr", alignItems:"center", padding:"8px 0", borderBottom:"1px solid #f1f5f9", gap:12 },
+  detailKey:  { fontSize:12, color:"#94a3b8", flexShrink:0 },
+  detailVal:  { fontSize:12, fontWeight:600, color:"#1e293b" },
   label:      { display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:5 },
   input:      { width:"100%", padding:"8px 11px", border:"1.5px solid #e2e8f0", borderRadius:8, fontSize:13, color:"#1e293b", background:"#fff", boxSizing:"border-box", outline:"none" },
   errMsg:     { fontSize:11, color:"#dc2626", marginTop:3 },
