@@ -597,8 +597,12 @@ function LogCard({ vessel, setPage }) {
 }
 
 function WeatherBar({ vessel }) {
-  const [weather, setWeather] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [weather, setWeather]   = useState(null);
+  const [forecast, setForecast] = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  const ICONS = {"01":"☀️","02":"⛅","03":"☁️","04":"☁️","09":"🌧","10":"🌦","11":"⛈","13":"❄️","50":"🌫"};
+  const DAYS  = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
   useEffect(() => {
     const city    = vessel.details?.city    || "";
@@ -606,59 +610,105 @@ function WeatherBar({ vessel }) {
     const country = vessel.details?.country || "";
     const query   = [city, state, country].filter(Boolean).join(",") || vessel.marina || "Caracas";
     const isLocal = window.location.hostname === "localhost";
-    const url = isLocal
-      ? `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(query)}&appid=756f12d0c20d29f76808839251369ef7&units=metric&lang=es`
+    const KEY     = "756f12d0c20d29f76808839251369ef7";
+
+    const currentUrl = isLocal
+      ? `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(query)}&appid=${KEY}&units=metric&lang=es`
       : `/api/weather?city=${encodeURIComponent(query)}`;
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (data.main) {
-          const icons = {
-            "01":"☀️","02":"⛅","03":"☁️","04":"☁️",
-            "09":"🌧","10":"🌦","11":"⛈","13":"❄️","50":"🌫"
+
+    const forecastUrl = isLocal
+      ? `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(query)}&appid=${KEY}&units=metric&lang=es&cnt=40`
+      : `/api/forecast?city=${encodeURIComponent(query)}`;
+
+    // Current weather
+    fetch(currentUrl).then(r=>r.json()).then(data => {
+      if (data.main) {
+        const code = (data.weather?.[0]?.icon||"01").slice(0,2);
+        setWeather({
+          temp:      Math.round(data.main.temp),
+          feels:     Math.round(data.main.feels_like),
+          humidity:  data.main.humidity,
+          wind:      Math.round((data.wind?.speed||0)*1.944),
+          condition: data.weather?.[0]?.description || "",
+          icon:      ICONS[code] || "🌤",
+          city:      data.name || query,
+        });
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+
+    // 5-day forecast — group by day, take midday reading
+    fetch(forecastUrl).then(r=>r.json()).then(data => {
+      if (!data.list) return;
+      const byDay = {};
+      data.list.forEach(item => {
+        const d = new Date(item.dt * 1000);
+        const key = d.toDateString();
+        const hour = d.getHours();
+        // prefer midday reading (12-15h), otherwise take first
+        if (!byDay[key] || (hour >= 12 && hour <= 15)) {
+          byDay[key] = {
+            day:  DAYS[d.getDay()],
+            icon: ICONS[(item.weather?.[0]?.icon||"01").slice(0,2)] || "🌤",
+            high: Math.round(item.main.temp_max),
+            low:  Math.round(item.main.temp_min),
+            desc: item.weather?.[0]?.description || "",
           };
-          const code = (data.weather?.[0]?.icon||"01").slice(0,2);
-          setWeather({
-            temp:   Math.round(data.main.temp),
-            feels:  Math.round(data.main.feels_like),
-            humidity: data.main.humidity,
-            wind:   Math.round((data.wind?.speed||0)*1.944), // m/s to kn
-            condition: data.weather?.[0]?.description || "",
-            icon:   icons[code] || "🌤",
-            city:   data.name || marina,
-          });
         }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      });
+      // skip today, take next 5
+      const days = Object.values(byDay).slice(1, 6);
+      setForecast(days);
+    }).catch(() => {});
   }, [vessel.details?.city, vessel.details?.state, vessel.details?.country, vessel.marina]);
 
-  const w = weather || { temp:"—", wind:"—", humidity:"—", condition:"Cargando...", icon:"🌤", city: vessel.marina||"" };
+  const w = weather || { temp:"—", wind:"—", humidity:"—", condition: loading?"Cargando...":"Sin datos", icon:"🌤", city: vessel.marina||"" };
 
   return (
-    <div style={{...s.card,display:"flex",alignItems:"center",gap:24,padding:"14px 24px",flexWrap:"wrap"}}>
-      <div style={{display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-        <span style={{fontSize:36}}>{loading?"⏳":w.icon}</span>
+    <div style={{...s.card,display:"flex",alignItems:"center",gap:0,padding:"14px 20px",flexWrap:"nowrap",overflow:"hidden"}}>
+      {/* Current weather */}
+      <div style={{display:"flex",alignItems:"center",gap:12,flexShrink:0,minWidth:160}}>
+        <span style={{fontSize:34}}>{loading?"⏳":w.icon}</span>
         <div>
-          <div style={{fontSize:24,fontWeight:700,color:"#0f172a"}}>{w.temp}{weather?"°C":""}</div>
-          <div style={{fontSize:12,color:"#64748b",textTransform:"capitalize"}}>{w.condition}</div>
-          <div style={{fontSize:11,color:"#94a3b8"}}>📍 {w.city}</div>
+          <div style={{fontSize:22,fontWeight:800,color:"#0f172a",lineHeight:1}}>{w.temp}{weather?"°C":""}</div>
+          <div style={{fontSize:11,color:"#64748b",textTransform:"capitalize",marginTop:2}}>{w.condition}</div>
+          <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>📍 {w.city}</div>
         </div>
       </div>
-      <div style={{width:1,height:44,background:"#e2e8f0"}} />
-      <div style={{display:"flex",gap:20,flex:1,flexWrap:"wrap"}}>
+
+      {/* Divider */}
+      <div style={{width:1,height:44,background:"#e2e8f0",flexShrink:0,margin:"0 16px"}}/>
+
+      {/* Current stats */}
+      <div style={{display:"flex",gap:16,flexShrink:0}}>
         {[
           ["💨", weather?`${w.wind} kn`:"—", "Viento"],
           ["💧", weather?`${w.humidity}%`:"—", "Humedad"],
           ["🌡", weather?`${w.feels}°C`:"—", "Sensación"],
-          ["📍", vessel.marina||"—", "Marina"],
         ].map(([ic,val,lbl]) => (
           <div key={lbl} style={{textAlign:"center"}}>
-            <div style={{fontSize:13,fontWeight:600}}>{ic} {val}</div>
-            <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{lbl}</div>
+            <div style={{fontSize:12,fontWeight:600,color:"#1e293b"}}>{ic} {val}</div>
+            <div style={{fontSize:9,color:"#94a3b8",marginTop:1}}>{lbl}</div>
           </div>
         ))}
       </div>
+
+      {/* Divider */}
+      {forecast.length>0&&<div style={{width:1,height:44,background:"#e2e8f0",flexShrink:0,margin:"0 16px"}}/>}
+
+      {/* 5-day forecast */}
+      {forecast.length>0&&(
+        <div style={{display:"flex",gap:10,flex:1,justifyContent:"space-around",minWidth:0}}>
+          {forecast.map((d,i)=>(
+            <div key={i} style={{textAlign:"center",flexShrink:0}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#64748b",marginBottom:2}}>{d.day}</div>
+              <div style={{fontSize:18,lineHeight:1,marginBottom:2}}>{d.icon}</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#0f172a"}}>{d.high}°</div>
+              <div style={{fontSize:10,color:"#94a3b8"}}>{d.low}°</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
