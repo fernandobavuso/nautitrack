@@ -150,19 +150,96 @@ export default function App() {
   const [showProviders, setShowProviders]         = useState(false);
   const [showProfile, setShowProfile]             = useState(false);
 
+  // ── Supabase helpers ──────────────────────────────────────────────────────
+  const fetchTasks = async (vesselId) => {
+    const { data } = await supabase.from("tasks").select("*").eq("vessel_id", vesselId).order("created_at");
+    return (data || []).map(t => ({
+      id: t.id, systemId: t.system_id, system: t.system_name,
+      equipment: t.equipment, name: t.name, assigned: t.assigned,
+      interval: t.interval, nextDue: t.next_due, status: t.status,
+      notes: t.notes, photos: t.photos || [],
+    }));
+  };
+
+  const fetchLog = async (vesselId) => {
+    const { data } = await supabase.from("log_entries").select("*").eq("vessel_id", vesselId).order("date", { ascending: false });
+    return (data || []).map(e => ({
+      id: e.id, date: e.date, type: e.type, serviceType: e.service_type,
+      systemId: e.system_id, equipment: e.equipment, desc: e.description,
+      performedBy: e.performed_by, fuelQty: e.fuel_qty, fuelUnit: e.fuel_unit,
+      equipHours: e.equip_hours, photos: e.photos || [],
+      brand: e.brand, model2: e.model2, partNum: e.part_num,
+      costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
+      item: e.item, dest: e.dest, persons: e.persons,
+      ownerAboard: e.owner_aboard, crewSel: e.crew_sel || [],
+      deptTime: e.dept_time, arrTime: e.arr_time,
+      fuelOut: e.fuel_out, fuelIn: e.fuel_in,
+      engineHrsOut: e.eng_out, engineHrsIn: e.eng_in,
+      genHrsOut: e.gen_out, genHrsIn: e.gen_in, salidaClima: e.clima,
+    }));
+  };
+
+  const addTask = useCallback(async (vesselId, ownerId, task) => {
+    const { data } = await supabase.from("tasks").insert({
+      vessel_id: vesselId, owner_id: ownerId,
+      system_id: task.systemId, system_name: task.system,
+      equipment: task.equipment, name: task.name,
+      assigned: task.assigned, interval: task.interval,
+      next_due: task.nextDue, status: task.status,
+      notes: task.notes, photos: task.photos || [],
+    }).select().single();
+    if (data) {
+      const mapped = { ...task, id: data.id };
+      setVessels(vs => vs.map(v => v.id === vesselId ? { ...v, tasks: [...(v.tasks||[]), mapped] } : v));
+    }
+  }, []);
+
+  const addLogEntry = useCallback(async (vesselId, ownerId, entry) => {
+    const { data } = await supabase.from("log_entries").insert({
+      vessel_id: vesselId, owner_id: ownerId,
+      date: entry.date, type: entry.type,
+      service_type: entry.serviceType, system_id: entry.systemId,
+      equipment: entry.equipment, description: entry.desc,
+      performed_by: entry.performedBy, fuel_qty: entry.fuelQty,
+      fuel_unit: entry.fuelUnit, equip_hours: entry.equipHours,
+      photos: entry.photos || [],
+      brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
+      cost_usd: entry.costUSD, cost_bs: entry.costBs, payment: entry.payment,
+      item: entry.item, dest: entry.dest, persons: entry.persons,
+      owner_aboard: entry.ownerAboard, crew_sel: entry.crewSel || [],
+      dept_time: entry.deptTime, arr_time: entry.arrTime,
+      fuel_out: entry.fuelOut, fuel_in: entry.fuelIn,
+      eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
+      gen_out: entry.genHrsOut, gen_in: entry.genHrsIn, clima: entry.salidaClima,
+    }).select().single();
+    if (data) {
+      const mapped = { ...entry, id: data.id };
+      setVessels(vs => vs.map(v => {
+        if (v.id !== vesselId) return v;
+        let updated = { ...v, log: [mapped, ...(v.log||[])] };
+        if (entry.type === "Combustible" && entry.fuelQty != null) {
+          updated.fuel = entry.fuelQty;
+          updated.fuelUnit = entry.fuelUnit || v.fuelUnit;
+        }
+        return updated;
+      }));
+    }
+  }, []);
+
   // All hooks must be before any early returns
   const updateVessel = useCallback(async (updated) => {
-    // Update local state immediately for snappy UI
     setVessels(vs => vs.map(v => v.id === updated.id ? updated : v));
-    // Persist to Supabase
-    const { details, crew, crew2, motors, generators, custom_systems, providers, photo, ...rest } = updated;
+    const { details, crew, crew2, motors, generators, custom_systems, providers, photo, tasks, log, records, alerts, weather, fuelUnit, engineHours, genHours, customSystems, ...rest } = updated;
     await supabase.from("vessels").update({
       ...rest,
+      fuel_unit: fuelUnit || updated.fuel_unit,
+      engine_hours: engineHours || updated.engine_hours,
+      gen_hours: genHours || updated.gen_hours,
       details: details || {},
       crew: crew || [],
       motors: motors || [],
       generators: generators || [],
-      custom_systems: custom_systems || [],
+      custom_systems: customSystems || custom_systems || [],
       providers: providers || [],
       photo_url: photo || null,
     }).eq("id", updated.id);
@@ -170,24 +247,21 @@ export default function App() {
 
   const fetchVessels = useCallback(async (uid) => {
     setVesselsLoading(true);
-    const { data } = await supabase
-      .from("vessels")
-      .select("*")
-      .eq("owner_id", uid)
-      .order("created_at", { ascending: true });
-    const mapped = (data || []).map(v => ({
-      ...v,
-      fuelUnit: v.fuel_unit || "gal",
-      engineHours: v.engine_hours || 0,
-      genHours: v.gen_hours || 0,
-      customSystems: v.custom_systems || [],
-      photo: v.photo_url || null,
-      // Add default empty arrays for UI
-      tasks: v.tasks || [],
-      log: v.log || [],
-      records: v.records || [],
-      alerts: 0,
-      weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
+    const { data } = await supabase.from("vessels").select("*").eq("owner_id", uid).order("created_at", { ascending: true });
+    const mapped = await Promise.all((data || []).map(async v => {
+      const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
+      return {
+        ...v,
+        fuelUnit: v.fuel_unit || "gal",
+        engineHours: v.engine_hours || 0,
+        genHours: v.gen_hours || 0,
+        customSystems: v.custom_systems || [],
+        photo: v.photo_url || null,
+        tasks, log,
+        records: [],
+        alerts: tasks.filter(t => t.status === "overdue").length,
+        weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
+      };
     }));
     setVessels(mapped);
     if (mapped.length > 0) setVesselId(mapped[0].id);
@@ -210,11 +284,7 @@ export default function App() {
   }, [fetchVessels]);
 
   const handleAddVessel = async (vesselData) => {
-    const { data } = await supabase
-      .from("vessels")
-      .insert({ ...vesselData, owner_id: user.id })
-      .select()
-      .single();
+    const { data } = await supabase.from("vessels").insert({ ...vesselData, owner_id: user.id }).select().single();
     if (data) {
       const mapped = {
         ...data,
@@ -233,10 +303,7 @@ export default function App() {
   // ── Early returns AFTER all hooks ────────────────────────────────────────────
   if (authLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontSize:40,marginBottom:16}}>⚓</div>
-        <div style={{fontSize:14,color:"#64748b"}}>Cargando NautiTrack...</div>
-      </div>
+      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>⚓</div><div style={{fontSize:14,color:"#64748b"}}>Cargando NautiTrack...</div></div>
     </div>
   );
 
@@ -244,18 +311,12 @@ export default function App() {
 
   if (vesselsLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontSize:40,marginBottom:16}}>🚢</div>
-        <div style={{fontSize:14,color:"#64748b"}}>Cargando tus embarcaciones...</div>
-      </div>
+      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🚢</div><div style={{fontSize:14,color:"#64748b"}}>Cargando tus embarcaciones...</div></div>
     </div>
   );
 
   if (vessels.length === 0) return (
-    <AddVessel
-      onAdd={handleAddVessel}
-      onSkip={() => setVessels(INIT_VESSELS.map(v => ({...v, owner_id: user.id})))}
-    />
+    <AddVessel onAdd={handleAddVessel} onSkip={() => setVessels(INIT_VESSELS.map(v => ({...v, owner_id: user.id})))}/>
   );
 
   const vessel = vessels.find(v => v.id === vesselId) || vessels[0];
@@ -273,8 +334,8 @@ export default function App() {
       />
       <div style={s.body}>
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} />}
-        {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} />}
-        {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} />}
+        {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
+        {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage />}
       </div>
@@ -500,7 +561,7 @@ function WeatherBar({ vessel }) {
     </div>
   );
 }
-function TasksPage({ vessel, updateVessel }) {
+function TasksPage({ vessel, updateVessel, addTask }) {
   const [filter, setFilter]     = useState("Todas");
   const [expanded, setExpanded] = useState(null);
   const [showAdd, setShowAdd]   = useState(false);
@@ -513,7 +574,7 @@ function TasksPage({ vessel, updateVessel }) {
   });
   const PILL = { overdue:{bg:"#ef4444",c:"#fff",l:"Vencido"}, due:{bg:"#f59e0b",c:"#fff",l:"Por vencer"}, ok:{bg:"#22c55e",c:"#fff",l:"Al día"}, done:{bg:"#64748b",c:"#fff",l:"Completado"} };
   const allSystems = getAllSystems(vessel);
-  const addTask = (task) => { updateVessel({...vessel,tasks:[...vessel.tasks,{...task,id:Date.now()}]}); setShowAdd(false); };
+  const handleAddTask = (task) => { addTask(task); setShowAdd(false); };
   return (
     <div style={{padding:"24px 28px"}}>
       <div style={s.toolbar}>
@@ -576,7 +637,7 @@ function TasksPage({ vessel, updateVessel }) {
           </tbody>
         </table>
       </div>
-      {showAdd && <AddTaskModal vessel={vessel} updateVessel={updateVessel} onSave={addTask} onClose={() => setShowAdd(false)} />}
+      {showAdd && <AddTaskModal vessel={vessel} updateVessel={updateVessel} onSave={handleAddTask} onClose={() => setShowAdd(false)} />}
     </div>
   );
 }
@@ -751,27 +812,21 @@ function AddTaskModal({ vessel, updateVessel, onSave, onClose }) {
     </div>
   );
 }
-function LogPage({ vessel, updateVessel }) {
+function LogPage({ vessel, updateVessel, addLogEntry }) {
   const [showModal, setShowModal] = useState(false);
   const [editEntry, setEditEntry] = useState(null);
   const [filter, setFilter]       = useState("Todos");
   const filtered = filter==="Todos" ? vessel.log : vessel.log.filter(e=>e.type===filter);
 
   const saveEntry = useCallback((entry) => {
-    let updated = {...vessel};
     if (editEntry) {
-      updated.log = vessel.log.map(e=>e.id===entry.id?entry:e);
+      // Update local state for edits
+      updateVessel({...vessel, log: vessel.log.map(e => e.id === entry.id ? entry : e)});
     } else {
-      const newEntry = {...entry,id:Date.now()};
-      updated.log = [newEntry,...vessel.log];
-      if (entry.type==="Combustible"&&entry.fuelQty!=null) {
-        updated.fuel = entry.fuelQty;
-        updated.fuelUnit = entry.fuelUnit||vessel.fuelUnit;
-      }
+      addLogEntry(entry);
     }
-    updateVessel(updated);
     setShowModal(false); setEditEntry(null);
-  }, [vessel, editEntry, updateVessel]);
+  }, [vessel, editEntry, updateVessel, addLogEntry]);
 
   return (
     <div style={{padding:"24px 28px"}}>
