@@ -5,6 +5,25 @@ import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 
 
+
+// ── WhatsApp Config ───────────────────────────────────────────────────────────
+const WA_PHONE_ID = "110569092263550 7".replace(/\s/g,"");
+const WA_TOKEN    = "EAAT9nusek5sBRhjr6ndwYzICuQhZCMf4XTGEWUDXmZCjYEz6GZCRyvqYZCIqgFjZBLBzgUPKs7oZAh6X73NZCqPtsLW9upNtGY0YIIbn4esNrarrQzrFsZCZAX7WLsMHx1s2vuhiufMEZA0M9AAJESoW3hkJfikziQ2UMUeMZAJz1TcbZBlpcYkNZB9OEjONyjFvjaA4Mz5hdNZA2804qT9nyDFVSAkuDL81o9OXdlW2XcWTgxbNjyFZBi8055nfNt0c5puepkrhi2hXrOFEdRrNwEc0vy9X6AHhpRxDqQI2u0ZD";
+
+async function sendWhatsApp(to, message) {
+  try {
+    const resp = await fetch("/api/whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, message, token: WA_TOKEN, phoneNumberId: WA_PHONE_ID }),
+    });
+    const data = await resp.json();
+    return data.success ? { ok: true } : { ok: false, error: data.error };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 // ── DATE FORMAT — DD/MM/AAAA (Venezuela) ─────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
@@ -163,6 +182,7 @@ export default function App() {
   const [showVesselDetails, setShowVesselDetails] = useState(false);
   const [showProviders, setShowProviders]         = useState(false);
   const [showProfile, setShowProfile]             = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // ── Supabase helpers ──────────────────────────────────────────────────────
   const fetchTasks = async (vesselId) => {
@@ -2361,6 +2381,237 @@ Responde en español con información técnica detallada. Si preguntan por repue
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ── NOTIFICATIONS MODAL ───────────────────────────────────────────────────────
+function NotificationsModal({ vessel, user, onClose }) {
+  const [tab, setTab]           = useState("send");
+  const [sending, setSending]   = useState(false);
+  const [result, setResult]     = useState(null);
+  const [history, setHistory]   = useState([]);
+  const [phone, setPhone]       = useState("");
+  const [customMsg, setCustomMsg] = useState("");
+  const [msgType, setMsgType]   = useState("custom");
+
+  useEffect(() => {
+    supabase.from("notifications").select("*")
+      .eq("vessel_id", vessel.id).order("created_at", { ascending: false }).limit(20)
+      .then(({ data }) => setHistory(data || []));
+  }, [vessel.id]);
+
+  const overdueTasks = (vessel.tasks||[]).filter(t => t.status === "overdue");
+  const dueTasks     = (vessel.tasks||[]).filter(t => t.status === "due");
+
+  const MSG_TEMPLATES = [
+    {
+      key: "overdue",
+      label: "⚠️ Tareas Vencidas",
+      icon: "🚨",
+      color: "#dc2626",
+      bg: "#fff5f5",
+      border: "#fecaca",
+      generate: () => overdueTasks.length === 0
+        ? `✅ *NautiTrack.VZ* — ${vessel.name}
+
+Sin tareas vencidas. ¡Todo al día!`
+        : `🚨 *NautiTrack.VZ* — ${vessel.name}
+
+⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:
+
+${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("
+")}
+
+📱 Ver detalles: nautitrack.vercel.app`
+    },
+    {
+      key: "due_soon",
+      label: "📅 Por Vencer",
+      icon: "⏰",
+      color: "#d97706",
+      bg: "#fffbeb",
+      border: "#fde68a",
+      generate: () => dueTasks.length === 0
+        ? `✅ *NautiTrack.VZ* — ${vessel.name}
+
+Sin tareas por vencer esta semana.`
+        : `⏰ *NautiTrack.VZ* — ${vessel.name}
+
+📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:
+
+${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("
+")}
+
+📱 Ver detalles: nautitrack.vercel.app`
+    },
+    {
+      key: "status",
+      label: "📊 Reporte Diario",
+      icon: "📊",
+      color: "#2563eb",
+      bg: "#eff6ff",
+      border: "#bfdbfe",
+      generate: () => `📊 *NautiTrack.VZ* — Reporte ${vessel.name}
+
+🚢 *${vessel.name}* · ${vessel.type||""}
+📍 ${vessel.marina||""}
+
+🔧 Motor: ${vessel.engineHours||0}h
+⚡ Generador: ${vessel.genHours||0}h
+⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}
+
+✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}
+⚠️ Vencidas: ${overdueTasks.length}
+📋 Bitácora: ${(vessel.log||[]).length} entradas
+
+📱 nautitrack.vercel.app`
+    },
+    {
+      key: "custom",
+      label: "✏️ Mensaje Personalizado",
+      icon: "✏️",
+      color: "#7c3aed",
+      bg: "#f5f3ff",
+      border: "#ddd6fe",
+      generate: () => customMsg || ""
+    },
+  ];
+
+  const selectedTemplate = MSG_TEMPLATES.find(t => t.key === msgType);
+  const message = selectedTemplate?.generate() || "";
+
+  const send = async () => {
+    if (!phone.trim()) { setResult({ ok: false, error: "Ingresa un número de teléfono" }); return; }
+    if (!message.trim()) { setResult({ ok: false, error: "El mensaje está vacío" }); return; }
+    setSending(true); setResult(null);
+    const r = await sendWhatsApp(phone, message);
+    setResult(r);
+    if (r.ok) {
+      // Save to history
+      const { data } = await supabase.from("notifications").insert({
+        vessel_id: vessel.id, owner_id: user.id,
+        type: msgType, message, recipient: phone, status: "sent"
+      }).select().single();
+      if (data) setHistory(h => [data, ...h]);
+    } else {
+      await supabase.from("notifications").insert({
+        vessel_id: vessel.id, owner_id: user.id,
+        type: msgType, message, recipient: phone, status: "failed"
+      });
+    }
+    setSending(false);
+  };
+
+  return (
+    <div style={s.modalOverlay} onClick={onClose}>
+      <div style={{...s.modalBox, maxWidth:580}} onClick={e=>e.stopPropagation()}>
+        <div style={s.modalHeader}>
+          <div>
+            <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>📲 Notificaciones WhatsApp</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{vessel.name}</div>
+          </div>
+          <button onClick={onClose} style={s.modalClose}>✕</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:"flex",borderBottom:"1px solid #e2e8f0",padding:"0 24px"}}>
+          {[{key:"send",label:"📤 Enviar"},{key:"history",label:"📋 Historial"}].map(t=>(
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{padding:"10px 16px",background:"none",border:"none",borderBottom:tab===t.key?"2px solid #0ea5e9":"2px solid transparent",cursor:"pointer",fontSize:13,color:tab===t.key?"#0ea5e9":"#64748b",fontWeight:tab===t.key?600:400}}>{t.label}</button>
+          ))}
+        </div>
+
+        <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
+          {tab==="send"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+              {/* Phone */}
+              <div>
+                <label style={s.label}>Número WhatsApp <span style={{color:"#dc2626"}}>*</span></label>
+                <input value={phone} onChange={e=>setPhone(e.target.value)}
+                  placeholder="+58 414 123 4567 o +1 305 123 4567"
+                  style={s.input}/>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>Incluye el código de país: +58 para Venezuela, +1 para USA</div>
+              </div>
+
+              {/* Message type */}
+              <div>
+                <label style={s.label}>Tipo de mensaje</label>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
+                  {MSG_TEMPLATES.map(t=>(
+                    <button key={t.key} onClick={()=>setMsgType(t.key)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",border:`1.5px solid ${msgType===t.key?t.color:t.border}`,borderRadius:8,cursor:"pointer",background:msgType===t.key?t.bg:"#fff",textAlign:"left"}}>
+                      <span style={{fontSize:16}}>{t.icon}</span>
+                      <span style={{fontSize:12,fontWeight:600,color:msgType===t.key?t.color:"#1e293b"}}>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom message input */}
+              {msgType==="custom"&&(
+                <div>
+                  <label style={s.label}>Mensaje</label>
+                  <textarea value={customMsg} onChange={e=>setCustomMsg(e.target.value)}
+                    placeholder="Escribe tu mensaje aquí..."
+                    rows={4} style={{...s.input,resize:"vertical"}}/>
+                </div>
+              )}
+
+              {/* Preview */}
+              {message&&(
+                <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#16a34a",marginBottom:6,letterSpacing:"0.06em"}}>VISTA PREVIA</div>
+                  <div style={{fontSize:12,color:"#1e293b",whiteSpace:"pre-wrap",lineHeight:1.6,fontFamily:"monospace"}}>{message}</div>
+                </div>
+              )}
+
+              {/* Result */}
+              {result&&(
+                <div style={{padding:"10px 14px",borderRadius:8,background:result.ok?"#f0fdf4":"#fff5f5",border:`1px solid ${result.ok?"#bbf7d0":"#fecaca"}`,fontSize:13,color:result.ok?"#16a34a":"#dc2626",fontWeight:600}}>
+                  {result.ok?"✅ Mensaje enviado exitosamente":"❌ Error: "+result.error}
+                </div>
+              )}
+
+              {/* WA note */}
+              <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:11,color:"#0369a1"}}>
+                💡 <strong>Modo prueba:</strong> Solo puedes enviar a números verificados en Meta. Para enviar a cualquier número necesitas verificar tu negocio en Meta.
+              </div>
+            </div>
+          )}
+
+          {tab==="history"&&(
+            <div>
+              {history.length===0&&(
+                <div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>
+                  <div style={{fontSize:32,marginBottom:8}}>📭</div>
+                  <div>Sin notificaciones enviadas</div>
+                </div>
+              )}
+              {history.map(n=>(
+                <div key={n.id} style={{padding:"12px 0",borderBottom:"1px solid #f1f5f9"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:n.status==="sent"?"#dcfce7":"#fee2e2",color:n.status==="sent"?"#16a34a":"#dc2626"}}>{n.status==="sent"?"✓ Enviado":"✗ Fallido"}</span>
+                      <span style={{fontSize:11,color:"#64748b"}}>{n.recipient}</span>
+                    </div>
+                    <span style={{fontSize:10,color:"#94a3b8"}}>{new Date(n.created_at).toLocaleDateString("es-VE")}</span>
+                  </div>
+                  <div style={{fontSize:12,color:"#475569",whiteSpace:"pre-wrap",maxHeight:60,overflow:"hidden",textOverflow:"ellipsis"}}>{n.message}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={s.modalFooter}>
+          <button style={s.btnOutline} onClick={onClose}>Cerrar</button>
+          {tab==="send"&&(
+            <button onClick={send} disabled={sending} style={{...s.btnPrimary,background:"#25D366",opacity:sending?0.6:1,display:"flex",alignItems:"center",gap:8}}>
+              {sending?"⏳ Enviando...":"📲 Enviar WhatsApp"}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
