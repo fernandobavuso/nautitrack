@@ -601,8 +601,15 @@ function WeatherBar({ vessel }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const city = vessel.details?.city || vessel.marina || "Caracas";
-    fetch(`/api/weather?city=${encodeURIComponent(city)}`)
+    const city    = vessel.details?.city    || "";
+    const state   = vessel.details?.state   || "";
+    const country = vessel.details?.country || "";
+    const query   = [city, state, country].filter(Boolean).join(",") || vessel.marina || "Caracas";
+    const isLocal = window.location.hostname === "localhost";
+    const url = isLocal
+      ? `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(query)}&appid=756f12d0c20d29f76808839251369ef7&units=metric&lang=es`
+      : `/api/weather?city=${encodeURIComponent(query)}`;
+    fetch(url)
       .then(r => r.json())
       .then(data => {
         if (data.main) {
@@ -624,7 +631,7 @@ function WeatherBar({ vessel }) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [vessel.details?.city, vessel.marina]);
+  }, [vessel.details?.city, vessel.details?.state, vessel.details?.country, vessel.marina]);
 
   const w = weather || { temp:"—", wind:"—", humidity:"—", condition:"Cargando...", icon:"🌤", city: vessel.marina||"" };
 
@@ -644,8 +651,7 @@ function WeatherBar({ vessel }) {
           ["💨", weather?`${w.wind} kn`:"—", "Viento"],
           ["💧", weather?`${w.humidity}%`:"—", "Humedad"],
           ["🌡", weather?`${w.feels}°C`:"—", "Sensación"],
-          ["📍", vessel.details?.city||vessel.marina||"—", "Ciudad"],
-          ["⚓", vessel.marina||"—", "Marina"],
+          ["📍", vessel.marina||"—", "Marina"],
         ].map(([ic,val,lbl]) => (
           <div key={lbl} style={{textAlign:"center"}}>
             <div style={{fontSize:13,fontWeight:600}}>{ic} {val}</div>
@@ -2431,7 +2437,9 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
     type:         vessel.details?.vesselType || vessel.type?.split(" ")[0] || "",
     eslora:       vessel.details?.eslora || vessel.type?.split(" ").slice(1).join(" ") || "",
     marina:       vessel.marina  || "",
-    city:         vessel.details?.city || vessel.marina?.split(',').pop()?.trim() || "",
+    city:         vessel.details?.city    || "",
+    state:        vessel.details?.state   || "",
+    country:      vessel.details?.country || "Venezuela",
     captain:      vessel.captain || "",
     manufacturer: d.manufacturer || "",
     model:        d.model        || "",
@@ -2512,7 +2520,9 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
       dinghyList,
       // preserve profile/config
       _profile:      d._profile      || {},
-      city:          gen.city || d.city || "",
+      city:          gen.city    || d.city    || "",
+      state:         gen.state   || d.state   || "",
+      country:       gen.country || d.country || "",
       _config:       d._config       || {},
       _subscription: d._subscription || {},
     };
@@ -2592,7 +2602,9 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
             {/* Eslora — separate field */}
             <VesselField key="eslora" editMode={editMode} label="Eslora" value={gen.eslora} onChange={v=>setGen(g=>({...g,eslora:v}))} placeholder="Ej: 48', 60', 14m"/>
             <VesselField key="marina" editMode={editMode} label="Nombre de la Marina" value={gen.marina} onChange={v=>setGen(g=>({...g,marina:v}))} placeholder="Ej: Marina Morrocoy, Club Náutico"/>
-            <VesselField key="city" editMode={editMode} label="Ciudad (para el clima 🌤)" value={gen.city} onChange={v=>setGen(g=>({...g,city:v}))} placeholder="Ej: Tucacas, Caraballeda, Porlamar"/>
+            <VesselField key="city"    editMode={editMode} label="Ciudad 🌤"  value={gen.city}    onChange={v=>setGen(g=>({...g,city:v}))}    placeholder="Ej: Tucacas, Miami, Porlamar"/>
+            <VesselField key="state"   editMode={editMode} label="Estado"     value={gen.state}   onChange={v=>setGen(g=>({...g,state:v}))}   placeholder="Ej: Falcón, Florida, Nueva Esparta"/>
+            <VesselField key="country" editMode={editMode} label="País"       value={gen.country} onChange={v=>setGen(g=>({...g,country:v}))} placeholder="Ej: Venezuela, USA"/>
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
             <VesselField key="manuf" editMode={editMode} label="Fabricante" value={gen.manufacturer} onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
             <VesselField key="model" editMode={editMode} label="Modelo" value={gen.model} onChange={v=>setGen(g=>({...g,model:v}))}/>
