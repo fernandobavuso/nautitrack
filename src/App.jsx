@@ -384,6 +384,7 @@ export default function App() {
         showUserMenu={showUserMenu} setShowUserMenu={setShowUserMenu}
         setShowVesselDetails={setShowVesselDetails}
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
+        setShowNotifications={setShowNotifications}
         page={page} setPage={setPage}
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); }}
       />
@@ -396,12 +397,13 @@ export default function App() {
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
       {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
+      {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
       {showProfile       && <ProfileModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProfile(false)} />}
     </div>
   );
 }
 
-function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,page,setPage,onLogout }) {
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
   return (
     <nav style={s.nav} onClick={e => e.stopPropagation()}>
@@ -439,7 +441,7 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
           )}
         </div>
         <div style={s.bellWrap}>
-          <span style={{fontSize:18,cursor:"pointer"}}>🔔</span>
+          <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifications(true)}>🔔</span>
           {totalAlerts > 0 && <div style={s.bellBadge}>{totalAlerts}</div>}
         </div>
         <div style={{position:"relative"}}>
