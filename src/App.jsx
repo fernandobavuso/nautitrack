@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
+import AddVessel from "./AddVessel";
 
 const DEFAULT_SYSTEMS = [
   { id:"motores",    label:"Motores",                  icon:"🔧", trackHours:true,
@@ -137,33 +138,99 @@ function getEquipmentList(vessel, systemId) {
   return [...base, "Otro"];
 }
 export default function App() {
-  const [vessels, setVessels]   = useState(INIT_VESSELS);
-  const [vesselId, setVesselId] = useState(1);
-  const [page, setPage]         = useState("home");
-  const [user, setUser]         = useState(null);
+  const [user, setUser]               = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [vessels, setVessels]         = useState([]);
+  const [vesselsLoading, setVesselsLoading] = useState(false);
+  const [vesselId, setVesselId]       = useState(null);
+  const [page, setPage]               = useState("home");
   const [showVesselMenu, setShowVesselMenu]       = useState(false);
   const [showUserMenu, setShowUserMenu]           = useState(false);
   const [showVesselDetails, setShowVesselDetails] = useState(false);
   const [showProviders, setShowProviders]         = useState(false);
   const [showProfile, setShowProfile]             = useState(false);
 
-  const vessel = vessels.find(v => v.id === vesselId);
-  const updateVessel = useCallback((updated) => {
+  // All hooks must be before any early returns
+  const updateVessel = useCallback(async (updated) => {
+    // Update local state immediately for snappy UI
     setVessels(vs => vs.map(v => v.id === updated.id ? updated : v));
+    // Persist to Supabase
+    const { details, crew, crew2, motors, generators, custom_systems, providers, photo, ...rest } = updated;
+    await supabase.from("vessels").update({
+      ...rest,
+      details: details || {},
+      crew: crew || [],
+      motors: motors || [],
+      generators: generators || [],
+      custom_systems: custom_systems || [],
+      providers: providers || [],
+      photo_url: photo || null,
+    }).eq("id", updated.id);
+  }, []);
+
+  const fetchVessels = useCallback(async (uid) => {
+    setVesselsLoading(true);
+    const { data } = await supabase
+      .from("vessels")
+      .select("*")
+      .eq("owner_id", uid)
+      .order("created_at", { ascending: true });
+    const mapped = (data || []).map(v => ({
+      ...v,
+      fuelUnit: v.fuel_unit || "gal",
+      engineHours: v.engine_hours || 0,
+      genHours: v.gen_hours || 0,
+      customSystems: v.custom_systems || [],
+      photo: v.photo_url || null,
+      // Add default empty arrays for UI
+      tasks: v.tasks || [],
+      log: v.log || [],
+      records: v.records || [],
+      alerts: 0,
+      weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
+    }));
+    setVessels(mapped);
+    if (mapped.length > 0) setVesselId(mapped[0].id);
+    setVesselsLoading(false);
   }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) fetchVessels(u.id);
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) fetchVessels(u.id);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchVessels]);
 
+  const handleAddVessel = async (vesselData) => {
+    const { data } = await supabase
+      .from("vessels")
+      .insert({ ...vesselData, owner_id: user.id })
+      .select()
+      .single();
+    if (data) {
+      const mapped = {
+        ...data,
+        fuelUnit: data.fuel_unit || "gal",
+        engineHours: data.engine_hours || 0,
+        genHours: data.gen_hours || 0,
+        customSystems: [],
+        tasks: [], log: [], records: [], alerts: 0,
+        weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
+      };
+      setVessels(v => [...v, mapped]);
+      setVesselId(mapped.id);
+    }
+  };
+
+  // ── Early returns AFTER all hooks ────────────────────────────────────────────
   if (authLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}>
@@ -173,7 +240,25 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={setUser} />;
+  if (!user) return <Auth onLogin={(u) => { setUser(u); fetchVessels(u.id); }} />;
+
+  if (vesselsLoading) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:40,marginBottom:16}}>🚢</div>
+        <div style={{fontSize:14,color:"#64748b"}}>Cargando tus embarcaciones...</div>
+      </div>
+    </div>
+  );
+
+  if (vessels.length === 0) return (
+    <AddVessel
+      onAdd={handleAddVessel}
+      onSkip={() => setVessels(INIT_VESSELS.map(v => ({...v, owner_id: user.id})))}
+    />
+  );
+
+  const vessel = vessels.find(v => v.id === vesselId) || vessels[0];
 
   return (
     <div style={s.root} onClick={() => { setShowVesselMenu(false); setShowUserMenu(false); }}>
@@ -183,7 +268,9 @@ export default function App() {
         showUserMenu={showUserMenu} setShowUserMenu={setShowUserMenu}
         setShowVesselDetails={setShowVesselDetails}
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
-        page={page} setPage={setPage} />
+        page={page} setPage={setPage}
+        onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); }}
+      />
       <div style={s.body}>
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} />}
@@ -198,7 +285,7 @@ export default function App() {
   );
 }
 
-function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,page,setPage }) {
+function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,page,setPage,onLogout }) {
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
   return (
     <nav style={s.nav} onClick={e => e.stopPropagation()}>
@@ -252,7 +339,7 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
                 {icon:"👤",label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
                 {icon:"⚓",label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
                 {icon:"💳",label:"Suscripción",      action:() => { setShowProfile(true); setShowUserMenu(false); }},
-                {icon:"🚪",label:"Cerrar Sesión",    action:() => setShowUserMenu(false)},
+                {icon:"🚪",label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
                 <button key={item.label} onClick={item.action} style={{...s.dropItem,gap:10}}>
                   <span>{item.icon}</span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
