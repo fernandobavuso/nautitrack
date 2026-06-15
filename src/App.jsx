@@ -241,21 +241,37 @@ export default function App() {
 
   // All hooks must be before any early returns
   const updateVessel = useCallback(async (updated) => {
+    // Update local state immediately
     setVessels(vs => vs.map(v => v.id === updated.id ? updated : v));
-    const { details, crew, crew2, motors, generators, custom_systems, providers, photo, tasks, log, records, alerts, weather, fuelUnit, engineHours, genHours, customSystems, ...rest } = updated;
-    await supabase.from("vessels").update({
-      ...rest,
-      fuel_unit: fuelUnit || updated.fuel_unit,
-      engine_hours: engineHours || updated.engine_hours,
-      gen_hours: genHours || updated.gen_hours,
-      details: details || {},
-      crew: crew || [],
-      motors: motors || [],
-      generators: generators || [],
-      custom_systems: customSystems || custom_systems || [],
-      providers: providers || [],
-      photo_url: photo || null,
-    }).eq("id", updated.id);
+    // Build clean Supabase payload — everything lives in details JSONB
+    const payload = {
+      name:         updated.name         || "",
+      type:         updated.type         || "",
+      marina:       updated.marina       || "",
+      captain:      updated.captain      || "",
+      fuel:         updated.fuel         ?? 0,
+      fuel_unit:    updated.fuelUnit     || updated.fuel_unit || "gal",
+      engine_hours: updated.engineHours  ?? updated.engine_hours ?? 0,
+      gen_hours:    updated.genHours     ?? updated.gen_hours    ?? 0,
+      status:       updated.status       || "ok",
+      photo_url:    updated.photo        || null,
+      crew:         updated.crew         || [],
+      motors:       updated.motors       || [],
+      generators:   updated.generators   || [],
+      custom_systems: updated.customSystems || updated.custom_systems || [],
+      providers:    updated.providers    || [],
+      details: {
+        ...(updated.details || {}),
+        _profile:      updated.profile      || {},
+        _config:       updated.config       || {},
+        _subscription: updated.subscription || {},
+      },
+    };
+    // Remove frontend-only keys that don't exist in DB
+    delete payload.id;
+    delete payload.owner_id;
+    const { error } = await supabase.from("vessels").update(payload).eq("id", updated.id);
+    if (error) console.error("updateVessel error:", error.message);
   }, []);
 
   const fetchVessels = useCallback(async (uid) => {
@@ -263,6 +279,7 @@ export default function App() {
     const { data } = await supabase.from("vessels").select("*").eq("owner_id", uid).order("created_at", { ascending: true });
     const mapped = await Promise.all((data || []).map(async v => {
       const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
+      const d = v.details || {};
       return {
         ...v,
         fuelUnit: v.fuel_unit || "gal",
@@ -270,6 +287,10 @@ export default function App() {
         genHours: v.gen_hours || 0,
         customSystems: v.custom_systems || [],
         photo: v.photo_url || null,
+        profile:      d._profile      || { firstName:"", lastName:"", phone:"", email:"", marinaAddress:"" },
+        config:       d._config       || { distUnit:"nm", speedUnit:"kn", fuelUnit:"gal", tempUnit:"C" },
+        subscription: d._subscription || { plan:"Pro", price:79, currency:"USD", cycle:"Mensual" },
+        details:      d,
         tasks, log,
         records: [],
         alerts: tasks.filter(t => t.status === "overdue").length,
@@ -402,8 +423,8 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
         </div>
         <div style={{position:"relative"}}>
           <button style={s.userBtn} onClick={() => { setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
-            <div style={s.navAvatar}>{vessel.profile?.firstName?.[0]||"R"}{vessel.profile?.lastName?.[0]||"O"}</div>
-            <div><div style={s.navName}>{vessel.profile?.firstName||"Ricardo"} {vessel.profile?.lastName?.[0]||"O"}.</div><div style={s.navRole}>Propietario</div></div>
+            <div style={s.navAvatar}>{vessel.profile?.firstName?.[0]||"?"}{vessel.profile?.lastName?.[0]||""}</div>
+            <div><div style={s.navName}>{vessel.profile?.firstName||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
@@ -1277,13 +1298,20 @@ function ReportModal({ vessel, onClose }) {
   ];
   const toggle = k => setSel(s => s.includes(k) ? s.filter(x=>x!==k) : [...s,k]);
 
+  const parseInputDate = (d) => {
+    if (!d) return null;
+    if (d.includes("/")) { const [day,m,y]=d.split("/"); return `${y}-${m.padStart(2,"0")}-${day.padStart(2,"0")}`; }
+    return d;
+  };
   const filterByDate = (items, dateField) => {
-    if (!from && !to) return items;
+    const f = parseInputDate(from);
+    const t = parseInputDate(to);
+    if (!f && !t) return items;
     return items.filter(i => {
       const d = i[dateField] || i.date;
       if (!d) return true;
-      if (from && d < from) return false;
-      if (to && d > to) return false;
+      if (f && d < f) return false;
+      if (t && d > t) return false;
       return true;
     });
   };
@@ -1637,37 +1665,51 @@ function ReportModal({ vessel, onClose }) {
           <button onClick={onClose} style={s.modalClose}>✕</button>
         </div>
 
-        {!gen ? (
-          <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:16}}>
-            <div style={{fontSize:12,color:"#64748b"}}>Selecciona las secciones que quieres incluir en el reporte:</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {REPORT_TYPES.map(r=>(
-                <button key={r.key} onClick={()=>toggle(r.key)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",border:"1.5px solid",borderRadius:8,cursor:"pointer",textAlign:"left",background:sel.includes(r.key)?"#eff6ff":"#f8fafc",borderColor:sel.includes(r.key)?"#2563eb":"#e2e8f0"}}>
-                  <span style={{fontSize:18,flexShrink:0}}>{r.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12,fontWeight:600,color:sel.includes(r.key)?"#2563eb":"#1e293b"}}>{r.label}</div>
-                    <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{r.desc}</div>
-                  </div>
-                  {sel.includes(r.key)&&<span style={{color:"#2563eb",flexShrink:0,fontSize:14}}>✓</span>}
-                </button>
-              ))}
+        {/* Scrollable content */}
+        <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{fontSize:12,color:"#64748b"}}>Selecciona las secciones que quieres incluir:</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {REPORT_TYPES.map(r=>(
+              <button key={r.key} onClick={()=>toggle(r.key)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",border:"1.5px solid",borderRadius:8,cursor:"pointer",textAlign:"left",background:sel.includes(r.key)?"#eff6ff":"#f8fafc",borderColor:sel.includes(r.key)?"#2563eb":"#e2e8f0"}}>
+                <span style={{fontSize:18,flexShrink:0}}>{r.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:600,color:sel.includes(r.key)?"#2563eb":"#1e293b"}}>{r.label}</div>
+                  <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{r.desc}</div>
+                </div>
+                {sel.includes(r.key)&&<span style={{color:"#2563eb",flexShrink:0,fontSize:14}}>✓</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Period — text inputs DD/MM/AAAA instead of date picker */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>
+              <label style={s.label}>Desde <span style={{color:"#94a3b8",fontWeight:400}}>(DD/MM/AAAA)</span></label>
+              <input value={from} onChange={e=>setFrom(e.target.value)} placeholder="01/06/2026" style={s.input}/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={s.label}>Desde <span style={{color:"#94a3b8",fontWeight:400}}>(opcional)</span></label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={s.input}/></div>
-              <div><label style={s.label}>Hasta <span style={{color:"#94a3b8",fontWeight:400}}>(opcional)</span></label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={s.input}/></div>
-            </div>
-            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#0369a1"}}>
-              💡 El reporte se abre en una nueva pestaña con diseño profesional. Desde ahí puedes imprimir o guardar como PDF.
+            <div>
+              <label style={s.label}>Hasta <span style={{color:"#94a3b8",fontWeight:400}}>(DD/MM/AAAA)</span></label>
+              <input value={to} onChange={e=>setTo(e.target.value)} placeholder="30/06/2026" style={s.input}/>
             </div>
           </div>
-        ) : null}
 
-        <div style={s.modalFooter}>
+          <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#0369a1"}}>
+            💡 El reporte se abre en una nueva pestaña. Desde ahí puedes imprimir o guardar como PDF con <strong>⌘+P</strong>.
+          </div>
+        </div>
+
+        {/* Fixed footer — always visible */}
+        <div style={{...s.modalFooter,background:"#fff",borderTop:"1px solid #e2e8f0"}}>
           <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
           <div style={{display:"flex",gap:8}}>
-            {sel.length>0&&<button style={{...s.btnPrimary,background:"#7c3aed"}} onClick={()=>{setSel([...REPORT_TYPES.map(r=>r.key)]);}}>Seleccionar todo</button>}
-            <button style={{...s.btnPrimary,opacity:sel.length===0?0.5:1}} onClick={()=>{if(sel.length>0)openReport();}}>
-              📄 Generar Reporte ({sel.length})
+            <button style={{...s.btnOutline,fontSize:11}} onClick={()=>setSel(REPORT_TYPES.map(r=>r.key))}>
+              Seleccionar todo
+            </button>
+            <button
+              style={{...s.btnPrimary,opacity:sel.length===0?0.4:1,background:"linear-gradient(135deg,#7c3aed,#2563eb)"}}
+              onClick={()=>{ if(sel.length>0) openReport(); }}
+            >
+              📄 Generar ({sel.length})
             </button>
           </div>
         </div>
@@ -1910,11 +1952,17 @@ Formato tu respuesta de forma clara y estructurada.`}]
 
 function ProfileModal({ vessel, updateVessel, onClose }) {
   const [tab,setTab]   = useState("profile");
-  const [form,setForm] = useState({...vessel.profile});
+  const [form,setForm] = useState({
+    firstName: vessel.profile?.firstName || "",
+    lastName:  vessel.profile?.lastName  || "",
+    phone:     vessel.profile?.phone     || "",
+    email:     vessel.profile?.email     || "",
+    marinaAddress: vessel.profile?.marinaAddress || "",
+  });
   const [config,setConfig] = useState(vessel.config||{distUnit:"nm",speedUnit:"kn",fuelUnit:"gal",tempUnit:"C"});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const setcfg=(k,v)=>setConfig(c=>({...c,[k]:v}));
-  const save=()=>{updateVessel({...vessel,profile:form,config});onClose();};
+  const save=()=>{ updateVessel({...vessel, profile:{...form}, config:{...config}}); onClose(); };
   const sub=vessel.subscription||{};
   const planFeatures={Basic:["1 embarcación","Bitácora básica","Tareas ilimitadas","Soporte email"],Pro:["Hasta 3 embarcaciones","Bitácora con fotos","Records y reportes","Proveedores","Soporte prioritario"],Fleet:["Embarcaciones ilimitadas","Todo lo de Pro","API access","Reportes automáticos","Gerente de cuenta"]};
   return (
@@ -1930,8 +1978,8 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
           {tab==="profile"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div style={{display:"flex",alignItems:"center",gap:16,padding:16,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
-                <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{(form.firstName?.[0]||"R")}{(form.lastName?.[0]||"O")}</div>
-                <div><div style={{fontWeight:700,fontSize:15,color:"#0f172a"}}>{form.firstName} {form.lastName}</div><div style={{fontSize:12,color:"#64748b"}}>{form.email}</div><button style={{...s.btnOutline,padding:"3px 10px",fontSize:11,marginTop:6}}>Cambiar foto</button></div>
+                <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{form.firstName?.[0]||"?"}{form.lastName?.[0]||""}</div>
+                <div><div style={{fontWeight:700,fontSize:15,color:"#0f172a"}}>{form.firstName||"Tu nombre"} {form.lastName||""}</div><div style={{fontSize:12,color:"#64748b"}}>{form.email||"Sin email"}</div><button style={{...s.btnOutline,padding:"3px 10px",fontSize:11,marginTop:6}}>Cambiar foto</button></div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <div><label style={s.label}>Nombre</label><input value={form.firstName||""} onChange={e=>set("firstName",e.target.value)} style={s.input}/></div>
@@ -2068,21 +2116,31 @@ function VesselDetailsModal({ vessel, updateVessel, onClose }) {
   };
 
   const saveAll = () => {
-    updateVessel({...vessel,
-      name: gen.name||vessel.name,
-      photo: vesselPhoto,
-      crew2: crew, crew: crew.map(x=>x.name),
-      motors: motors.slice(0,numMotors).map(m=>m.name),
-      generators: gens.slice(0,numGens).map(g=>g.name).filter(Boolean),
-      details:{
-        ...d, ...gen, ...dims,
-        fuelTanks: fuelTanks.slice(0,numFuelTanks),
-        freshWater, wasteTank, greyWater,
-        anchor, anchorRode,
-        motors2: motors.slice(0,numMotors),
-        generators2: gens.slice(0,numGens),
-        dinghyList,
-      }
+    const updatedDetails = {
+      ...d,
+      ...gen,
+      ...dims,
+      fuelTanks:   fuelTanks.slice(0, numFuelTanks),
+      freshWater,  wasteTank, greyWater,
+      anchor,      anchorRode,
+      motors2:     motors.slice(0, numMotors),
+      generators2: gens.slice(0, numGens),
+      dinghyList,
+      // preserve profile/config
+      _profile:      d._profile      || {},
+      _config:       d._config       || {},
+      _subscription: d._subscription || {},
+    };
+    updateVessel({
+      ...vessel,
+      name:       gen.name || vessel.name,
+      marina:     gen.homePort || vessel.marina,
+      photo:      vesselPhoto,
+      crew2:      crew,
+      crew:       crew.map(x => x.name),
+      motors:     motors.slice(0, numMotors).map(m => m.name),
+      generators: gens.slice(0, numGens).map(g => g.name).filter(Boolean),
+      details:    updatedDetails,
     });
     setEditMode(false);
   };
