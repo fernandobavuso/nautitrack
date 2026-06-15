@@ -419,7 +419,7 @@ function HomePage({ vessel, setPage, vessels }) {
   return (
     <div style={s.home}>
       <div style={s.row}>
-        <FleetCard vessels={vessels} vessel={vessel} />
+        <FleetCard vessels={vessels} vessel={vessel} updateVessel={updateVessel} />
         <AlertsCard vessel={vessel} setPage={setPage} />
         <IndicatorsCard vessel={vessel} />
       </div>
@@ -432,7 +432,18 @@ function HomePage({ vessel, setPage, vessels }) {
   );
 }
 
-function FleetCard({ vessels, vessel }) {
+function FleetCard({ vessels, vessel, updateVessel }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName]   = useState("");
+
+  const startEdit = (v, e) => { e.stopPropagation(); setEditingId(v.id); setEditName(v.name); };
+  const saveEdit  = async (v) => {
+    if (editName.trim() && editName !== v.name) {
+      await updateVessel({...v, name: editName.trim()});
+    }
+    setEditingId(null);
+  };
+
   return (
     <div style={{...s.card,flex:1.2}}>
       <div style={s.cardHdr}><span style={s.cardTitle}>🚢 Estado de la Flota</span><span style={s.cardSub}>{vessels.length} embarcaciones</span></div>
@@ -442,7 +453,16 @@ function FleetCard({ vessels, vessel }) {
           <div key={v.id} style={{...s.fleetRow,background:v.id===vessel.id?"#f0f9ff":"#f8fafc",borderColor:v.id===vessel.id?"#bae6fd":"#e2e8f0"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,flex:1}}>
               <div style={{...s.statusBall,background:STATUS_CFG[v.status].dot,boxShadow:`0 0 8px ${STATUS_CFG[v.status].dot}66`}} />
-              <div><div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{v.name}</div><div style={{fontSize:11,color:"#94a3b8"}}>{v.marina} · Cap. {v.captain.split(" ")[0]}</div></div>
+              <div style={{flex:1}}>
+                {editingId===v.id
+                  ? <input value={editName} onChange={e=>setEditName(e.target.value)} onBlur={()=>saveEdit(v)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(v);if(e.key==="Escape")setEditingId(null);}} autoFocus style={{...s.input,padding:"3px 7px",fontSize:13,width:"100%"}}/>
+                  : <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{v.name}</div>
+                      <button onClick={(e)=>startEdit(v,e)} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:11,padding:"1px 4px",borderRadius:4}} title="Editar nombre">✎</button>
+                    </div>
+                }
+                <div style={{fontSize:11,color:"#94a3b8"}}>{v.marina} · Cap. {(v.captain||"").split(" ")[0]}</div>
+              </div>
             </div>
             <div style={{display:"flex",gap:5}}>
               {od>0&&<span style={{...s.miniTag,background:"#fee2e2",color:"#dc2626"}}>⚠ {od}v</span>}
@@ -1222,50 +1242,273 @@ function ReportModal({ vessel, onClose }) {
   const [from,setFrom] = useState("");
   const [to,setTo]     = useState("");
   const [gen,setGen]   = useState(false);
-  const types=[{key:"costs",icon:"💰",label:"Reporte de Costos",desc:"Compras y mantenimiento"},{key:"salidas",icon:"🚢",label:"Reporte de Salidas",desc:"Todas las salidas"},{key:"fuel",icon:"⛽",label:"Reporte de Combustible",desc:"Historial repostajes"},{key:"service",icon:"🔧",label:"Reporte de Servicios",desc:"Preventivo, reactivo, reparaciones"},{key:"inspect",icon:"🔍",label:"Reporte de Inspecciones",desc:"Todas las inspecciones"},{key:"log",icon:"📓",label:"Bitácora Completa",desc:"Todas las entradas"},{key:"tasks",icon:"☑",label:"Estado de Tareas",desc:"Completadas, pendientes, vencidas"},{key:"sale",icon:"⚓",label:"Reporte para Venta",desc:"Historial completo para compradores"},{key:"insurance",icon:"🛡",label:"Reporte para Seguro",desc:"Mantenimientos y estado"}];
-  const toggle=k=>setSel(s=>s.includes(k)?s.filter(x=>x!==k):[...s,k]);
-  const totalCost=vessel.records.reduce((a,r)=>a+r.cost,0);
+
+  const REPORT_TYPES = [
+    {key:"service", icon:"🔧", label:"Servicios",        desc:"Preventivo, reactivo, reparaciones"},
+    {key:"inspect", icon:"🔍", label:"Inspecciones",     desc:"Todas las inspecciones registradas"},
+    {key:"fuel",    icon:"⛽", label:"Combustible",      desc:"Historial de repostajes"},
+    {key:"salidas", icon:"🚢", label:"Salidas al Mar",   desc:"Destinos, tripulación, horas"},
+    {key:"costs",   icon:"💰", label:"Costos y Compras", desc:"Gastos y repuestos comprados"},
+    {key:"tasks",   icon:"☑", label:"Estado de Tareas", desc:"Pendientes, vencidas, completadas"},
+    {key:"log",     icon:"📓", label:"Bitácora Completa",desc:"Todas las entradas del período"},
+    {key:"sale",    icon:"⚓", label:"Para Venta",       desc:"Historial completo para compradores"},
+    {key:"insurance",icon:"🛡",label:"Para Seguro",      desc:"Mantenimientos y estado del barco"},
+  ];
+  const toggle = k => setSel(s => s.includes(k) ? s.filter(x=>x!==k) : [...s,k]);
+
+  const filterByDate = (items, dateField) => {
+    if (!from && !to) return items;
+    return items.filter(i => {
+      const d = i[dateField] || i.date;
+      if (!d) return true;
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  };
+
+  const generateHTML = () => {
+    const today = new Date().toLocaleDateString("es-VE");
+    const d = vessel.details || {};
+    const filteredLog  = filterByDate(vessel.log||[], "date");
+    const filteredTasks = vessel.tasks || [];
+    const services     = filteredLog.filter(e=>e.type==="Servicio");
+    const inspections  = filteredLog.filter(e=>e.type==="Inspección");
+    const fuelLog      = filteredLog.filter(e=>e.type==="Combustible");
+    const salidas      = filteredLog.filter(e=>e.type==="Salida");
+    const compras      = filteredLog.filter(e=>e.type==="Compra");
+    const totalCost    = compras.reduce((a,e)=>a+(e.costUSD||0),0);
+
+    const tableStyle = `border-collapse:collapse;width:100%;margin-bottom:24px;font-size:12px;`;
+    const thStyle    = `background:#1e3a5f;color:#93c5fd;padding:8px 12px;text-align:left;font-size:11px;letter-spacing:0.05em;`;
+    const tdStyle    = `padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#475569;`;
+    const tdBold     = `${tdStyle}font-weight:600;color:#0f172a;`;
+    const secTitle   = `font-size:10px;font-weight:700;color:#0ea5e9;letter-spacing:0.12em;text-transform:uppercase;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid #0ea5e9;`;
+
+    let sections = "";
+
+    if (sel.includes("service") && services.length > 0) {
+      sections += `<div style="${secTitle}">🔧 Servicios (${services.length})</div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Tipo</th>
+        <th style="${thStyle}">Equipo</th><th style="${thStyle}">Descripción</th>
+        <th style="${thStyle}">Realizado por</th>
+      </tr></thead><tbody>
+      ${services.map(e=>`<tr>
+        <td style="${tdStyle}">${e.date||""}</td>
+        <td style="${tdStyle}">${e.serviceType||""}</td>
+        <td style="${tdBold}">${e.equipment||""}</td>
+        <td style="${tdStyle}">${e.desc||""}</td>
+        <td style="${tdStyle}">${e.performedBy||""}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("inspect") && inspections.length > 0) {
+      sections += `<div style="${secTitle}">🔍 Inspecciones (${inspections.length})</div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Equipo</th>
+        <th style="${thStyle}">Descripción</th><th style="${thStyle}">Realizado por</th>
+      </tr></thead><tbody>
+      ${inspections.map(e=>`<tr>
+        <td style="${tdStyle}">${e.date||""}</td>
+        <td style="${tdBold}">${e.equipment||""}</td>
+        <td style="${tdStyle}">${e.desc||""}</td>
+        <td style="${tdStyle}">${e.performedBy||""}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("fuel") && fuelLog.length > 0) {
+      sections += `<div style="${secTitle}">⛽ Combustible (${fuelLog.length} repostajes)</div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Cantidad</th>
+        <th style="${thStyle}">Unidad</th><th style="${thStyle}">Notas</th>
+      </tr></thead><tbody>
+      ${fuelLog.map(e=>`<tr>
+        <td style="${tdStyle}">${e.date||""}</td>
+        <td style="${tdBold}">${e.fuelQty||""}</td>
+        <td style="${tdStyle}">${e.fuelUnit||""}</td>
+        <td style="${tdStyle}">${e.desc||""}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("salidas") && salidas.length > 0) {
+      sections += `<div style="${secTitle}">🚢 Salidas al Mar (${salidas.length})</div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Destino</th>
+        <th style="${thStyle}">Personas</th><th style="${thStyle}">Salida</th>
+        <th style="${thStyle}">Regreso</th><th style="${thStyle}">Clima</th>
+      </tr></thead><tbody>
+      ${salidas.map(e=>`<tr>
+        <td style="${tdStyle}">${e.date||""}</td>
+        <td style="${tdBold}">${e.dest||""}</td>
+        <td style="${tdStyle}">${e.persons||""}</td>
+        <td style="${tdStyle}">${e.deptTime||""}</td>
+        <td style="${tdStyle}">${e.arrTime||"Pendiente"}</td>
+        <td style="${tdStyle}">${e.salidaClima||""}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("costs") && compras.length > 0) {
+      sections += `<div style="${secTitle}">💰 Compras y Costos — Total: $${totalCost.toFixed(2)}</div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Descripción</th>
+        <th style="${thStyle}">Marca</th><th style="${thStyle}">N° Parte</th>
+        <th style="${thStyle}">USD</th><th style="${thStyle}">Pago</th>
+      </tr></thead><tbody>
+      ${compras.map(e=>`<tr>
+        <td style="${tdStyle}">${e.date||""}</td>
+        <td style="${tdBold}">${e.item||""}</td>
+        <td style="${tdStyle}">${e.brand||""}</td>
+        <td style="${tdStyle}">${e.partNum||""}</td>
+        <td style="${tdBold};color:#16a34a;">$${e.costUSD||0}</td>
+        <td style="${tdStyle}">${e.payment||""}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("tasks")) {
+      const overdue = filteredTasks.filter(t=>t.status==="overdue");
+      const due     = filteredTasks.filter(t=>t.status==="due");
+      const ok      = filteredTasks.filter(t=>t.status==="ok");
+      sections += `<div style="${secTitle}">☑ Estado de Tareas (${filteredTasks.length} total)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#dc2626;">${overdue.length}</div><div style="font-size:11px;color:#dc2626;">Vencidas</div></div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#d97706;">${due.length}</div><div style="font-size:11px;color:#d97706;">Por vencer</div></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:700;color:#16a34a;">${ok.length}</div><div style="font-size:11px;color:#16a34a;">Al día</div></div>
+      </div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Sistema</th><th style="${thStyle}">Tarea</th>
+        <th style="${thStyle}">Próx. Venc.</th><th style="${thStyle}">Estado</th>
+      </tr></thead><tbody>
+      ${filteredTasks.map(t=>`<tr>
+        <td style="${tdStyle}">${t.system||""}</td>
+        <td style="${tdBold}">${t.name||""}</td>
+        <td style="${tdStyle}">${t.nextDue||""}</td>
+        <td style="${tdStyle};color:${t.status==="overdue"?"#dc2626":t.status==="due"?"#d97706":"#16a34a"};font-weight:600;">${t.status==="overdue"?"Vencido":t.status==="due"?"Por vencer":"Al día"}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("log")) {
+      sections += `<div style="${secTitle}">📓 Bitácora Completa (${filteredLog.length} entradas)</div>
+      <table style="${tableStyle}"><thead><tr>
+        <th style="${thStyle}">Fecha</th><th style="${thStyle}">Tipo</th>
+        <th style="${thStyle}">Detalle</th><th style="${thStyle}">Realizado por</th>
+      </tr></thead><tbody>
+      ${filteredLog.map(e=>`<tr>
+        <td style="${tdStyle}">${e.date||""}</td>
+        <td style="${tdStyle}">${e.type||""}${e.serviceType?` · ${e.serviceType}`:""}</td>
+        <td style="${tdBold}">${e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p`:e.type==="Compra"?e.item||"":e.desc||""}</td>
+        <td style="${tdStyle}">${e.performedBy||""}</td>
+      </tr>`).join("")}</tbody></table>`;
+    }
+
+    if (sel.includes("sale") || sel.includes("insurance")) {
+      sections += `<div style="${secTitle}">📋 Información Técnica del Barco</div>
+      <table style="${tableStyle}"><tbody>
+        ${[["Fabricante / Modelo",`${d.manufacturer||""} ${d.model||""}`],["Año",d.year||""],["Tipo de Casco",d.hullType||""],["Puerto Base",d.homePort||""],["Serial (HIN)",d.hin||""],["Eslora",d.loa||""],["Manga",d.beam||""],["Desplazamiento",d.displacement||""]].map(([k,v])=>`<tr><td style="${tdStyle}">${k}</td><td style="${tdBold}">${v||"—"}</td></tr>`).join("")}
+      </tbody></table>`;
+    }
+
+    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    <title>Reporte NautiTrack — ${vessel.name}</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; background:#fff; }
+      @media print { .no-print { display:none; } body { padding:0; } }
+    </style></head>
+    <body style="padding:0;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0f2744,#1e3a8a);padding:32px 48px;color:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="font-size:11px;letter-spacing:0.15em;opacity:0.7;margin-bottom:6px;">REPORTE OFICIAL</div>
+            <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">NautiTrack<span style="color:#38bdf8;">.VZ</span></div>
+            <div style="font-size:13px;opacity:0.8;margin-top:4px;">Gestión inteligente de embarcaciones</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:22px;font-weight:700;">${vessel.name}</div>
+            <div style="font-size:13px;opacity:0.8;margin-top:4px;">${vessel.type||""} · ${vessel.marina||""}</div>
+            <div style="font-size:11px;opacity:0.6;margin-top:8px;">Generado: ${today}</div>
+            ${from||to?`<div style="font-size:11px;opacity:0.6;">Período: ${from||"inicio"} → ${to||"hoy"}</div>`:""}
+          </div>
+        </div>
+      </div>
+      <!-- Summary bar -->
+      <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:16px 48px;display:flex;gap:32px;">
+        ${[
+          ["📋 Bitácora",(vessel.log||[]).length+" entradas"],
+          ["☑ Tareas",(vessel.tasks||[]).length+" registradas"],
+          ["💰 Compras","$"+totalCost.toFixed(2)+" USD"],
+          ["🚢 Salidas",salidas.length+" salidas"],
+        ].map(([k,v])=>`<div><div style="font-size:18px;font-weight:700;color:#1e3a8a;">${v}</div><div style="font-size:11px;color:#64748b;margin-top:2px;">${k}</div></div>`).join('<div style="width:1px;background:#e2e8f0;"></div>')}
+      </div>
+      <!-- Content -->
+      <div style="padding:32px 48px;">
+        ${sections || '<p style="color:#94a3b8;text-align:center;padding:40px;">No se seleccionaron secciones para este reporte.</p>'}
+      </div>
+      <!-- Footer -->
+      <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 48px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:11px;color:#94a3b8;">NautiTrack.VZ — nautitrack.vercel.app</div>
+        <div style="font-size:11px;color:#94a3b8;">Documento confidencial — ${vessel.name} — ${today}</div>
+      </div>
+      <!-- Print button -->
+      <div class="no-print" style="position:fixed;bottom:24px;right:24px;display:flex;gap:10px;">
+        <button onclick="window.print()" style="padding:12px 20px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(29,78,216,0.4);">🖨️ Imprimir / PDF</button>
+        <button onclick="window.close()" style="padding:12px 20px;background:#fff;color:#475569;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;cursor:pointer;">✕ Cerrar</button>
+      </div>
+    </body></html>`;
+  };
+
+  const openReport = () => {
+    const html = generateHTML();
+    const w = window.open("","_blank");
+    w.document.write(html);
+    w.document.close();
+  };
+
   return (
     <div style={s.modalOverlay} onClick={onClose}>
-      <div style={{...s.modalBox,maxWidth:600}} onClick={e=>e.stopPropagation()}>
+      <div style={{...s.modalBox,maxWidth:620}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>📊 Generar Reporte</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>{vessel.name}</div></div>
+          <div>
+            <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>📊 Generar Reporte</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{vessel.name}</div>
+          </div>
           <button onClick={onClose} style={s.modalClose}>✕</button>
         </div>
-        {!gen?(
+
+        {!gen ? (
           <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{fontSize:12,color:"#64748b"}}>Selecciona las secciones que quieres incluir en el reporte:</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {types.map(r=>(
+              {REPORT_TYPES.map(r=>(
                 <button key={r.key} onClick={()=>toggle(r.key)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",border:"1.5px solid",borderRadius:8,cursor:"pointer",textAlign:"left",background:sel.includes(r.key)?"#eff6ff":"#f8fafc",borderColor:sel.includes(r.key)?"#2563eb":"#e2e8f0"}}>
                   <span style={{fontSize:18,flexShrink:0}}>{r.icon}</span>
-                  <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:sel.includes(r.key)?"#2563eb":"#1e293b"}}>{r.label}</div><div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{r.desc}</div></div>
-                  {sel.includes(r.key)&&<span style={{color:"#2563eb",flexShrink:0}}>✓</span>}
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:600,color:sel.includes(r.key)?"#2563eb":"#1e293b"}}>{r.label}</div>
+                    <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{r.desc}</div>
+                  </div>
+                  {sel.includes(r.key)&&<span style={{color:"#2563eb",flexShrink:0,fontSize:14}}>✓</span>}
                 </button>
               ))}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={s.label}>Desde</label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={s.input}/></div>
-              <div><label style={s.label}>Hasta</label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={s.input}/></div>
+              <div><label style={s.label}>Desde <span style={{color:"#94a3b8",fontWeight:400}}>(opcional)</span></label><input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={s.input}/></div>
+              <div><label style={s.label}>Hasta <span style={{color:"#94a3b8",fontWeight:400}}>(opcional)</span></label><input type="date" value={to} onChange={e=>setTo(e.target.value)} style={s.input}/></div>
+            </div>
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#0369a1"}}>
+              💡 El reporte se abre en una nueva pestaña con diseño profesional. Desde ahí puedes imprimir o guardar como PDF.
             </div>
           </div>
-        ):(
-          <div style={{padding:"24px",textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:12}}>📄</div>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:16}}>Reporte Listo</div>
-            <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:16,textAlign:"left",marginBottom:16}}>
-              {[["Embarcación",vessel.name],["Records",vessel.records.length],["Bitácora",vessel.log.length],["Costo total",`$${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}`]].map(([k,v])=>(
-                <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span style={{color:"#64748b"}}>{k}</span><span style={{fontWeight:600}}>{v}</span></div>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-              <button style={{...s.btnPrimary,background:"#16a34a"}}>⬇ Descargar PDF</button>
-              <button style={s.btnPrimary}>📧 Enviar</button>
-            </div>
-          </div>
-        )}
+        ) : null}
+
         <div style={s.modalFooter}>
           <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
-          {!gen?<button style={{...s.btnPrimary,opacity:sel.length===0?0.5:1}} onClick={()=>sel.length>0&&setGen(true)}>Generar ({sel.length})</button>:<button style={s.btnOutline} onClick={()=>setGen(false)}>← Volver</button>}
+          <div style={{display:"flex",gap:8}}>
+            {sel.length>0&&<button style={{...s.btnPrimary,background:"#7c3aed"}} onClick={()=>{setSel([...REPORT_TYPES.map(r=>r.key)]);}}>Seleccionar todo</button>}
+            <button style={{...s.btnPrimary,opacity:sel.length===0?0.5:1}} onClick={()=>{if(sel.length>0)openReport();}}>
+              📄 Generar Reporte ({sel.length})
+            </button>
+          </div>
         </div>
       </div>
     </div>
