@@ -1,4 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "./supabase";
+import Auth from "./Auth";
 
 const DEFAULT_SYSTEMS = [
   { id:"motores",    label:"Motores",                  icon:"🔧", trackHours:true,
@@ -138,6 +140,8 @@ export default function App() {
   const [vessels, setVessels]   = useState(INIT_VESSELS);
   const [vesselId, setVesselId] = useState(1);
   const [page, setPage]         = useState("home");
+  const [user, setUser]         = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [showVesselMenu, setShowVesselMenu]       = useState(false);
   const [showUserMenu, setShowUserMenu]           = useState(false);
   const [showVesselDetails, setShowVesselDetails] = useState(false);
@@ -148,6 +152,28 @@ export default function App() {
   const updateVessel = useCallback((updated) => {
     setVessels(vs => vs.map(v => v.id === updated.id ? updated : v));
   }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (authLoading) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:40,marginBottom:16}}>⚓</div>
+        <div style={{fontSize:14,color:"#64748b"}}>Cargando NautiTrack...</div>
+      </div>
+    </div>
+  );
+
+  if (!user) return <Auth onLogin={setUser} />;
 
   return (
     <div style={s.root} onClick={() => { setShowVesselMenu(false); setShowUserMenu(false); }}>
