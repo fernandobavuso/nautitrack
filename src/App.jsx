@@ -2414,17 +2414,8 @@ function NotificationsModal({ vessel, user, onClose }) {
       bg: "#fff5f5",
       border: "#fecaca",
       generate: () => overdueTasks.length === 0
-        ? `✅ *NautiTrack.VZ* — ${vessel.name}
-
-Sin tareas vencidas. ¡Todo al día!`
-        : `🚨 *NautiTrack.VZ* — ${vessel.name}
-
-⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:
-
-${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("
-")}
-
-📱 Ver detalles: nautitrack.vercel.app`
+        ? `✅ *NautiTrack.VZ* — ${vessel.name}\n\nSin tareas vencidas. ¡Todo al día!`
+        : `🚨 *NautiTrack.VZ* — ${vessel.name}\n\n⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:\n\n${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
     },
     {
       key: "due_soon",
@@ -2434,17 +2425,8 @@ ${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDat
       bg: "#fffbeb",
       border: "#fde68a",
       generate: () => dueTasks.length === 0
-        ? `✅ *NautiTrack.VZ* — ${vessel.name}
-
-Sin tareas por vencer esta semana.`
-        : `⏰ *NautiTrack.VZ* — ${vessel.name}
-
-📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:
-
-${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("
-")}
-
-📱 Ver detalles: nautitrack.vercel.app`
+        ? `✅ *NautiTrack.VZ* — ${vessel.name}\n\nSin tareas por vencer esta semana.`
+        : `⏰ *NautiTrack.VZ* — ${vessel.name}\n\n📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:\n\n${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
     },
     {
       key: "status",
@@ -2453,20 +2435,7 @@ ${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.
       color: "#2563eb",
       bg: "#eff6ff",
       border: "#bfdbfe",
-      generate: () => `📊 *NautiTrack.VZ* — Reporte ${vessel.name}
-
-🚢 *${vessel.name}* · ${vessel.type||""}
-📍 ${vessel.marina||""}
-
-🔧 Motor: ${vessel.engineHours||0}h
-⚡ Generador: ${vessel.genHours||0}h
-⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}
-
-✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}
-⚠️ Vencidas: ${overdueTasks.length}
-📋 Bitácora: ${(vessel.log||[]).length} entradas
-
-📱 nautitrack.vercel.app`
+      generate: () => `📊 *NautiTrack.VZ* — Reporte ${vessel.name}\n\n🚢 *${vessel.name}* · ${vessel.type||""}\n📍 ${vessel.marina||""}\n\n🔧 Motor: ${vessel.engineHours||0}h\n⚡ Generador: ${vessel.genHours||0}h\n⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}\n\n✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}\n⚠️ Vencidas: ${overdueTasks.length}\n📋 Bitácora: ${(vessel.log||[]).length} entradas\n\n📱 nautitrack.vercel.app`
     },
     {
       key: "custom",
