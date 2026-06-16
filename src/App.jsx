@@ -399,13 +399,14 @@ export default function App() {
 
   return (
     <div style={s.root} onClick={() => { setShowVesselMenu(false); setShowUserMenu(false); }}>
-      <TopNav vessel={vessel} vessels={vessels}
+      <TopNav vessel={vessel} vessels={vessels} user={user}
         setVesselId={(id) => { setVesselId(id); setPage("home"); }}
         showVesselMenu={showVesselMenu} setShowVesselMenu={setShowVesselMenu}
         showUserMenu={showUserMenu} setShowUserMenu={setShowUserMenu}
         setShowVesselDetails={setShowVesselDetails}
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
         setShowNotifications={setShowNotifications}
+        setShowQRPanel={setShowQRPanel}
         page={page} setPage={setPage}
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); }}
       />
@@ -425,7 +426,7 @@ export default function App() {
   );
 }
 
-function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,page,setPage,onLogout }) {
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
   return (
     <nav style={s.nav} onClick={e => e.stopPropagation()}>
