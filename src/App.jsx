@@ -176,7 +176,7 @@ export default function App() {
   const [user, setUser]               = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [vessels, setVessels]         = useState([]);
-  const [vesselsLoading, setVesselsLoading] = useState(false);
+  const [vesselsLoading, setVesselsLoading] = useState(true);
   const [vesselId, setVesselId]       = useState(null);
   const [page, setPage]               = useState("home");
   const [showVesselMenu, setShowVesselMenu]       = useState(false);
