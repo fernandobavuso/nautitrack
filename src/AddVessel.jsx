@@ -5,17 +5,14 @@ const VESSEL_TYPES = [
   "Barco de Trabajo","Yate de Vela","Otro"
 ];
 
-const MARINAS_VZ = [
-  "Puerto La Cruz","Margarita / Porlamar","Tucacas","Los Roques",
-  "La Guaira","Caraballeda","Chichiriviche","Cumaná","Mochima","Otra"
-];
-
 export default function AddVessel({ onAdd, onSkip }) {
   const [step, setStep]     = useState(1);
   const [loading, setLoading] = useState(false);
   const [form, setForm]     = useState({
-    name:"", type:"", marina:"", captain:"",
-    fuel:0, fuelUnit:"gal", engineHours:0, genHours:0,
+    name:"", type:"",
+    marinaName:"", city:"", country:"Venezuela",
+    captain:"",
+    brand:"", model:"", lengthFt:"",
   });
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
 
@@ -23,17 +20,30 @@ export default function AddVessel({ onAdd, onSkip }) {
     if (!form.name.trim()) return;
     setLoading(true);
     try {
+      // Build marina string for weather: "MarinaName, City, Country"
+      const marinaParts = [form.marinaName, form.city, form.country].filter(Boolean);
+      const marinaStr   = marinaParts.join(", ");
+
       await onAdd({
         name:         form.name,
         type:         form.type || "Yate Motor",
-        marina:       form.marina || "",
+        marina:       marinaStr,
         captain:      form.captain || "",
-        fuel:         parseFloat(form.fuel) || 0,
-        fuel_unit:    form.fuelUnit,
-        engine_hours: parseFloat(form.engineHours) || 0,
-        gen_hours:    parseFloat(form.genHours) || 0,
+        fuel:         0,
+        fuel_unit:    "gal",
+        engine_hours: 0,
+        gen_hours:    0,
         status:       "ok",
-        details:      {},
+        details: {
+          _profile: {
+            brand:     form.brand || "",
+            model:     form.model || "",
+            lengthFt:  form.lengthFt || "",
+            city:      form.city || "",
+            state:     "",
+            country:   form.country || "Venezuela",
+          }
+        },
         crew:         [],
         motors:       [],
         generators:   [],
@@ -102,17 +112,28 @@ export default function AddVessel({ onAdd, onSkip }) {
           </div>
         )}
 
-        {/* Step 2 — Location & crew */}
+        {/* Step 2 — Marca, modelo, eslora */}
         {step===2&&(
           <div style={s.form}>
-            <div style={s.stepTitle}>📍 Ubicación y capitán</div>
+            <div style={s.stepTitle}>🛥️ Datos del barco</div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <label style={s.label}>Marca</label>
+                <input value={form.brand} onChange={e=>set("brand",e.target.value)}
+                  placeholder="Ej: Sea Ray" style={s.input}/>
+              </div>
+              <div>
+                <label style={s.label}>Modelo</label>
+                <input value={form.model} onChange={e=>set("model",e.target.value)}
+                  placeholder="Ej: 65L" style={s.input}/>
+              </div>
+            </div>
 
             <div>
-              <label style={s.label}>Marina / Puerto base</label>
-              <select value={form.marina} onChange={e=>set("marina",e.target.value)} style={s.input}>
-                <option value="">Seleccionar...</option>
-                {MARINAS_VZ.map(m=><option key={m} value={m}>{m}</option>)}
-              </select>
+              <label style={s.label}>Eslora (pies)</label>
+              <input type="number" value={form.lengthFt} onChange={e=>set("lengthFt",e.target.value)}
+                placeholder="Ej: 65" style={s.input}/>
             </div>
 
             <div>
@@ -128,37 +149,32 @@ export default function AddVessel({ onAdd, onSkip }) {
           </div>
         )}
 
-        {/* Step 3 — Readings */}
+        {/* Step 3 — Marina y ubicación */}
         {step===3&&(
           <div style={s.form}>
-            <div style={s.stepTitle}>⚙️ Lecturas actuales <span style={{fontSize:11,color:"#94a3b8",fontWeight:400}}>(opcional)</span></div>
+            <div style={s.stepTitle}>📍 Ubicación del barco</div>
 
             <div>
-              <label style={s.label}>Combustible actual</label>
-              <div style={{display:"flex",gap:8}}>
-                <select value={form.fuelUnit} onChange={e=>set("fuelUnit",e.target.value)} style={{...s.input,width:90}}>
-                  {["gal","lts","%"].map(u=><option key={u} value={u}>{u}</option>)}
-                </select>
-                <input type="number" value={form.fuel} onChange={e=>set("fuel",e.target.value)}
-                  placeholder="0" style={{...s.input,flex:1}}/>
-              </div>
+              <label style={s.label}>Nombre de la marina / puerto base</label>
+              <input value={form.marinaName} onChange={e=>set("marinaName",e.target.value)}
+                placeholder="Ej: Marina Bahía Redonda" style={s.input}/>
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
-                <label style={s.label}>Horas de motor</label>
-                <input type="number" value={form.engineHours} onChange={e=>set("engineHours",e.target.value)}
-                  placeholder="0" style={s.input}/>
+                <label style={s.label}>Ciudad</label>
+                <input value={form.city} onChange={e=>set("city",e.target.value)}
+                  placeholder="Ej: Puerto La Cruz" style={s.input}/>
               </div>
               <div>
-                <label style={s.label}>Horas de generador</label>
-                <input type="number" value={form.genHours} onChange={e=>set("genHours",e.target.value)}
-                  placeholder="0" style={s.input}/>
+                <label style={s.label}>País</label>
+                <input value={form.country} onChange={e=>set("country",e.target.value)}
+                  placeholder="Venezuela" style={s.input}/>
               </div>
             </div>
 
-            <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#15803d"}}>
-              ✓ Puedes completar todos los detalles técnicos después en "Mi Embarcación"
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#0369a1"}}>
+              📡 Usamos ciudad + país para mostrar el clima en tiempo real de tu embarcación
             </div>
 
             <div style={{display:"flex",gap:10}}>
