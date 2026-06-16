@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
 export default function Auth({ onLogin }) {
-  const [mode, setMode]         = useState("login");
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName]         = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
-  const [success, setSuccess]   = useState("");
+  const [mode, setMode]           = useState("login");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [name, setName]           = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
+  const [success, setSuccess]     = useState("");
 
   // Clear any error hashes from URL on mount
   useEffect(() => {
@@ -26,8 +27,9 @@ export default function Auth({ onLogin }) {
   };
 
   const handleRegister = async () => {
-    if (!email || !password || !name) { setError("Completa todos los campos"); return; }
+    if (!email || !password || !confirmPwd || !name) { setError("Completa todos los campos"); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
+    if (password !== confirmPwd) { setError("Las contraseñas no coinciden"); return; }
     setLoading(true); setError("");
     const { data, error: err } = await supabase.auth.signUp({ email, password });
     if (err) { setError(err.message); setLoading(false); return; }
@@ -73,7 +75,7 @@ export default function Auth({ onLogin }) {
           {mode==="register"&&(
             <div>
               <label style={s.label}>Nombre completo</label>
-              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Ricardo Ortega" style={s.input}/>
+              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Tu nombre completo" style={s.input}/>
             </div>
           )}
           <div>
@@ -86,6 +88,13 @@ export default function Auth({ onLogin }) {
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={s.input}
               onKeyDown={e=>e.key==="Enter"&&(mode==="login"?handleLogin():handleRegister())}/>
           </div>
+          {mode==="register"&&(
+            <div>
+              <label style={s.label}>Confirmar contraseña</label>
+              <input type="password" value={confirmPwd} onChange={e=>setConfirmPwd(e.target.value)} placeholder="••••••••" style={s.input}
+                onKeyDown={e=>e.key==="Enter"&&handleRegister()}/>
+            </div>
+          )}
 
           {error   && <div style={s.errorBox}>⚠ {error}</div>}
           {success && <div style={s.successBox}>✓ {success}</div>}
@@ -104,15 +113,16 @@ export default function Auth({ onLogin }) {
           )}
         </div>
 
-        {/* Plans */}
+        {/* Features */}
         <div style={s.footer}>
-          <div style={s.plansRow}>
-            <div style={s.plan}><div style={s.planPrice}>$29<span style={{fontSize:10}}>/mes</span></div><div style={s.planName}>Basic</div></div>
-            <div style={{...s.plan,...s.planFeatured}}><div style={s.planPrice}>$79<span style={{fontSize:10}}>/mes</span></div><div style={s.planName}>Pro ⭐</div></div>
-            <div style={s.plan}><div style={s.planPrice}>$149<span style={{fontSize:10}}>/mes</span></div><div style={s.planName}>Fleet</div></div>
+          <div style={s.featuresGrid}>
+            <div style={s.feature}><span style={s.featureIcon}>📊</span><span style={s.featureText}>Bitácora digital</span></div>
+            <div style={s.feature}><span style={s.featureIcon}>🔧</span><span style={s.featureText}>Control de tareas</span></div>
+            <div style={s.feature}><span style={s.featureIcon}>🤖</span><span style={s.featureText}>Asistente IA</span></div>
+            <div style={s.feature}><span style={s.featureIcon}>📱</span><span style={s.featureText}>Alertas WhatsApp</span></div>
           </div>
-          <div style={{fontSize:11,color:"#94a3b8",marginTop:10,textAlign:"center"}}>
-            Pagos: Zelle · Pago Móvil · Efectivo USD
+          <div style={{fontSize:11,color:"#cbd5e1",marginTop:12,textAlign:"center",letterSpacing:"0.04em"}}>
+            Gestión inteligente · Desde cualquier lugar
           </div>
         </div>
       </div>
@@ -136,9 +146,8 @@ const s = {
   errorBox: { background:"#fff5f5", border:"1px solid #fecaca", borderRadius:8, padding:"9px 12px", fontSize:12, color:"#dc2626" },
   successBox:{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:8, padding:"9px 12px", fontSize:12, color:"#16a34a" },
   footer:   { marginTop:24, paddingTop:20, borderTop:"1px solid #f1f5f9" },
-  plansRow: { display:"flex", gap:8 },
-  plan:     { flex:1, textAlign:"center", padding:"10px 6px", borderRadius:10, background:"#f8fafc", border:"1px solid #e2e8f0" },
-  planFeatured: { background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", color:"#fff", border:"none" },
-  planPrice:{ fontSize:16, fontWeight:800, color:"inherit" },
-  planName: { fontSize:10, marginTop:2, opacity:0.8 },
+  featuresGrid: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 },
+  feature:  { display:"flex", alignItems:"center", gap:8, padding:"9px 12px", background:"#f8fafc", borderRadius:9, border:"1px solid #e2e8f0" },
+  featureIcon: { fontSize:16 },
+  featureText: { fontSize:12, color:"#475569", fontWeight:500 },
 };
