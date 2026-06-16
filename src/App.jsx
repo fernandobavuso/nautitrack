@@ -333,16 +333,21 @@ export default function App() {
   };
 
   useEffect(() => {
+    let initialized = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
       if (u) { fetchVessels(u.id); fetchUserProfile(u.id); }
+      else setVesselsLoading(false);
       setAuthLoading(false);
+      initialized = true;
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!initialized) return;
       const u = session?.user ?? null;
       setUser(u);
       if (u) { fetchVessels(u.id); fetchUserProfile(u.id); }
+      else { setVessels([]); setVesselsLoading(false); }
     });
     return () => subscription.unsubscribe();
   }, [fetchVessels]);
@@ -384,7 +389,11 @@ export default function App() {
   );
 
   if (!vesselsLoading && vessels.length === 0) return (
-    <AddVessel onAdd={handleAddVessel} onSkip={() => setVessels(INIT_VESSELS.map(v => ({...v, owner_id: user.id})))}/>
+    <AddVessel onAdd={handleAddVessel} onSkip={() => {
+      const demo = INIT_VESSELS.map(v => ({...v, owner_id: user.id}));
+      setVessels(demo);
+      setVesselId(demo[0].id);
+    }}/>
   );
 
   const vessel = vessels.find(v => v.id === vesselId) || vessels[0];
