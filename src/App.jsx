@@ -186,6 +186,7 @@ export default function App() {
   const [showProfile, setShowProfile]             = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQRPanel, setShowQRPanel]             = useState(false);
+  const [userProfile, setUserProfile]             = useState(null);
 
   // ── Supabase helpers ──────────────────────────────────────────────────────
   const fetchTasks = async (vesselId) => {
@@ -326,17 +327,22 @@ export default function App() {
     setVesselsLoading(false);
   }, []);
 
+  const fetchUserProfile = async (uid) => {
+    const { data } = await supabase.from("profiles").select("full_name, email").eq("id", uid).single();
+    if (data) setUserProfile(data);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchVessels(u.id);
+      if (u) { fetchVessels(u.id); fetchUserProfile(u.id); }
       setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchVessels(u.id);
+      if (u) { fetchVessels(u.id); fetchUserProfile(u.id); }
     });
     return () => subscription.unsubscribe();
   }, [fetchVessels]);
@@ -377,7 +383,7 @@ export default function App() {
     </div>
   );
 
-  if (vessels.length === 0) return (
+  if (!vesselsLoading && vessels.length === 0) return (
     <AddVessel onAdd={handleAddVessel} onSkip={() => setVessels(INIT_VESSELS.map(v => ({...v, owner_id: user.id})))}/>
   );
 
@@ -459,8 +465,8 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
         </div>
         <div style={{position:"relative"}}>
           <button style={s.userBtn} onClick={() => { setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
-            <div style={s.navAvatar}>{vessel.profile?.firstName?.[0]||"?"}{vessel.profile?.lastName?.[0]||""}</div>
-            <div><div style={s.navName}>{vessel.profile?.firstName||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
+            <div style={s.navAvatar}>{(userProfile?.full_name||user?.email||"?")[0].toUpperCase()}</div>
+            <div><div style={s.navName}>{userProfile?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
