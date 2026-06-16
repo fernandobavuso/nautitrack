@@ -3,6 +3,8 @@ import React from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
+import QRPanel from "./QRPanel";
+import CheckinPage from "./CheckinPage";
 
 
 
@@ -183,6 +185,7 @@ export default function App() {
   const [showProviders, setShowProviders]         = useState(false);
   const [showProfile, setShowProfile]             = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showQRPanel, setShowQRPanel]             = useState(false);
 
   // ── Supabase helpers ──────────────────────────────────────────────────────
   const fetchTasks = async (vesselId) => {
@@ -356,6 +359,10 @@ export default function App() {
   };
 
   // ── Early returns AFTER all hooks ────────────────────────────────────────────
+
+  // Ruta pública de QR check-in — no requiere auth
+  if (window.location.pathname === "/checkin") return <CheckinPage />;
+
   if (authLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>⚓</div><div style={{fontSize:14,color:"#64748b"}}>Cargando NautiTrack...</div></div>
@@ -398,6 +405,7 @@ export default function App() {
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
       {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
+      {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
       {showProfile       && <ProfileModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProfile(false)} />}
     </div>
   );
@@ -443,6 +451,11 @@ function TopNav({ vessel,vessels,setVesselId,showVesselMenu,setShowVesselMenu,sh
         <div style={s.bellWrap}>
           <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifications(true)}>🔔</span>
           {totalAlerts > 0 && <div style={s.bellBadge}>{totalAlerts}</div>}
+        </div>
+        <div style={{position:"relative"}}>
+          <button onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12,color:"#0369a1",fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+            📱 QR
+          </button>
         </div>
         <div style={{position:"relative"}}>
           <button style={s.userBtn} onClick={() => { setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
