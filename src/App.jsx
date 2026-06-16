@@ -301,29 +301,34 @@ export default function App() {
 
   const fetchVessels = useCallback(async (uid) => {
     setVesselsLoading(true);
-    const { data } = await supabase.from("vessels").select("*").eq("owner_id", uid).order("created_at", { ascending: true });
-    const mapped = await Promise.all((data || []).map(async v => {
-      const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
-      const d = v.details || {};
-      return {
-        ...v,
-        fuelUnit: v.fuel_unit || "gal",
-        engineHours: v.engine_hours || 0,
-        genHours: v.gen_hours || 0,
-        customSystems: v.custom_systems || [],
-        photo: v.photo_url || null,
-        profile:      d._profile      || { firstName:"", lastName:"", phone:"", email:"", marinaAddress:"" },
-        config:       d._config       || { distUnit:"nm", speedUnit:"kn", fuelUnit:"gal", tempUnit:"C" },
-        subscription: d._subscription || { plan:"Pro", price:79, currency:"USD", cycle:"Mensual" },
-        details:      d,
-        tasks, log,
-        records: [],
-        alerts: tasks.filter(t => t.status === "overdue").length,
-        weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
-      };
-    }));
-    setVessels(mapped);
-    if (mapped.length > 0) setVesselId(mapped[0].id);
+    try {
+      const { data, error } = await supabase.from("vessels").select("*").eq("owner_id", uid).order("created_at", { ascending: true });
+      if (error) { console.error("fetchVessels error:", error.message); setVesselsLoading(false); return; }
+      const mapped = await Promise.all((data || []).map(async v => {
+        const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
+        const d = v.details || {};
+        return {
+          ...v,
+          fuelUnit: v.fuel_unit || "gal",
+          engineHours: v.engine_hours || 0,
+          genHours: v.gen_hours || 0,
+          customSystems: v.custom_systems || [],
+          photo: v.photo_url || null,
+          profile:      d._profile      || { firstName:"", lastName:"", phone:"", email:"", marinaAddress:"" },
+          config:       d._config       || { distUnit:"nm", speedUnit:"kn", fuelUnit:"gal", tempUnit:"C" },
+          subscription: d._subscription || { plan:"Pro", price:79, currency:"USD", cycle:"Mensual" },
+          details:      d,
+          tasks, log,
+          records: [],
+          alerts: tasks.filter(t => t.status === "overdue").length,
+          weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
+        };
+      }));
+      setVessels(mapped);
+      if (mapped.length > 0) setVesselId(mapped[0].id);
+    } catch(e) {
+      console.error("fetchVessels catch:", e);
+    }
     setVesselsLoading(false);
   }, []);
 
