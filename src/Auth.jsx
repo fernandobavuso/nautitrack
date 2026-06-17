@@ -6,7 +6,8 @@ export default function Auth({ onLogin }) {
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
-  const [name, setName]           = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName]   = useState("");
   const [userRole, setUserRole]   = useState("owner"); // 'owner' | 'crew'
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
@@ -28,7 +29,7 @@ export default function Auth({ onLogin }) {
   };
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPwd || !name) { setError("Completa todos los campos"); return; }
+    if (!email || !password || !confirmPwd || !firstName || !lastName) { setError("Completa todos los campos"); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     if (password !== confirmPwd) { setError("Las contraseñas no coinciden"); return; }
     setLoading(true); setError("");
@@ -36,10 +37,10 @@ export default function Auth({ onLogin }) {
     if (err) { setError(err.message); setLoading(false); return; }
     if (data.user) {
       await supabase.from("profiles").insert({
-        id: data.user.id, email, full_name: name, role: userRole
+        id: data.user.id, email, full_name: `${firstName} ${lastName}`.trim(), role: userRole
       });
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
-      if (loginData?.user) { onLogin({...loginData.user, role: userRole}); return; }
+      if (loginData?.user) { onLogin({...loginData.user, role: userRole, full_name: `${firstName} ${lastName}`.trim()}); return; }
       setSuccess("¡Cuenta creada! Ya puedes iniciar sesión.");
     }
     setLoading(false);
@@ -74,8 +75,16 @@ export default function Auth({ onLogin }) {
         <div style={s.form}>
           {mode==="register"&&(
             <div>
-              <label style={s.label}>Nombre completo</label>
-              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Tu nombre completo" style={s.input}/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <label style={s.label}>Nombre *</label>
+                  <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="Carlos" style={s.input}/>
+                </div>
+                <div>
+                  <label style={s.label}>Apellido *</label>
+                  <input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="Mendoza" style={s.input}/>
+                </div>
+              </div>
             </div>
           )}
           {mode==="register"&&(

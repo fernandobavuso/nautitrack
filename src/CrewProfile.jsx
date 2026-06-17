@@ -47,6 +47,7 @@ const BADGE_DEFS = [
   {id:"3boats",      icon:"🚢", label:"3+ Embarcaciones",   color:"#0891b2", bg:"#ecfeff", border:"#a5f3fc"},
   {id:"captain",     icon:"⚓", label:"Capitán Certificado",color:"#be185d", bg:"#fdf2f8", border:"#fbcfe8"},
   {id:"bilingual",   icon:"🌐", label:"Bilingüe",           color:"#059669", bg:"#ecfdf5", border:"#a7f3d0"},
+  {id:"passport",    icon:"🛂", label:"Pasaporte Vigente",   color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
 ];
 
 const PAYMENT_METHODS = [
@@ -92,7 +93,7 @@ export default function CrewProfile({ user, onLogout }) {
       full_name:"", bio:"", phone:"", phone_code:"+58", crew_role:"Capitán",
       certifications:[], experience:[], badges:[], available:false, location:"",
       nationality:"Venezolana", languages:["Español"], fun_facts:{},
-      payment_methods:{}, photo_url:null, id_doc_url:null,
+      payment_methods:{}, photo_url:null, id_doc_url:null, passport_url:null, legal_name:'', has_passport:false,
       first_name:"", last_name:"", email: user.email||"",
     });
     setLoading(false);
@@ -179,7 +180,7 @@ export default function CrewProfile({ user, onLogout }) {
       const resp = await fetch('/api/verify-id', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profilePhotoBase64, idDocBase64, profileName: profile.full_name }),
+        body: JSON.stringify({ profilePhotoBase64, idDocBase64, legalName: profile.legal_name }),
       });
       const data = await resp.json();
       if (data.success) {
@@ -354,34 +355,91 @@ export default function CrewProfile({ user, onLogout }) {
                 )}
               </div>
 
-              {/* Documento de identidad */}
+              {/* Cédula de identidad */}
               <div style={s.card}>
-                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:8}}>🪪 Documento de Identidad</div>
-                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Cédula o pasaporte · Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
-                <input ref={docRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
+                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>🪪 Cédula de Identidad</div>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
+                <input ref={docRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
+
+                {/* Campo nombre legal */}
+                <div style={{marginBottom:10}}>
+                  <label style={s.label}>Nombre completo como aparece en la cédula *</label>
+                  <input value={profile.legal_name||""} onChange={e=>set("legal_name",e.target.value)}
+                    placeholder="Ej: Fernando Ignacio Bavuso Larrazabal" style={s.input}/>
+                </div>
+
                 {profile.id_doc_url
                   ? <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento subido</span>
+                        <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Cédula subida</span>
                         <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>Cambiar</button>
                       </div>
                       {(profile.badges||[]).includes("verified")
                         ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ Identidad verificada por IA</div>
-                        : <button onClick={verifyIdentity} disabled={verifying} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:verifying?0.6:1}}>
+                        : <button onClick={verifyIdentity} disabled={verifying||!profile.legal_name} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:(verifying||!profile.legal_name)?0.5:1}}>
                             {verifying?"⏳ Verificando...":"🤖 Verificar identidad con IA"}
                           </button>
                       }
+                      {!profile.legal_name&&<div style={{fontSize:10,color:"#f59e0b"}}>⚠️ Escribe tu nombre legal arriba para verificar</div>}
                       {verifyResult&&(
                         <div style={{fontSize:10,color:"#64748b",background:"#f8fafc",padding:"8px",borderRadius:7,border:"1px solid #e2e8f0"}}>
-                          {verifyResult.extracted_name&&<div>Nombre: <strong>{verifyResult.extracted_name}</strong></div>}
+                          {verifyResult.extracted_name&&<div>Nombre detectado: <strong>{verifyResult.extracted_name}</strong></div>}
                           {verifyResult.id_number&&<div>Cédula: <strong>{verifyResult.id_number}</strong></div>}
+                          {verifyResult.notes&&<div style={{marginTop:4,color:"#94a3b8"}}>{verifyResult.notes}</div>}
                         </div>
                       )}
                     </div>
                   : <button onClick={()=>docRef.current.click()} style={{width:"100%",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
-                      📎 Subir cédula o pasaporte
+                      📷 Subir foto de cédula
                     </button>
                 }
+
+                {/* Pasaporte — opcional */}
+                <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid #f1f5f9"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                    <input type="checkbox" id="has_passport" checked={profile.has_passport||false} onChange={e=>set("has_passport",e.target.checked)} style={{width:14,height:14,cursor:"pointer"}}/>
+                    <label htmlFor="has_passport" style={{fontSize:12,color:"#475569",cursor:"pointer",fontWeight:600}}>
+                      Tengo pasaporte vigente <span style={{color:"#94a3b8",fontWeight:400}}>(opcional · genera badge 🛂)</span>
+                    </label>
+                  </div>
+                  {profile.has_passport&&(
+                    <div>
+                      {profile.passport_url
+                        ? <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                            <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Pasaporte subido</span>
+                            <label style={{fontSize:10,color:"#64748b",cursor:"pointer",border:"1px solid #e2e8f0",padding:"2px 8px",borderRadius:5,background:"#f8fafc"}}>
+                              Cambiar
+                              <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
+                                const file=e.target.files[0]; if(!file) return;
+                                const path=`profiles/${user.id}/passport.${file.name.split(".").pop()}`;
+                                await supabase.storage.from("manuales").upload(path,file,{upsert:true});
+                                const {data:d}=supabase.storage.from("manuales").getPublicUrl(path);
+                                set("passport_url",d.publicUrl);
+                                const badges=[...new Set([...(profile.badges||[]),"passport"])];
+                                set("badges",badges);
+                                setMsg("✅ Pasaporte subido. Badge 🛂 desbloqueado!");
+                                setTimeout(()=>setMsg(""),3000);
+                              }}/>
+                            </label>
+                          </div>
+                        : <label style={{display:"block",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
+                            📷 Subir foto de pasaporte
+                            <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
+                              const file=e.target.files[0]; if(!file) return;
+                              const path=`profiles/${user.id}/passport.${file.name.split(".").pop()}`;
+                              await supabase.storage.from("manuales").upload(path,file,{upsert:true});
+                              const {data:d}=supabase.storage.from("manuales").getPublicUrl(path);
+                              set("passport_url",d.publicUrl);
+                              const badges=[...new Set([...(profile.badges||[]),"passport"])];
+                              set("badges",badges);
+                              setMsg("✅ Pasaporte subido. Badge 🛂 desbloqueado!");
+                              setTimeout(()=>setMsg(""),3000);
+                            }}/>
+                          </label>
+                      }
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -1,5 +1,6 @@
 // /api/verify-id.js
-// Verifica foto de perfil vs cédula usando Claude Vision
+// Verifica cédula y foto de perfil usando Claude Vision
+// Compara nombre legal escrito con nombre en el documento
 // Extrae nombre, número de cédula, fecha nacimiento del documento
 
 export default async function handler(req, res) {
@@ -9,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { profilePhotoBase64, idDocBase64, profileName } = req.body;
+  const { profilePhotoBase64, idDocBase64, legalName } = req.body;
 
   if (!idDocBase64) {
     return res.status(400).json({ error: 'Se requiere imagen del documento' });
@@ -35,8 +36,8 @@ export default async function handler(req, res) {
 
     userContent.push({
       type: "text",
-      text: profilePhotoBase64
-        ? `Analiza estas dos imágenes. La primera es la foto de perfil del usuario. La segunda es su documento de identidad (cédula o pasaporte).
+      text: legalName ? `El usuario dice que su nombre legal es: "${legalName}". ` + (profilePhotoBase64 ? "Analiza estas dos imágenes." : "Analiza esta cédula.") + ` Verifica si el nombre en el documento coincide con ese nombre declarado. ` : (profilePhotoBase64 ? "Analiza estas dos imágenes." : "Analiza este documento.")
+        ? `Analiza estas dos imágenes. La primera es la foto de perfil del usuario. La segunda es su cédula de identidad venezolana.
 
 Por favor responde SOLO con un JSON válido con este formato exacto:
 {
