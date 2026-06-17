@@ -7,6 +7,7 @@ export default function Auth({ onLogin }) {
   const [password, setPassword]   = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [name, setName]           = useState("");
+  const [userRole, setUserRole]   = useState("owner"); // 'owner' | 'crew'
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [success, setSuccess]     = useState("");
@@ -35,7 +36,7 @@ export default function Auth({ onLogin }) {
     if (err) { setError(err.message); setLoading(false); return; }
     if (data.user) {
       await supabase.from("profiles").insert({
-        id: data.user.id, email, full_name: name, role: "owner"
+        id: data.user.id, email, full_name: name, role: userRole
       });
       // Auto login after register
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
@@ -76,6 +77,31 @@ export default function Auth({ onLogin }) {
             <div>
               <label style={s.label}>Nombre completo</label>
               <input value={name} onChange={e=>setName(e.target.value)} placeholder="Tu nombre completo" style={s.input}/>
+            </div>
+          )}
+          {mode==="register"&&(
+            <div>
+              <label style={s.label}>¿Cuál es tu rol?</label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <button onClick={()=>setUserRole("owner")} style={{
+                  padding:"12px 8px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
+                  borderColor:userRole==="owner"?"#2563eb":"#e2e8f0",
+                  background:userRole==="owner"?"#eff6ff":"#f8fafc",
+                }}>
+                  <div style={{fontSize:24,marginBottom:4}}>🚤</div>
+                  <div style={{fontSize:13,fontWeight:700,color:userRole==="owner"?"#2563eb":"#475569"}}>Propietario</div>
+                  <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Tengo un barco</div>
+                </button>
+                <button onClick={()=>setUserRole("crew")} style={{
+                  padding:"12px 8px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
+                  borderColor:userRole==="crew"?"#2563eb":"#e2e8f0",
+                  background:userRole==="crew"?"#eff6ff":"#f8fafc",
+                }}>
+                  <div style={{fontSize:24,marginBottom:4}}>⚓</div>
+                  <div style={{fontSize:13,fontWeight:700,color:userRole==="crew"?"#2563eb":"#475569"}}>Tripulación</div>
+                  <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Soy capitán / marinero</div>
+                </button>
+              </div>
             </div>
           )}
           <div>

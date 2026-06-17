@@ -5,6 +5,7 @@ import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
+import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 
 
@@ -190,6 +191,7 @@ export default function App() {
   const [showCaptainManager, setShowCaptainManager] = useState(false);
   const [captainProfile, setCaptainProfile]       = useState(null);
   const [captainVessel, setCaptainVessel]         = useState(null);
+  const [crewProfile, setCrewProfile]             = useState(null);
 
   // ── Supabase helpers ──────────────────────────────────────────────────────
   const fetchTasks = async (vesselId) => {
@@ -336,29 +338,35 @@ export default function App() {
   }, []);
 
   const checkIfCaptain = useCallback(async (uid) => {
-    const { data } = await supabase
-      .from("captain_profiles")
-      .select("*, vessels(*)")
-      .eq("user_id", uid)
-      .eq("active", true)
-      .single();
+    const { data: prof } = await supabase.from("profiles").select("role").eq("id", uid).single();
+    if (prof?.role === "crew") {
+      const { data: cap } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
+      if (cap) {
+        setCaptainProfile(cap);
+        const v = cap.vessels;
+        if (v) {
+          const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
+          setCaptainVessel({ ...v, fuelUnit: v.fuel_unit||"gal", engineHours: v.engine_hours||0, genHours: v.gen_hours||0, tasks, log, weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" } });
+        }
+      } else {
+        setCrewProfile(prof);
+        setVesselsLoading(false);
+      }
+      return;
+    }
+    const { data } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
     if (data) {
       setCaptainProfile(data);
-      // Mapear el vessel para CaptainView
       const v = data.vessels;
       if (v) {
         const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
-        setCaptainVessel({
-          ...v,
-          fuelUnit: v.fuel_unit || "gal",
-          engineHours: v.engine_hours || 0,
-          genHours: v.gen_hours || 0,
-          tasks, log,
-          weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
-        });
+        setCaptainVessel({ ...v, fuelUnit: v.fuel_unit||"gal", engineHours: v.engine_hours||0, genHours: v.gen_hours||0, tasks, log, weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" } });
       }
     }
-  }, []);
+  }, [fetchTasks, fetchLog]);
+
+  useEffect(() => {
+    let initialized = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
@@ -406,6 +414,14 @@ export default function App() {
   );
 
   if (!user) return <Auth onLogin={(u) => { setUser(u); fetchVessels(u.id); checkIfCaptain(u.id); }} />;
+
+  // Si es tripulación sin barco asignado → mostrar perfil de crew
+  if (crewProfile && !captainProfile) return (
+    <CrewProfile
+      user={user}
+      onLogout={async () => { await supabase.auth.signOut(); setUser(null); setCrewProfile(null); }}
+    />
+  );
 
   // Si el usuario es capitán → mostrar vista de capitán
   if (captainProfile && captainVessel) return (
