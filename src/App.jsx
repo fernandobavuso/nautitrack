@@ -370,6 +370,9 @@ export default function App() {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
+        // Cargar nombre del perfil
+        supabase.from("profiles").select("full_name").eq("id", u.id).single()
+          .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         const isCrew = await checkIfCaptain(u.id);
         if (!isCrew) await fetchVessels(u.id);
       } else {
@@ -523,8 +526,8 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
         </div>
         <div style={{position:"relative"}}>
           <button style={s.userBtn} onClick={() => { setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
-            <div style={s.navAvatar}>{(user?.email||"?")[0].toUpperCase()}</div>
-            <div><div style={s.navName}>{user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
+            <div style={s.navAvatar}>{(user?.full_name||user?.email||"?")[0].toUpperCase()}</div>
+            <div><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
