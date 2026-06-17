@@ -366,28 +366,18 @@ export default function App() {
   }, [fetchTasks, fetchLog]);
 
   useEffect(() => {
-    let done = false;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
         const isCrew = await checkIfCaptain(u.id);
-        if (!isCrew) fetchVessels(u.id);
-      } else setVesselsLoading(false);
+        if (!isCrew) await fetchVessels(u.id);
+      } else {
+        setVesselsLoading(false);
+      }
       setAuthLoading(false);
-      done = true;
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!done) return;
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        const isCrew = await checkIfCaptain(u.id);
-        if (!isCrew) fetchVessels(u.id);
-      } else { setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }
-    });
-    return () => subscription.unsubscribe();
-  }, [fetchVessels, checkIfCaptain]);
+  }, []);
 
   const handleAddVessel = async (vesselData) => {
     const { data } = await supabase.from("vessels").insert({ ...vesselData, owner_id: user.id }).select().single();
@@ -465,7 +455,7 @@ export default function App() {
         setShowQRPanel={setShowQRPanel}
         setShowCaptainManager={setShowCaptainManager}
         page={page} setPage={setPage}
-        onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); }}
+        onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
       />
       <div style={s.body}>
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
