@@ -366,7 +366,7 @@ export default function App() {
   }, [fetchTasks, fetchLog]);
 
   useEffect(() => {
-    let initialized = false;
+    let done = false;
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
@@ -375,10 +375,10 @@ export default function App() {
         if (!isCrew) fetchVessels(u.id);
       } else setVesselsLoading(false);
       setAuthLoading(false);
-      initialized = true;
+      done = true;
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!initialized) return;
+      if (!done) return;
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
