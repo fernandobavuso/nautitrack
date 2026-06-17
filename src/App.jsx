@@ -373,6 +373,7 @@ export default function App() {
       if (u) {
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
+        window.__setUserFullName = (name) => setUser(prev => ({...prev, full_name: name}));
         const isCrew = await checkIfCaptain(u.id);
         setCheckingRole(false);
         if (!isCrew) await fetchVessels(u.id);
@@ -474,7 +475,7 @@ export default function App() {
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
       {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
       {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
-      {showProfile       && <ProfileModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
   );
 }
@@ -2693,19 +2694,47 @@ function NotificationsModal({ vessel, user, onClose }) {
 }
 
 
-function ProfileModal({ vessel, updateVessel, onClose }) {
+function ProfileModal({ vessel, updateVessel, user, onClose }) {
   const [tab,setTab]   = useState("profile");
   const [form,setForm] = useState({
-    firstName: vessel.profile?.firstName || "",
-    lastName:  vessel.profile?.lastName  || "",
-    phone:     vessel.profile?.phone     || "",
-    email:     vessel.profile?.email     || "",
-    marinaAddress: vessel.profile?.marinaAddress || "",
+    firstName: "", lastName: "", phone: "", email: "", marinaAddress: "",
   });
   const [config,setConfig] = useState(vessel.config||{distUnit:"nm",speedUnit:"kn",fuelUnit:"gal",tempUnit:"C"});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) { setLoading(false); return; }
+    supabase.from("profiles").select("full_name, phone, email").eq("id", user.id).single()
+      .then(({ data }) => {
+        if (data) {
+          const parts = (data.full_name||"").split(" ");
+          setForm({
+            firstName: parts[0]||"",
+            lastName:  parts.slice(1).join(" ")||"",
+            phone:     data.phone||"",
+            email:     data.email||user.email||"",
+            marinaAddress: vessel.profile?.marinaAddress||"",
+          });
+        }
+        setLoading(false);
+      });
+  }, [user?.id]);
+
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const setcfg=(k,v)=>setConfig(c=>({...c,[k]:v}));
-  const save=()=>{ updateVessel({...vessel, profile:{...form}, config:{...config}}); onClose(); };
+
+  const save = async () => {
+    const full_name = `${form.firstName} ${form.lastName}`.trim();
+    await supabase.from("profiles").upsert({
+      id: user.id, email: form.email||user.email,
+      full_name, phone: form.phone,
+    });
+    // Actualizar nombre en navbar
+    if (window.__setUserFullName) window.__setUserFullName(full_name);
+    updateVessel({...vessel, profile:{...form}, config:{...config}});
+    onClose();
+  };
+
   const sub=vessel.subscription||{};
   const planFeatures={Basic:["1 embarcación","Bitácora básica","Tareas ilimitadas","Soporte email"],Pro:["Hasta 3 embarcaciones","Bitácora con fotos","Records y reportes","Proveedores","Soporte prioritario"],Fleet:["Embarcaciones ilimitadas","Todo lo de Pro","API access","Reportes automáticos","Gerente de cuenta"]};
   return (
@@ -2718,7 +2747,8 @@ function ProfileModal({ vessel, updateVessel, onClose }) {
           ))}
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"20px 24px"}}>
-          {tab==="profile"&&(
+          {loading && <div style={{textAlign:"center",padding:30,color:"#64748b"}}>⏳ Cargando...</div>}
+          {!loading && tab==="profile"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div style={{display:"flex",alignItems:"center",gap:16,padding:16,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
                 <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{form.firstName?.[0]||"?"}{form.lastName?.[0]||""}</div>
