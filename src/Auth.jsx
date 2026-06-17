@@ -36,9 +36,10 @@ export default function Auth({ onLogin }) {
     const { data, error: err } = await supabase.auth.signUp({ email, password });
     if (err) { setError(err.message); setLoading(false); return; }
     if (data.user) {
-      await supabase.from("profiles").insert({
+      await supabase.from("profiles").upsert({
         id: data.user.id, email, full_name: `${firstName} ${lastName}`.trim(), role: userRole
       });
+      console.log("[NautiTrack] Cuenta creada con role:", userRole);
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
       if (loginData?.user) { onLogin({...loginData.user, role: userRole, full_name: `${firstName} ${lastName}`.trim()}); return; }
       setSuccess("¡Cuenta creada! Ya puedes iniciar sesión.");
@@ -91,7 +92,7 @@ export default function Auth({ onLogin }) {
             <div>
               <label style={s.label}>¿Cuál es tu rol?</label>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                <button onClick={()=>setUserRole("owner")} style={{
+                <button type="button" onClick={()=>setUserRole("owner")} style={{
                   padding:"12px 8px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
                   borderColor:userRole==="owner"?"#2563eb":"#e2e8f0",
                   background:userRole==="owner"?"#eff6ff":"#f8fafc",
@@ -100,7 +101,7 @@ export default function Auth({ onLogin }) {
                   <div style={{fontSize:13,fontWeight:700,color:userRole==="owner"?"#2563eb":"#475569"}}>Propietario</div>
                   <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Tengo un barco</div>
                 </button>
-                <button onClick={()=>setUserRole("crew")} style={{
+                <button type="button" onClick={()=>setUserRole("crew")} style={{
                   padding:"12px 8px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
                   borderColor:userRole==="crew"?"#2563eb":"#e2e8f0",
                   background:userRole==="crew"?"#eff6ff":"#f8fafc",
