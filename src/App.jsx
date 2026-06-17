@@ -352,7 +352,7 @@ export default function App() {
         setCrewProfile(prof);
         setVesselsLoading(false);
       }
-      return;
+      return true;
     }
     const { data } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
     if (data) {
@@ -370,7 +370,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) { fetchVessels(u.id); checkIfCaptain(u.id); }
+      if (u) { checkIfCaptain(u.id).then(isCrew => { if (!isCrew) fetchVessels(u.id); }); }
       else setVesselsLoading(false);
       setAuthLoading(false);
       initialized = true;
@@ -379,8 +379,8 @@ export default function App() {
       if (!initialized) return;
       const u = session?.user ?? null;
       setUser(u);
-      if (u) { fetchVessels(u.id); checkIfCaptain(u.id); }
-      else { setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); }
+      if (u) { checkIfCaptain(u.id).then(isCrew => { if (!isCrew) fetchVessels(u.id); }); }
+      else { setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }
     });
     return () => subscription.unsubscribe();
   }, [fetchVessels, checkIfCaptain]);
