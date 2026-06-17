@@ -179,6 +179,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [vessels, setVessels]         = useState([]);
   const [vesselsLoading, setVesselsLoading] = useState(true);
+  const [checkingRole, setCheckingRole] = useState(true);
   const [vesselId, setVesselId]       = useState(null);
   const [page, setPage]               = useState("home");
   const [showVesselMenu, setShowVesselMenu]       = useState(false);
@@ -370,13 +371,14 @@ export default function App() {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
-        // Cargar nombre del perfil
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         const isCrew = await checkIfCaptain(u.id);
+        setCheckingRole(false);
         if (!isCrew) await fetchVessels(u.id);
       } else {
         setVesselsLoading(false);
+        setCheckingRole(false);
       }
       setAuthLoading(false);
     });
@@ -430,9 +432,9 @@ export default function App() {
     />
   );
 
-  if (vesselsLoading) return (
+  if (checkingRole || vesselsLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🚢</div><div style={{fontSize:14,color:"#64748b"}}>Cargando tus embarcaciones...</div></div>
+      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🚢</div><div style={{fontSize:14,color:"#64748b"}}>Cargando...</div></div>
     </div>
   );
 
