@@ -367,20 +367,24 @@ export default function App() {
 
   useEffect(() => {
     let initialized = false;
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) { checkIfCaptain(u.id).then(isCrew => { if (!isCrew) fetchVessels(u.id); }); }
-      else setVesselsLoading(false);
+      if (u) {
+        const isCrew = await checkIfCaptain(u.id);
+        if (!isCrew) fetchVessels(u.id);
+      } else setVesselsLoading(false);
       setAuthLoading(false);
       initialized = true;
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!initialized) return;
       const u = session?.user ?? null;
       setUser(u);
-      if (u) { checkIfCaptain(u.id).then(isCrew => { if (!isCrew) fetchVessels(u.id); }); }
-      else { setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }
+      if (u) {
+        const isCrew = await checkIfCaptain(u.id);
+        if (!isCrew) fetchVessels(u.id);
+      } else { setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }
     });
     return () => subscription.unsubscribe();
   }, [fetchVessels, checkIfCaptain]);
