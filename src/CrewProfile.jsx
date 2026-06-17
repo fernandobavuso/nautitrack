@@ -51,11 +51,11 @@ const BADGE_DEFS = [
 
 const PAYMENT_METHODS = [
   {key:"pagomovil",  label:"Pago Móvil",     fields:[{k:"banco",l:"Banco"},{k:"telefono",l:"Teléfono"},{k:"cedula",l:"Cédula"}]},
-  {key:"zelle",      label:"Zelle",          fields:[{k:"email",l:"Email o teléfono"}]},
+  {key:"zelle",      label:"Zelle",          fields:[{k:"email",l:"Email o teléfono"},{k:"nombre",l:"Cuenta a nombre de"}]},
   {key:"usdt",       label:"USDT (Cripto)",  fields:[{k:"red",l:"Red (TRC20, ERC20...)"},{k:"wallet",l:"Wallet address"}]},
-  {key:"paypal",     label:"PayPal",         fields:[{k:"email",l:"Email de PayPal"}]},
-  {key:"transfer",   label:"Transferencia",  fields:[{k:"banco",l:"Banco"},{k:"cuenta",l:"N° de cuenta"},{k:"titular",l:"Titular"}]},
-  {key:"efectivo",   label:"Efectivo USD",   fields:[{k:"nota",l:"Nota (opcional)"}]},
+  {key:"paypal",     label:"PayPal",         fields:[{k:"email",l:"Email de PayPal"},{k:"nombre",l:"Cuenta a nombre de"}]},
+  {key:"transfer",   label:"Transferencia",  fields:[{k:"banco",l:"Banco"},{k:"cuenta",l:"N° de cuenta"},{k:"titular",l:"Cuenta a nombre de"},{k:"email",l:"Email asociado"}]},
+  {key:"efectivo",   label:"Efectivo USD",   fields:[{k:"nota",l:"Nota (opcional)"},{k:"nombre",l:"Cuenta a nombre de"}]},
   {key:"otro",       label:"Otro método",    fields:[{k:"descripcion",l:"Descripción"},{k:"datos",l:"Datos de contacto"}]},
 ];
 
@@ -88,7 +88,7 @@ export default function CrewProfile({ user, onLogout }) {
     const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     setProfile(data || {
       full_name:"", bio:"", phone:"", phone_code:"+58", crew_role:"Capitán",
-      certifications:[], experience:[], badges:[], available:true, location:"",
+      certifications:[], experience:[], badges:[], available:false, location:"",
       nationality:"Venezolana", languages:["Español"], fun_facts:{},
       payment_methods:{}, photo_url:null, id_doc_url:null,
       first_name:"", last_name:"", email: user.email||"",
@@ -267,7 +267,7 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginTop:16,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>DISPONIBILIDAD</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>DISPONIBILIDAD DE TRABAJO</div>
                   <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>Requiere foto y cédula para activarse</div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div onClick={()=>{
@@ -396,7 +396,7 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Dato curioso */}
               <div style={{...s.card,background:"linear-gradient(135deg,#fffbeb,#fff7ed)",border:"1px solid #fde68a"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>🌊 Dato Curioso</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>Dato Curioso</div>
                 <div style={{fontSize:11,color:"#b45309",marginBottom:12}}>Comparte cuál es tu playa favorita en el mundo</div>
                 <input value={(profile.fun_facts||{}).playa_favorita||""} onChange={e=>setProfile(p=>({...p,fun_facts:{...(p.fun_facts||{}),playa_favorita:e.target.value}}))}
                   placeholder="Ej: Playa Medina, Venezuela" style={{...s.input,borderColor:"#fde68a",background:"#fff"}}/>
@@ -545,8 +545,17 @@ export default function CrewProfile({ user, onLogout }) {
                       </div>
                       <div>
                         <label style={s.label}>Período</label>
-                        <input value={exp.period||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],period:e.target.value};set("experience",x);}}
-                          placeholder="Ej: 2018-2022" style={s.input}/>
+                        <select value={exp.period||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],period:e.target.value};set("experience",x);}} style={s.input}>
+                          <option value="">Seleccionar...</option>
+                          <option>Menos de 3 meses</option>
+                          <option>3 a 6 meses</option>
+                          <option>6 meses a 1 año</option>
+                          <option>1 a 2 años</option>
+                          <option>2 a 3 años</option>
+                          <option>3 a 5 años</option>
+                          <option>5 a 10 años</option>
+                          <option>Más de 10 años</option>
+                        </select>
                       </div>
                     </div>
                     <div style={{marginTop:10}}>
