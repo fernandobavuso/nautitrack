@@ -26,7 +26,18 @@ const CERT_OPTIONS = [
 
 const LANGUAGES = ["Español","Inglés","Portugués","Francés","Italiano","Alemán","Holandés","Chino","Japonés","Árabe","Ruso"];
 
-const NATIONALITIES = ["Venezolana","Estadounidense","Colombiana","Española","Mexicana","Peruana","Chilena","Argentina","Brasileña","Ecuatoriana","Panameña","Cubana","Dominicana","Otra"];
+const NATIONALITIES = [
+  "Venezolana","Estadounidense","Colombiana","Española","Mexicana","Peruana","Chilena","Argentina",
+  "Brasileña","Ecuatoriana","Panameña","Cubana","Dominicana","Puertorriqueña","Costarricense",
+  "Guatemalteca","Hondureña","Nicaragüense","Salvadoreña","Boliviana","Paraguaya","Uruguaya",
+  "Británica","Francesa","Alemana","Italiana","Portuguesa","Holandesa","Belga","Suiza","Austríaca",
+  "Sueca","Noruega","Danesa","Finlandesa","Polaca","Checa","Húngara","Rumana","Griega","Turca",
+  "Rusa","Ucraniana","Israelí","Árabe Saudí","Emiratí","Libanesa","Egipcia","Marroquí","Nigeriana",
+  "Sudafricana","Keniana","Etíope","Ghanesa","Senegalesa","Camerunesa","Angoleña","Mozambiqueña",
+  "China","Japonesa","Coreana","India","Paquistaní","Bangladesí","Vietnamita","Tailandesa",
+  "Filipina","Indonesia","Malasia","Singapurense","Australiana","Neozelandesa","Canadiense",
+  "Jamaicana","Trinitense","Barbadense","Bahameña","Haitiana","Otra",
+];
 
 const BADGE_DEFS = [
   {id:"verified",    icon:"✅", label:"Perfil Verificado",  color:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0"},
@@ -39,13 +50,13 @@ const BADGE_DEFS = [
 ];
 
 const PAYMENT_METHODS = [
-  {key:"pagomovil",  label:"Pago Móvil",         icon:"📱", fields:[{k:"banco",l:"Banco"},{k:"telefono",l:"Teléfono"},{k:"cedula",l:"Cédula"}]},
-  {key:"zelle",      label:"Zelle",              icon:"💙", fields:[{k:"email",l:"Email o teléfono"}]},
-  {key:"usdt",       label:"USDT (Cripto)",      icon:"💎", fields:[{k:"red",l:"Red (TRC20, ERC20...)"},{k:"wallet",l:"Wallet address"}]},
-  {key:"paypal",     label:"PayPal",             icon:"🅿️", fields:[{k:"email",l:"Email de PayPal"}]},
-  {key:"transfer",   label:"Transferencia",      icon:"🏦", fields:[{k:"banco",l:"Banco"},{k:"cuenta",l:"N° de cuenta"},{k:"titular",l:"Titular"}]},
-  {key:"efectivo",   label:"Efectivo USD",       icon:"💵", fields:[{k:"nota",l:"Nota (opcional)"}]},
-  {key:"otro",       label:"Otro método",        icon:"💳", fields:[{k:"descripcion",l:"Descripción"},{k:"datos",l:"Datos de contacto"}]},
+  {key:"pagomovil",  label:"Pago Móvil",     fields:[{k:"banco",l:"Banco"},{k:"telefono",l:"Teléfono"},{k:"cedula",l:"Cédula"}]},
+  {key:"zelle",      label:"Zelle",          fields:[{k:"email",l:"Email o teléfono"}]},
+  {key:"usdt",       label:"USDT (Cripto)",  fields:[{k:"red",l:"Red (TRC20, ERC20...)"},{k:"wallet",l:"Wallet address"}]},
+  {key:"paypal",     label:"PayPal",         fields:[{k:"email",l:"Email de PayPal"}]},
+  {key:"transfer",   label:"Transferencia",  fields:[{k:"banco",l:"Banco"},{k:"cuenta",l:"N° de cuenta"},{k:"titular",l:"Titular"}]},
+  {key:"efectivo",   label:"Efectivo USD",   fields:[{k:"nota",l:"Nota (opcional)"}]},
+  {key:"otro",       label:"Otro método",    fields:[{k:"descripcion",l:"Descripción"},{k:"datos",l:"Datos de contacto"}]},
 ];
 
 export default function CrewProfile({ user, onLogout }) {
@@ -250,12 +261,19 @@ export default function CrewProfile({ user, onLogout }) {
                   <button onClick={()=>photoRef.current.click()} style={{marginTop:10,padding:"6px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#475569",fontWeight:600}}>
                     📷 {profile.photo_url?"Cambiar foto":"Subir foto"}
                   </button>
+                  <div style={{marginTop:8,fontSize:10,color:"#94a3b8",lineHeight:1.5,textAlign:"center"}}>
+                    Foto estilo pasaporte · Fondo blanco · Sin lentes ni gorras
+                  </div>
                 </div>
 
                 <div style={{marginTop:16,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:8}}>DISPONIBILIDAD</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>DISPONIBILIDAD</div>
+                  <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>Requiere foto y cédula para activarse</div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div onClick={()=>set("available",!profile.available)} style={{
+                    <div onClick={()=>{
+                    if (!profile.photo_url || !profile.id_doc_url) { setMsg("⚠️ Necesitas subir tu foto de perfil y cédula primero"); setTimeout(()=>setMsg(""),4000); return; }
+                    set("available",!profile.available);
+                  }} style={{
                       width:42,height:24,borderRadius:12,background:profile.available?"#16a34a":"#cbd5e1",
                       cursor:"pointer",position:"relative",transition:"background 0.2s"
                     }}>
@@ -290,7 +308,7 @@ export default function CrewProfile({ user, onLogout }) {
               {/* Documento de identidad */}
               <div style={s.card}>
                 <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:8}}>🪪 Documento de Identidad</div>
-                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Cédula o pasaporte (privado, solo tú lo ves)</div>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Cédula o pasaporte · Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
                 <input ref={docRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
                 {profile.id_doc_url
                   ? <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -376,24 +394,12 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* Sazón venezolano */}
+              {/* Dato curioso */}
               <div style={{...s.card,background:"linear-gradient(135deg,#fffbeb,#fff7ed)",border:"1px solid #fde68a"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>🇻🇪 Sazón Venezolano</div>
-                <div style={{fontSize:11,color:"#b45309",marginBottom:14}}>Cuéntale al mundo quién eres de verdad</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  {[
-                    {k:"playa_favorita",    l:"🏖️ Playa favorita",        p:"Ej: Playa Medina"},
-                    {k:"pescado_favorito",  l:"🐟 Pescado favorito",       p:"Ej: Pargo rojo"},
-                    {k:"puerto_corazon",    l:"⚓ Puerto de corazón",      p:"Ej: Puerto La Cruz"},
-                    {k:"dato_curioso",      l:"✨ Un dato curioso",         p:"Ej: Crucé el Atlántico solo"},
-                  ].map(f=>(
-                    <div key={f.k}>
-                      <label style={{...s.label,color:"#92400e"}}>{f.l}</label>
-                      <input value={(profile.fun_facts||{})[f.k]||""} onChange={e=>setProfile(p=>({...p,fun_facts:{...(p.fun_facts||{}),[f.k]:e.target.value}}))}
-                        placeholder={f.p} style={{...s.input,borderColor:"#fde68a",background:"#fff"}}/>
-                    </div>
-                  ))}
-                </div>
+                <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>🌊 Dato Curioso</div>
+                <div style={{fontSize:11,color:"#b45309",marginBottom:12}}>Comparte cuál es tu playa favorita en el mundo</div>
+                <input value={(profile.fun_facts||{}).playa_favorita||""} onChange={e=>setProfile(p=>({...p,fun_facts:{...(p.fun_facts||{}),playa_favorita:e.target.value}}))}
+                  placeholder="Ej: Playa Medina, Venezuela" style={{...s.input,borderColor:"#fde68a",background:"#fff"}}/>
               </div>
 
             </div>
@@ -569,7 +575,7 @@ export default function CrewProfile({ user, onLogout }) {
                   return (
                     <div key={pm.key} style={{border:`1.5px solid ${active?"#bfdbfe":"#e2e8f0"}`,borderRadius:12,overflow:"hidden"}}>
                       <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:active?"#eff6ff":"#f8fafc",cursor:"pointer"}} onClick={()=>togglePaymentMethod(pm.key)}>
-                        <span style={{fontSize:22}}>{pm.icon}</span>
+  
                         <div style={{flex:1}}>
                           <div style={{fontSize:13,fontWeight:700,color:active?"#1d4ed8":"#475569"}}>{pm.label}</div>
                         </div>
