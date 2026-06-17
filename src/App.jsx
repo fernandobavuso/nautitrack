@@ -339,11 +339,14 @@ export default function App() {
   }, []);
 
   const checkIfCaptain = useCallback(async (uid, knownRole) => {
-    const role = knownRole || (await supabase.from("profiles").select("role").eq("id", uid).single()).data?.role;
-    // Guardar rol en cache para próximo refresh
-    if (role) localStorage.setItem(`nautitrack_role_${uid}`, role);
+    // Siempre leer el role de profiles (fuente de verdad), con fallback al knownRole
+    let role = knownRole;
+    const { data: prof, error: profErr } = await supabase.from("profiles").select("role").eq("id", uid).maybeSingle();
+    if (prof?.role) role = prof.role;
+    console.log("[NautiTrack] checkIfCaptain — uid:", uid, "knownRole:", knownRole, "profileRole:", prof?.role, "finalRole:", role, "profErr:", profErr?.message);
+
     if (role === "crew") {
-      const { data: cap } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
+      const { data: cap } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).maybeSingle();
       if (cap) {
         setCaptainProfile(cap);
         const v = cap.vessels;
@@ -357,15 +360,18 @@ export default function App() {
       }
       return true;
     }
-    const { data } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
+    // Owner — buscar si está asignado como capitán a algún barco
+    const { data } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).maybeSingle();
     if (data) {
       setCaptainProfile(data);
       const v = data.vessels;
       if (v) {
         const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
         setCaptainVessel({ ...v, fuelUnit: v.fuel_unit||"gal", engineHours: v.engine_hours||0, genHours: v.gen_hours||0, tasks, log, weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" } });
+        return true;
       }
     }
+    return false;
   }, [fetchTasks, fetchLog]);
 
   useEffect(() => {

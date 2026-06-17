@@ -150,10 +150,10 @@ export default function Auth({ onLogin }) {
         {/* Features */}
         <div style={s.footer}>
           <div style={s.featuresGrid}>
-            <div style={s.feature}><span style={s.featureIcon}>📊</span><span style={s.featureText}>Bitácora digital</span></div>
-            <div style={s.feature}><span style={s.featureIcon}>🔧</span><span style={s.featureText}>Control de tareas</span></div>
-            <div style={s.feature}><span style={s.featureIcon}>🤖</span><span style={s.featureText}>Asistente IA</span></div>
-            <div style={s.feature}><span style={s.featureIcon}>📱</span><span style={s.featureText}>Alertas WhatsApp</span></div>
+            <div style={s.feature}><span style={s.featureText}>Bitácora digital</span></div>
+            <div style={s.feature}><span style={s.featureText}>Control de tareas</span></div>
+            <div style={s.feature}><span style={s.featureText}>Asistente IA</span></div>
+            <div style={s.feature}><span style={s.featureText}>Alertas WhatsApp</span></div>
           </div>
           <div style={{fontSize:11,color:"#cbd5e1",marginTop:12,textAlign:"center",letterSpacing:"0.04em"}}>
             Gestión inteligente · Desde cualquier lugar
