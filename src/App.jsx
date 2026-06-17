@@ -373,20 +373,13 @@ export default function App() {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
-        // Leer rol del cache para evitar flash de AddVessel
-        const cachedRole = localStorage.getItem(`nautitrack_role_${u.id}`);
-        if (cachedRole === "crew") {
-          setCrewProfile({ role: "crew" });
-          setVesselsLoading(false);
-        }
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         window.__setUserFullName = (name) => setUser(prev => ({...prev, full_name: name}));
         const isCrew = await checkIfCaptain(u.id, u.role);
-        setCheckingRole(false);
         if (!isCrew) await fetchVessels(u.id);
+        setCheckingRole(false);
       } else {
-        // Limpiar cache al hacer logout
         Object.keys(localStorage).filter(k=>k.startsWith("nautitrack_role_")).forEach(k=>localStorage.removeItem(k));
         setVesselsLoading(false);
         setCheckingRole(false);
@@ -435,13 +428,14 @@ export default function App() {
     />
   );
 
+  // Mientras se determina el rol, mostrar loading (bloquea AddVessel)
   if (checkingRole || vesselsLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🚢</div><div style={{fontSize:14,color:"#64748b"}}>Cargando...</div></div>
     </div>
   );
 
-  // Si es crew sin barco asignado → mostrar perfil crew (doble protección)
+  // Si es crew sin barco asignado → mostrar perfil crew
   if (crewProfile && !captainProfile) return (
     <CrewProfile user={user} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVesselsLoading(false); setCheckingRole(true); setCrewProfile(null); setCaptainProfile(null); setCaptainVessel(null); }}/>
   );
