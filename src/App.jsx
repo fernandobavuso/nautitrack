@@ -338,9 +338,9 @@ export default function App() {
     setVesselsLoading(false);
   }, []);
 
-  const checkIfCaptain = useCallback(async (uid) => {
-    const { data: prof } = await supabase.from("profiles").select("role").eq("id", uid).single();
-    if (prof?.role === "crew") {
+  const checkIfCaptain = useCallback(async (uid, knownRole) => {
+    const role = knownRole || (await supabase.from("profiles").select("role").eq("id", uid).single()).data?.role;
+    if (role === "crew") {
       const { data: cap } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
       if (cap) {
         setCaptainProfile(cap);
@@ -350,7 +350,7 @@ export default function App() {
           setCaptainVessel({ ...v, fuelUnit: v.fuel_unit||"gal", engineHours: v.engine_hours||0, genHours: v.gen_hours||0, tasks, log, weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" } });
         }
       } else {
-        setCrewProfile(prof);
+        setCrewProfile({ role });
         setVesselsLoading(false);
       }
       return true;
@@ -374,7 +374,7 @@ export default function App() {
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         window.__setUserFullName = (name) => setUser(prev => ({...prev, full_name: name}));
-        const isCrew = await checkIfCaptain(u.id);
+        const isCrew = await checkIfCaptain(u.id, u.role);
         setCheckingRole(false);
         if (!isCrew) await fetchVessels(u.id);
       } else {
@@ -413,7 +413,7 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={(u) => { setUser(u); fetchVessels(u.id); checkIfCaptain(u.id); }} />;
+  if (!user) return <Auth onLogin={async (u) => { setUser(u); setCheckingRole(true); const isCrew = await checkIfCaptain(u.id, u.role); setCheckingRole(false); if (!isCrew) fetchVessels(u.id); }} />;
 
   // Si es tripulación sin barco asignado → mostrar perfil de crew
   if (crewProfile && !captainProfile) return (

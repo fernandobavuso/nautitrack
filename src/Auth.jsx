@@ -38,9 +38,8 @@ export default function Auth({ onLogin }) {
       await supabase.from("profiles").insert({
         id: data.user.id, email, full_name: name, role: userRole
       });
-      // Auto login after register
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
-      if (loginData?.user) { onLogin(loginData.user); return; }
+      if (loginData?.user) { onLogin({...loginData.user, role: userRole}); return; }
       setSuccess("¡Cuenta creada! Ya puedes iniciar sesión.");
     }
     setLoading(false);
