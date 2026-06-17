@@ -340,6 +340,8 @@ export default function App() {
 
   const checkIfCaptain = useCallback(async (uid, knownRole) => {
     const role = knownRole || (await supabase.from("profiles").select("role").eq("id", uid).single()).data?.role;
+    // Guardar rol en cache para próximo refresh
+    if (role) localStorage.setItem(`nautitrack_role_${uid}`, role);
     if (role === "crew") {
       const { data: cap } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).single();
       if (cap) {
@@ -371,6 +373,12 @@ export default function App() {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
+        // Leer rol del cache para evitar flash de AddVessel
+        const cachedRole = localStorage.getItem(`nautitrack_role_${u.id}`);
+        if (cachedRole === "crew") {
+          setCrewProfile({ role: "crew" });
+          setVesselsLoading(false);
+        }
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         window.__setUserFullName = (name) => setUser(prev => ({...prev, full_name: name}));
@@ -378,6 +386,8 @@ export default function App() {
         setCheckingRole(false);
         if (!isCrew) await fetchVessels(u.id);
       } else {
+        // Limpiar cache al hacer logout
+        Object.keys(localStorage).filter(k=>k.startsWith("nautitrack_role_")).forEach(k=>localStorage.removeItem(k));
         setVesselsLoading(false);
         setCheckingRole(false);
       }

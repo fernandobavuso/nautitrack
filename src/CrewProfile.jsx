@@ -70,6 +70,8 @@ export default function CrewProfile({ user, onLogout }) {
   const [searching, setSearching] = useState(false);
   const [msg,       setMsg]       = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [verifying, setVerifying]           = useState(false);
+  const [verifyResult, setVerifyResult]     = useState(null);
   const photoRef  = useRef();
   const docRef    = useRef();
 
@@ -154,6 +156,53 @@ export default function CrewProfile({ user, onLogout }) {
     set("id_doc_url", data.publicUrl);
     setMsg("✅ Documento subido");
     setTimeout(()=>setMsg(""),3000);
+  };
+
+  const verifyIdentity = async () => {
+    if (!profile.id_doc_url) { setMsg("⚠️ Sube tu cédula primero"); return; }
+    setVerifying(true); setMsg("");
+    try {
+      // Convertir URLs a base64
+      const toBase64 = async (url) => {
+        const r = await fetch(url);
+        const blob = await r.blob();
+        return new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result.split(',')[1]);
+          reader.readAsDataURL(blob);
+        });
+      };
+
+      const idDocBase64   = await toBase64(profile.id_doc_url);
+      const profilePhotoBase64 = profile.photo_url ? await toBase64(profile.photo_url) : null;
+
+      const resp = await fetch('/api/verify-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profilePhotoBase64, idDocBase64, profileName: profile.full_name }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setVerifyResult(data.result);
+        // Si pasa la verificación, agregar badge verified
+        const passed = data.result.is_official_doc && data.result.face_in_doc &&
+          (!profilePhotoBase64 || data.result.faces_match !== false);
+        if (passed) {
+          const badges = [...new Set([...(profile.badges||[]), "verified"])];
+          set("badges", badges);
+          // Guardar datos extraídos de la cédula
+          if (data.result.extracted_name) set("verified_name", data.result.extracted_name);
+          if (data.result.id_number) set("id_number", data.result.id_number);
+          setMsg("✅ Identidad verificada. Badge agregado.");
+        } else {
+          setMsg("⚠️ No se pudo verificar. Revisa que la foto sea clara y el documento sea válido.");
+        }
+      }
+    } catch(e) {
+      setMsg("Error al verificar: " + e.message);
+    }
+    setVerifying(false);
+    setTimeout(()=>setMsg(""),5000);
   };
 
   const searchVessels = async () => {
@@ -311,12 +360,26 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Cédula o pasaporte · Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
                 <input ref={docRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
                 {profile.id_doc_url
-                  ? <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento subido</span>
-                      <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>Cambiar</button>
+                  ? <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento subido</span>
+                        <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>Cambiar</button>
+                      </div>
+                      {(profile.badges||[]).includes("verified")
+                        ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ Identidad verificada por IA</div>
+                        : <button onClick={verifyIdentity} disabled={verifying} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:verifying?0.6:1}}>
+                            {verifying?"⏳ Verificando...":"🤖 Verificar identidad con IA"}
+                          </button>
+                      }
+                      {verifyResult&&(
+                        <div style={{fontSize:10,color:"#64748b",background:"#f8fafc",padding:"8px",borderRadius:7,border:"1px solid #e2e8f0"}}>
+                          {verifyResult.extracted_name&&<div>Nombre: <strong>{verifyResult.extracted_name}</strong></div>}
+                          {verifyResult.id_number&&<div>Cédula: <strong>{verifyResult.id_number}</strong></div>}
+                        </div>
+                      )}
                     </div>
-                  : <button onClick={()=>docRef.current.click()} style={{width:"100%",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b"}}>
-                      📎 Subir foto o PDF
+                  : <button onClick={()=>docRef.current.click()} style={{width:"100%",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
+                      📎 Subir cédula o pasaporte
                     </button>
                 }
               </div>
