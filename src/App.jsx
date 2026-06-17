@@ -5,6 +5,7 @@ import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
+import CaptainView from "./CaptainView";
 
 
 
@@ -186,6 +187,9 @@ export default function App() {
   const [showProfile, setShowProfile]             = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQRPanel, setShowQRPanel]             = useState(false);
+  const [showCaptainManager, setShowCaptainManager] = useState(false);
+  const [captainProfile, setCaptainProfile]       = useState(null);
+  const [captainVessel, setCaptainVessel]         = useState(null);
 
   // ── Supabase helpers ──────────────────────────────────────────────────────
   const fetchTasks = async (vesselId) => {
@@ -331,12 +335,34 @@ export default function App() {
     setVesselsLoading(false);
   }, []);
 
-  useEffect(() => {
-    let initialized = false;
+  const checkIfCaptain = useCallback(async (uid) => {
+    const { data } = await supabase
+      .from("captain_profiles")
+      .select("*, vessels(*)")
+      .eq("user_id", uid)
+      .eq("active", true)
+      .single();
+    if (data) {
+      setCaptainProfile(data);
+      // Mapear el vessel para CaptainView
+      const v = data.vessels;
+      if (v) {
+        const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
+        setCaptainVessel({
+          ...v,
+          fuelUnit: v.fuel_unit || "gal",
+          engineHours: v.engine_hours || 0,
+          genHours: v.gen_hours || 0,
+          tasks, log,
+          weather: { temp:29, wind:14, condition:"Parcialmente nublado", icon:"⛅" },
+        });
+      }
+    }
+  }, []);
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) { fetchVessels(u.id); }
+      if (u) { fetchVessels(u.id); checkIfCaptain(u.id); }
       else setVesselsLoading(false);
       setAuthLoading(false);
       initialized = true;
@@ -345,11 +371,11 @@ export default function App() {
       if (!initialized) return;
       const u = session?.user ?? null;
       setUser(u);
-      if (u) { fetchVessels(u.id); }
-      else { setVessels([]); setVesselsLoading(false); }
+      if (u) { fetchVessels(u.id); checkIfCaptain(u.id); }
+      else { setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); }
     });
     return () => subscription.unsubscribe();
-  }, [fetchVessels]);
+  }, [fetchVessels, checkIfCaptain]);
 
   const handleAddVessel = async (vesselData) => {
     const { data } = await supabase.from("vessels").insert({ ...vesselData, owner_id: user.id }).select().single();
@@ -379,7 +405,17 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={(u) => { setUser(u); fetchVessels(u.id); }} />;
+  if (!user) return <Auth onLogin={(u) => { setUser(u); fetchVessels(u.id); checkIfCaptain(u.id); }} />;
+
+  // Si el usuario es capitán → mostrar vista de capitán
+  if (captainProfile && captainVessel) return (
+    <CaptainView
+      vessel={captainVessel}
+      user={user}
+      captainProfile={captainProfile}
+      onLogout={async () => { await supabase.auth.signOut(); setUser(null); setCaptainProfile(null); setCaptainVessel(null); }}
+    />
+  );
 
   if (vesselsLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
@@ -407,6 +443,7 @@ export default function App() {
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
         setShowNotifications={setShowNotifications}
         setShowQRPanel={setShowQRPanel}
+        setShowCaptainManager={setShowCaptainManager}
         page={page} setPage={setPage}
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); }}
       />
@@ -421,12 +458,13 @@ export default function App() {
       {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
       {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
+      {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
       {showProfile       && <ProfileModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProfile(false)} />}
     </div>
   );
 }
 
-function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,page,setPage,onLogout }) {
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
   return (
     <nav style={s.nav} onClick={e => e.stopPropagation()}>
@@ -446,6 +484,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
       </div>
       <div style={s.navRight}>
         <button style={s.provBtn} onClick={() => setShowProviders(true)}>👥 Proveedores</button>
+        <button style={s.provBtn} onClick={() => setShowCaptainManager(true)}>⚓ Capitanes</button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
             <span style={{...s.dot,background:STATUS_CFG[vessel.status].dot}} />
@@ -3255,3 +3294,170 @@ const s = {
   typeChip:   { padding:"5px 13px", border:"1.5px solid", borderRadius:20, fontSize:12, cursor:"pointer", transition:"all 0.15s" },
   photoUpload: { border:"2px dashed #bae6fd", borderRadius:10, padding:14, textAlign:"center", background:"#f0f9ff" },
 };
+// ── CAPTAIN MANAGER MODAL ─────────────────────────────────────────────────────
+function CaptainManagerModal({ vessel, user, onClose }) {
+  const [captains, setCaptains]   = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [adding, setAdding]       = useState(false);
+  const [form, setForm]           = useState({ email:"", full_name:"", role:"Capitán", phone:"" });
+  const [saving, setSaving]       = useState(false);
+  const [msg, setMsg]             = useState("");
+
+  useEffect(() => { loadCaptains(); }, []);
+
+  const loadCaptains = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("captain_profiles")
+      .select("*, user:user_id(email)")
+      .eq("vessel_id", vessel.id);
+    setCaptains(data || []);
+    setLoading(false);
+  };
+
+  const handleInvite = async () => {
+    if (!form.email.trim() || !form.full_name.trim()) { setMsg("Completa nombre y email"); return; }
+    setSaving(true); setMsg("");
+    try {
+      // 1. Buscar si el usuario ya existe en auth
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("email", form.email.trim())
+        .single();
+
+      if (!profile) {
+        setMsg("⚠️ Ese email no tiene cuenta en NautiTrack. Pídele que se registre primero en nautitrack.vercel.app");
+        setSaving(false); return;
+      }
+
+      // 2. Agregar a captain_profiles
+      const { error } = await supabase.from("captain_profiles").insert({
+        user_id:   profile.id,
+        vessel_id: vessel.id,
+        full_name: form.full_name.trim(),
+        role:      form.role,
+        phone:     form.phone.trim(),
+        active:    true,
+      });
+
+      if (error) { setMsg("Error: " + error.message); setSaving(false); return; }
+
+      setMsg("✅ Capitán agregado. La próxima vez que inicie sesión verá la vista de capitán.");
+      setForm({ email:"", full_name:"", role:"Capitán", phone:"" });
+      setAdding(false);
+      loadCaptains();
+    } catch(e) {
+      setMsg("Error: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  const toggleActive = async (cap) => {
+    await supabase.from("captain_profiles").update({ active: !cap.active }).eq("id", cap.id);
+    loadCaptains();
+  };
+
+  const remove = async (cap) => {
+    if (!confirm(`¿Eliminar acceso de ${cap.full_name}?`)) return;
+    await supabase.from("captain_profiles").delete().eq("id", cap.id);
+    loadCaptains();
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
+      <div style={{background:"#fff",borderRadius:20,width:"100%",maxWidth:560,boxShadow:"0 30px 80px rgba(0,0,0,0.3)",overflow:"hidden"}}>
+        {/* Header */}
+        <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",padding:"18px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:800,color:"#fff"}}>⚓ Capitanes y Tripulación</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,0.75)",marginTop:2}}>{vessel.name}</div>
+          </div>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",width:32,height:32,borderRadius:"50%",cursor:"pointer",fontSize:16}}>✕</button>
+        </div>
+
+        <div style={{padding:24}}>
+          {/* Lista de capitanes */}
+          {loading && <div style={{textAlign:"center",padding:20,color:"#64748b"}}>⏳ Cargando...</div>}
+
+          {!loading && captains.length === 0 && !adding && (
+            <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
+              <div style={{fontSize:40,marginBottom:12}}>⚓</div>
+              <div style={{fontWeight:600,color:"#475569"}}>Sin capitanes asignados</div>
+              <div style={{fontSize:12,marginTop:6}}>Agrega un capitán para que pueda acceder a la app</div>
+            </div>
+          )}
+
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+            {captains.map(cap=>(
+              <div key={cap.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:cap.active?"#f0fdf4":"#f8fafc",border:`1px solid ${cap.active?"#bbf7d0":"#e2e8f0"}`,borderRadius:10}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>
+                  {cap.full_name?.[0]||"?"}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{cap.full_name}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>{cap.role} · {cap.user?.email||""}</div>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{fontSize:11,fontWeight:600,color:cap.active?"#16a34a":"#94a3b8"}}>{cap.active?"Activo":"Inactivo"}</span>
+                  <button onClick={()=>toggleActive(cap)} style={{padding:"4px 8px",border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",cursor:"pointer",fontSize:11,color:"#475569"}}>
+                    {cap.active?"Suspender":"Activar"}
+                  </button>
+                  <button onClick={()=>remove(cap)} style={{padding:"4px 6px",border:"none",background:"none",cursor:"pointer",color:"#dc2626",fontSize:14}}>🗑</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Formulario agregar */}
+          {adding ? (
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:16}}>
+              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Agregar capitán / tripulante</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div>
+                    <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Nombre completo *</label>
+                    <input value={form.full_name} onChange={e=>setForm(f=>({...f,full_name:e.target.value}))} placeholder="Carlos Mendoza" style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
+                  </div>
+                  <div>
+                    <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Rol</label>
+                    <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))} style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}>
+                      <option>Capitán</option>
+                      <option>Primer Oficial</option>
+                      <option>Marinero</option>
+                      <option>Mecánico</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Email (debe tener cuenta en NautiTrack) *</label>
+                  <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="capitan@email.com" style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
+                </div>
+                <div>
+                  <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Teléfono</label>
+                  <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="+58412..." style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
+                </div>
+              </div>
+              {msg && <div style={{marginTop:10,padding:"8px 12px",background:msg.startsWith("✅")?"#f0fdf4":"#fff7ed",border:`1px solid ${msg.startsWith("✅")?"#bbf7d0":"#fed7aa"}`,borderRadius:7,fontSize:12,color:msg.startsWith("✅")?"#16a34a":"#c2410c"}}>{msg}</div>}
+              <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
+                <button onClick={()=>{setAdding(false);setMsg("");}} style={{padding:"8px 16px",border:"1.5px solid #e2e8f0",borderRadius:7,background:"#fff",cursor:"pointer",fontSize:13}}>Cancelar</button>
+                <button onClick={handleInvite} disabled={saving} style={{padding:"8px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13,opacity:saving?0.6:1}}>
+                  {saving?"⏳ Guardando...":"✓ Agregar"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={()=>setAdding(true)} style={{width:"100%",padding:"11px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              ＋ Agregar Capitán / Tripulante
+            </button>
+          )}
+
+          {/* Instrucciones */}
+          <div style={{marginTop:16,padding:"10px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,fontSize:11,color:"#64748b",lineHeight:1.6}}>
+            💡 El capitán debe crear su cuenta en <strong>nautitrack.vercel.app</strong> primero. Una vez agregado aquí, al iniciar sesión verá automáticamente la vista de capitán de este barco.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
