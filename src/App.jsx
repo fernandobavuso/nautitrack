@@ -415,14 +415,6 @@ export default function App() {
 
   if (!user) return <Auth onLogin={async (u) => { setUser(u); setCheckingRole(true); const isCrew = await checkIfCaptain(u.id, u.role); setCheckingRole(false); if (!isCrew) fetchVessels(u.id); }} />;
 
-  // Si es tripulación sin barco asignado → mostrar perfil de crew
-  if (crewProfile && !captainProfile) return (
-    <CrewProfile
-      user={user}
-      onLogout={async () => { await supabase.auth.signOut(); setUser(null); setCrewProfile(null); }}
-    />
-  );
-
   // Si el usuario es capitán → mostrar vista de capitán
   if (captainProfile && captainVessel) return (
     <CaptainView
@@ -437,6 +429,11 @@ export default function App() {
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
       <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🚢</div><div style={{fontSize:14,color:"#64748b"}}>Cargando...</div></div>
     </div>
+  );
+
+  // Si es crew sin barco asignado → mostrar perfil crew (doble protección)
+  if (crewProfile && !captainProfile) return (
+    <CrewProfile user={user} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVesselsLoading(false); setCheckingRole(true); setCrewProfile(null); setCaptainProfile(null); setCaptainVessel(null); }}/>
   );
 
   if (!vesselsLoading && vessels.length === 0) return (
