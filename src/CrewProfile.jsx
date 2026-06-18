@@ -40,14 +40,14 @@ const NATIONALITIES = [
 ];
 
 const BADGE_DEFS = [
-  {id:"verified",    icon:"✅", label:"Perfil Verificado",  color:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0"},
+  {id:"verified",    icon:"✅", label:"Usuario Certificado",color:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0"},
   {id:"stcw",        icon:"📜", label:"STCW Certificado",   color:"#1d4ed8", bg:"#eff6ff", border:"#bfdbfe"},
   {id:"5years",      icon:"⭐", label:"5 Años de Exp.",     color:"#d97706", bg:"#fffbeb", border:"#fde68a"},
   {id:"10years",     icon:"🏆", label:"10 Años de Exp.",    color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
   {id:"3boats",      icon:"🚢", label:"3+ Embarcaciones",   color:"#0891b2", bg:"#ecfeff", border:"#a5f3fc"},
   {id:"captain",     icon:"⚓", label:"Capitán Certificado",color:"#be185d", bg:"#fdf2f8", border:"#fbcfe8"},
   {id:"bilingual",   icon:"🌐", label:"Bilingüe",           color:"#059669", bg:"#ecfdf5", border:"#a7f3d0"},
-  {id:"passport",    icon:"🛂", label:"Pasaporte Vigente",   color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
+  {id:"passport",    icon:"", label:"Pasaporte Vigente",   color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
 ];
 
 const PAYMENT_METHODS = [
@@ -73,11 +73,15 @@ export default function CrewProfile({ user, onLogout }) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [verifying, setVerifying]           = useState(false);
   const [verifyResult, setVerifyResult]     = useState(null);
+  const [showVerifyPopup, setShowVerifyPopup] = useState(false);
+  const [newCert, setNewCert] = useState({name:"",custom_name:"",date:"",expiry:"",doc_url:""});
+  const [newExp, setNewExp]   = useState({brand:"",length:"",role:"",period:"",notes:""});
   const photoRef  = useRef();
   const docRef    = useRef();
 
   const TABS = [
     {key:"perfil",   icon:"👤", label:"Mi Perfil"},
+    {key:"documentos",icon:"📁", label:"Documentos"},
     {key:"certs",    icon:"📜", label:"Certificaciones"},
     {key:"historial",icon:"🚢", label:"Historial"},
     {key:"pagos",    icon:"💳", label:"Pagos"},
@@ -88,14 +92,30 @@ export default function CrewProfile({ user, onLogout }) {
   useEffect(() => { loadProfile(); loadRequests(); }, []);
 
   const loadProfile = async () => {
-    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    setProfile(data || {
-      full_name:"", bio:"", phone:"", phone_code:"+58", crew_role:"Capitán",
-      certifications:[], experience:[], badges:[], available:false, location:"",
-      nationality:"Venezolana", languages:["Español"], fun_facts:{},
-      payment_methods:{}, photo_url:null, id_doc_url:null, passport_url:null, legal_name:'', has_passport:false,
-      first_name:"", last_name:"", email: user.email||"",
-    });
+    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    if (data) {
+      // Asegurar que los arrays/objetos nunca sean null
+      setProfile({
+        ...data,
+        languages: data.languages||["Español"],
+        certifications: data.certifications||[],
+        experience: data.experience||[],
+        badges: data.badges||[],
+        fun_facts: data.fun_facts||{},
+        payment_methods: data.payment_methods||{},
+        documents: data.documents||[],
+        available: data.available||false,
+        email: data.email||user.email||"",
+      });
+    } else {
+      setProfile({
+        full_name:"", bio:"", phone:"", phone_code:"+58", crew_role:"Capitán",
+        certifications:[], experience:[], badges:[], available:false, location:"",
+        nationality:"Venezolana", languages:["Español"], fun_facts:{},
+        payment_methods:{}, photo_url:null, id_doc_url:null, passport_url:null, legal_name:'', has_passport:false,
+        first_name:"", last_name:"", email: user.email||"", documents:[],
+      });
+    }
     setLoading(false);
   };
 
@@ -108,21 +128,26 @@ export default function CrewProfile({ user, onLogout }) {
 
   const saveProfile = async () => {
     setSaving(true);
-    const badges = computeBadges(profile);
     const full_name = `${profile.first_name||""} ${profile.last_name||""}`.trim() || profile.full_name || "";
-    await supabase.from("profiles").upsert({
+    const badges = computeBadges(profile, full_name);
+    const { error } = await supabase.from("profiles").upsert({
       id: user.id, email: profile.email||user.email,
       full_name, ...profile, badges,
       updated_at: new Date().toISOString(),
     });
-    setProfile(p=>({...p, badges, full_name}));
-    setMsg("✅ Perfil guardado");
-    setTimeout(()=>setMsg(""),3000);
+    if (error) {
+      setMsg("⚠️ Error al guardar: " + error.message);
+      console.error("[NautiTrack] saveProfile error:", error);
+    } else {
+      setProfile(p=>({...p, badges, full_name}));
+      setMsg("✅ Perfil guardado");
+    }
+    setTimeout(()=>setMsg(""),4000);
     setSaving(false);
   };
 
-  const computeBadges = (p) => {
-    const earned = [];
+  const computeBadges = (p, full_name) => {
+    const earned = [...(p.badges||[]).filter(b=>["verified","passport"].includes(b))]; // preservar verified y passport
     const years = (p.experience||[]).length;
     const hasCerts = (p.certifications||[]).some(c=>(c.name||"").includes("STCW"));
     const boats = (p.experience||[]).length;
@@ -133,8 +158,7 @@ export default function CrewProfile({ user, onLogout }) {
     if (hasCerts)  earned.push("stcw");
     if ((p.crew_role||"").includes("Capitán")) earned.push("captain");
     if (langs>=2)  earned.push("bilingual");
-    if (p.photo_url && full_name) earned.push("verified");
-    return earned;
+    return [...new Set(earned)];
   };
 
   const uploadPhoto = async (file) => {
@@ -144,7 +168,9 @@ export default function CrewProfile({ user, onLogout }) {
     const path = `profiles/${user.id}/photo.${ext}`;
     await supabase.storage.from("manuales").upload(path, file, {upsert:true});
     const { data } = supabase.storage.from("manuales").getPublicUrl(path);
-    set("photo_url", data.publicUrl);
+    const url = data.publicUrl + "?t=" + Date.now();
+    set("photo_url", url);
+    await supabase.from("profiles").update({ photo_url: url }).eq("id", user.id);
     setUploadingPhoto(false);
   };
 
@@ -154,8 +180,13 @@ export default function CrewProfile({ user, onLogout }) {
     const path = `profiles/${user.id}/id_doc.${ext}`;
     await supabase.storage.from("manuales").upload(path, file, {upsert:true});
     const { data } = supabase.storage.from("manuales").getPublicUrl(path);
-    set("id_doc_url", data.publicUrl);
-    setMsg("✅ Documento subido");
+    const url = data.publicUrl + "?t=" + Date.now();
+    set("id_doc_url", url);
+    // Guardar inmediatamente + agregar a documentos
+    const docs = [...(profile.documents||[]).filter(d=>d.type!=="cedula"), {type:"cedula", name:"Cédula de Identidad", url, folder:"Identidad", uploaded:new Date().toISOString()}];
+    set("documents", docs);
+    await supabase.from("profiles").update({ id_doc_url: url, documents: docs }).eq("id", user.id);
+    setMsg("✅ Cédula subida y guardada");
     setTimeout(()=>setMsg(""),3000);
   };
 
@@ -185,25 +216,90 @@ export default function CrewProfile({ user, onLogout }) {
       const data = await resp.json();
       if (data.success) {
         setVerifyResult(data.result);
-        // Si pasa la verificación, agregar badge verified
         const passed = data.result.is_official_doc && data.result.face_in_doc &&
           (!profilePhotoBase64 || data.result.faces_match !== false);
         if (passed) {
           const badges = [...new Set([...(profile.badges||[]), "verified"])];
-          set("badges", badges);
-          // Guardar datos extraídos de la cédula
-          if (data.result.extracted_name) set("verified_name", data.result.extracted_name);
-          if (data.result.id_number) set("id_number", data.result.id_number);
-          setMsg("✅ Identidad verificada. Badge agregado.");
+          const updates = {
+            badges,
+            verified_name: data.result.extracted_name||null,
+            id_number: data.result.id_number||null,
+          };
+          setProfile(p=>({...p, ...updates}));
+          await supabase.from("profiles").update(updates).eq("id", user.id);
+          setShowVerifyPopup(true); // POPUP de éxito
         } else {
-          setMsg("⚠️ No se pudo verificar. Revisa que la foto sea clara y el documento sea válido.");
+          setMsg("⚠️ No se pudo verificar. Revisa que la foto de perfil sea tu cara y la cédula sea legible.");
+          setTimeout(()=>setMsg(""),5000);
         }
       }
     } catch(e) {
       setMsg("Error al verificar: " + e.message);
+      setTimeout(()=>setMsg(""),5000);
     }
     setVerifying(false);
-    setTimeout(()=>setMsg(""),5000);
+  };
+
+  // ── Manejo de documentos y carpetas ──
+  const uploadDocument = async (file, folder) => {
+    if (!file) return;
+    const ext = file.name.split(".").pop();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `profiles/${user.id}/docs/${Date.now()}_${safeName}`;
+    await supabase.storage.from("manuales").upload(path, file, {upsert:true});
+    const { data } = supabase.storage.from("manuales").getPublicUrl(path);
+    const newDoc = { type:"file", name:file.name, url:data.publicUrl, folder:folder||"General", uploaded:new Date().toISOString() };
+    const docs = [...(profile.documents||[]), newDoc];
+    set("documents", docs);
+    await supabase.from("profiles").update({ documents: docs }).eq("id", user.id);
+    setMsg("✅ Documento guardado en " + (folder||"General"));
+    setTimeout(()=>setMsg(""),3000);
+  };
+
+  const deleteDocument = async (idx) => {
+    const docs = (profile.documents||[]).filter((_,i)=>i!==idx);
+    set("documents", docs);
+    await supabase.from("profiles").update({ documents: docs }).eq("id", user.id);
+  };
+
+  const addFolder = async (name) => {
+    if (!name) return;
+    const folders = [...new Set([...(profile.doc_folders||["Identidad","Licencias","Certificados"]), name])];
+    set("doc_folders", folders);
+    await supabase.from("profiles").update({ doc_folders: folders }).eq("id", user.id);
+  };
+
+  const addCertification = async () => {
+    if (!newCert.name) { setMsg("⚠️ Selecciona el tipo de certificación"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!newCert.doc_url) { setMsg("⚠️ Debes subir el documento de la certificación"); setTimeout(()=>setMsg(""),3000); return; }
+    const certs = [...(profile.certifications||[]), newCert];
+    set("certifications", certs);
+    await supabase.from("profiles").update({ certifications: certs }).eq("id", user.id);
+    setNewCert({name:"",custom_name:"",date:"",expiry:"",doc_url:""});
+    setMsg("✅ Certificación agregada");
+    setTimeout(()=>setMsg(""),3000);
+  };
+
+  const deleteCertification = async (i) => {
+    const certs = (profile.certifications||[]).filter((_,idx)=>idx!==i);
+    set("certifications", certs);
+    await supabase.from("profiles").update({ certifications: certs }).eq("id", user.id);
+  };
+
+  const addExperience = async () => {
+    if (!newExp.brand) { setMsg("⚠️ Indica la marca del barco"); setTimeout(()=>setMsg(""),3000); return; }
+    const exps = [...(profile.experience||[]), newExp];
+    set("experience", exps);
+    await supabase.from("profiles").update({ experience: exps }).eq("id", user.id);
+    setNewExp({brand:"",length:"",role:"",period:"",notes:""});
+    setMsg("✅ Experiencia agregada");
+    setTimeout(()=>setMsg(""),3000);
+  };
+
+  const deleteExperience = async (i) => {
+    const exps = (profile.experience||[]).filter((_,idx)=>idx!==i);
+    set("experience", exps);
+    await supabase.from("profiles").update({ experience: exps }).eq("id", user.id);
   };
 
   const searchVessels = async () => {
@@ -318,21 +414,36 @@ export default function CrewProfile({ user, onLogout }) {
 
                 <div style={{marginTop:16,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>DISPONIBILIDAD DE TRABAJO</div>
-                  <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>Requiere foto y cédula para activarse</div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div onClick={()=>{
-                    if (!profile.photo_url || !profile.id_doc_url) { setMsg("⚠️ Necesitas subir tu foto de perfil y cédula primero"); setTimeout(()=>setMsg(""),4000); return; }
-                    set("available",!profile.available);
-                  }} style={{
-                      width:42,height:24,borderRadius:12,background:profile.available?"#16a34a":"#cbd5e1",
-                      cursor:"pointer",position:"relative",transition:"background 0.2s"
-                    }}>
-                      <div style={{position:"absolute",top:3,left:profile.available?20:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
-                    </div>
-                    <span style={{fontSize:12,color:profile.available?"#16a34a":"#94a3b8",fontWeight:600}}>
-                      {profile.available?"Disponible":"No disponible"}
-                    </span>
-                  </div>
+                  {(() => {
+                    const unlocked = !!(profile.photo_url && profile.id_doc_url);
+                    const isOn = unlocked && profile.available;
+                    return (
+                      <>
+                        <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>
+                          {unlocked ? "Activa para que los propietarios te encuentren" : "🔒 Sube tu foto de perfil y cédula para activar"}
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div onClick={async ()=>{
+                            if (!unlocked) { setMsg("🔒 Necesitas subir tu foto de perfil y cédula primero"); setTimeout(()=>setMsg(""),4000); return; }
+                            const newVal = !profile.available;
+                            set("available", newVal);
+                            await supabase.from("profiles").update({ available:newVal }).eq("id", user.id);
+                          }} style={{
+                            width:42,height:24,borderRadius:12,
+                            background: isOn ? "#16a34a" : "#cbd5e1",
+                            cursor: unlocked ? "pointer" : "not-allowed",
+                            position:"relative", transition:"background 0.2s",
+                            opacity: unlocked ? 1 : 0.45,
+                          }}>
+                            <div style={{position:"absolute",top:3,left:isOn?20:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                          </div>
+                          <span style={{fontSize:12,color:isOn?"#16a34a":"#94a3b8",fontWeight:600}}>
+                            {!unlocked ? "Bloqueado" : isOn ? "Disponible" : "No disponible"}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -530,89 +641,77 @@ export default function CrewProfile({ user, onLogout }) {
         {/* ── CERTIFICACIONES ── */}
         {tab==="certs"&&(
           <div style={{maxWidth:700}}>
+            {/* Lista de certificaciones guardadas */}
             <div style={s.card}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>📜 Certificaciones</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Sube el diploma o certificado para cada una</div>
-                </div>
-                <button onClick={()=>set("certifications",[...(profile.certifications||[]),{name:"",date:"",expiry:"",doc_url:""}])}
-                  style={{padding:"7px 14px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700}}>
-                  ＋ Agregar
-                </button>
-              </div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>📜 Mis Certificaciones</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Tus certificaciones náuticas con documento de respaldo</div>
 
-              {(profile.certifications||[]).length===0&&(
-                <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                  <div style={{fontSize:40,marginBottom:8}}>📜</div>
-                  <div style={{fontWeight:600}}>Sin certificaciones</div>
-                  <div style={{fontSize:12,marginTop:4}}>Agrega tus certificaciones náuticas</div>
-                </div>
-              )}
-
-              <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                {(profile.certifications||[]).map((cert,i)=>(
-                  <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:14}}>
-                    <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"flex-start"}}>
-                      <div style={{flex:1}}>
-                        <label style={s.label}>Certificación</label>
-                        <select value={cert.name||""} onChange={e=>{const c=[...(profile.certifications||[])];c[i]={...c[i],name:e.target.value};set("certifications",c);}} style={s.input}>
-                          <option value="">Seleccionar...</option>
-                          {CERT_OPTIONS.map(o=><option key={o}>{o}</option>)}
-                        </select>
-                        {cert.name==="Otro"&&(
-                          <input value={cert.custom_name||""} onChange={e=>{const c=[...(profile.certifications||[])];c[i]={...c[i],custom_name:e.target.value};set("certifications",c);}}
-                            placeholder="Especifica la certificación" style={{...s.input,marginTop:6}}/>
-                        )}
-                      </div>
-                      <button onClick={()=>{const c=[...(profile.certifications||[])];c.splice(i,1);set("certifications",c);}}
-                        style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:18,padding:"0 4px",marginTop:18}}>✕</button>
-                    </div>
-
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                      <div>
-                        <label style={s.label}>Fecha de emisión</label>
-                        <input type="date" value={cert.date||""} onChange={e=>{const c=[...(profile.certifications||[])];c[i]={...c[i],date:e.target.value};set("certifications",c);}} style={s.input}/>
-                      </div>
-                      <div>
-                        <label style={s.label}>Fecha de vencimiento</label>
-                        <input type="date" value={cert.expiry||""} onChange={e=>{const c=[...(profile.certifications||[])];c[i]={...c[i],expiry:e.target.value};set("certifications",c);}} style={s.input}/>
-                      </div>
-                    </div>
-
-                    {/* Upload certificado */}
-                    <div>
-                      <label style={s.label}>Diploma / Certificado</label>
-                      {cert.doc_url
-                        ? <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                            <a href={cert.doc_url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",fontWeight:600}}>✅ Ver documento</a>
-                            <span style={{fontSize:10,color:"#94a3b8"}}>·</span>
-                            <label style={{fontSize:11,color:"#64748b",cursor:"pointer"}}>
-                              Cambiar
-                              <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{
-                                const file=e.target.files[0]; if(!file) return;
-                                const path=`profiles/${user.id}/cert_${i}.${file.name.split(".").pop()}`;
-                                await supabase.storage.from("manuales").upload(path,file,{upsert:true});
-                                const {data:d}=supabase.storage.from("manuales").getPublicUrl(path);
-                                const c=[...(profile.certifications||[])];c[i]={...c[i],doc_url:d.publicUrl};set("certifications",c);
-                              }}/>
-                            </label>
-                          </div>
-                        : <label style={{display:"block",padding:"8px 12px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
-                            📎 Subir foto o PDF del certificado
-                            <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{
-                              const file=e.target.files[0]; if(!file) return;
-                              const path=`profiles/${user.id}/cert_${i}.${file.name.split(".").pop()}`;
-                              await supabase.storage.from("manuales").upload(path,file,{upsert:true});
-                              const {data:d}=supabase.storage.from("manuales").getPublicUrl(path);
-                              const c=[...(profile.certifications||[])];c[i]={...c[i],doc_url:d.publicUrl};set("certifications",c);
-                            }}/>
-                          </label>
-                      }
-                    </div>
+              {(profile.certifications||[]).length===0
+                ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
+                    <div style={{fontSize:36,marginBottom:8}}>📜</div>
+                    <div style={{fontWeight:600}}>Sin certificaciones aún</div>
                   </div>
-                ))}
+                : <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:8}}>
+                    {(profile.certifications||[]).map((cert,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10}}>
+                        <div style={{fontSize:22}}>📜</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{cert.name==="Otro"?cert.custom_name:cert.name}</div>
+                          <div style={{fontSize:11,color:"#64748b"}}>
+                            {cert.date&&`Emitido: ${cert.date}`}{cert.expiry&&` · Vence: ${cert.expiry}`}
+                          </div>
+                        </div>
+                        {cert.doc_url&&<a href={cert.doc_url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",fontWeight:600}}>Ver doc</a>}
+                        <button onClick={()=>deleteCertification(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
+                      </div>
+                    ))}
+                  </div>
+              }
+            </div>
+
+            {/* Formulario nueva certificación */}
+            <div style={{...s.card,marginTop:16,border:"1.5px solid #bfdbfe"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Certificación</div>
+              <div style={{marginBottom:10}}>
+                <label style={s.label}>Certificación</label>
+                <select value={newCert.name} onChange={e=>setNewCert({...newCert,name:e.target.value})} style={s.input}>
+                  <option value="">Seleccionar...</option>
+                  {CERT_OPTIONS.map(o=><option key={o}>{o}</option>)}
+                </select>
+                {newCert.name==="Otro"&&(
+                  <input value={newCert.custom_name} onChange={e=>setNewCert({...newCert,custom_name:e.target.value})}
+                    placeholder="Especifica la certificación" style={{...s.input,marginTop:6}}/>
+                )}
               </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div>
+                  <label style={s.label}>Fecha de emisión</label>
+                  <input type="date" value={newCert.date} onChange={e=>setNewCert({...newCert,date:e.target.value})} style={s.input}/>
+                </div>
+                <div>
+                  <label style={s.label}>Fecha de vencimiento</label>
+                  <input type="date" value={newCert.expiry} onChange={e=>setNewCert({...newCert,expiry:e.target.value})} style={s.input}/>
+                </div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <label style={s.label}>Diploma / Certificado *</label>
+                {newCert.doc_url
+                  ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento cargado</div>
+                  : <label style={{display:"block",padding:"8px 12px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
+                      📎 Subir foto o PDF del certificado (obligatorio)
+                      <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{
+                        const file=e.target.files[0]; if(!file) return;
+                        const path=`profiles/${user.id}/cert_${Date.now()}.${file.name.split(".").pop()}`;
+                        await supabase.storage.from("manuales").upload(path,file,{upsert:true});
+                        const {data:d}=supabase.storage.from("manuales").getPublicUrl(path);
+                        setNewCert(nc=>({...nc,doc_url:d.publicUrl}));
+                      }}/>
+                    </label>
+                }
+              </div>
+              <button onClick={addCertification} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                Agregar a mi perfil
+              </button>
             </div>
           </div>
         )}
@@ -620,73 +719,73 @@ export default function CrewProfile({ user, onLogout }) {
         {/* ── HISTORIAL ── */}
         {tab==="historial"&&(
           <div style={{maxWidth:700}}>
+            {/* Lista de experiencias guardadas */}
             <div style={s.card}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>🚢 Historial de Embarcaciones</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Tu experiencia embarcado (el nombre del barco es privado)</div>
-                </div>
-                <button onClick={()=>set("experience",[...(profile.experience||[]),{brand:"",length:"",role:"",period:"",notes:""}])}
-                  style={{padding:"7px 14px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700}}>
-                  ＋ Agregar
-                </button>
-              </div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🚢 Historial de Embarcaciones</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Tu experiencia embarcado (el nombre del barco se mantiene privado)</div>
 
-              {(profile.experience||[]).length===0&&(
-                <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                  <div style={{fontSize:40,marginBottom:8}}>🚢</div>
-                  <div style={{fontWeight:600}}>Sin historial</div>
-                </div>
-              )}
-
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {(profile.experience||[]).map((exp,i)=>(
-                  <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:14}}>
-                    <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
-                      <button onClick={()=>{const x=[...(profile.experience||[])];x.splice(i,1);set("experience",x);}}
-                        style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>✕</button>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                      <div>
-                        <label style={s.label}>Marca del barco</label>
-                        <input value={exp.brand||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],brand:e.target.value};set("experience",x);}}
-                          placeholder="Ej: Sea Ray" style={s.input}/>
-                      </div>
-                      <div>
-                        <label style={s.label}>Eslora (pies)</label>
-                        <input value={exp.length||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],length:e.target.value};set("experience",x);}}
-                          placeholder="Ej: 65" style={s.input}/>
-                      </div>
-                      <div>
-                        <label style={s.label}>Tu rol</label>
-                        <select value={exp.role||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],role:e.target.value};set("experience",x);}} style={s.input}>
-                          <option value="">Seleccionar...</option>
-                          {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label style={s.label}>Período</label>
-                        <select value={exp.period||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],period:e.target.value};set("experience",x);}} style={s.input}>
-                          <option value="">Seleccionar...</option>
-                          <option>Menos de 3 meses</option>
-                          <option>3 a 6 meses</option>
-                          <option>6 meses a 1 año</option>
-                          <option>1 a 2 años</option>
-                          <option>2 a 3 años</option>
-                          <option>3 a 5 años</option>
-                          <option>5 a 10 años</option>
-                          <option>Más de 10 años</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div style={{marginTop:10}}>
-                      <label style={s.label}>Notas</label>
-                      <input value={exp.notes||""} onChange={e=>{const x=[...(profile.experience||[])];x[i]={...x[i],notes:e.target.value};set("experience",x);}}
-                        placeholder="Rutas frecuentes, tipo de operación, etc." style={s.input}/>
-                    </div>
+              {(profile.experience||[]).length===0
+                ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
+                    <div style={{fontSize:36,marginBottom:8}}>🚢</div>
+                    <div style={{fontWeight:600}}>Sin historial aún</div>
                   </div>
-                ))}
+                : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {(profile.experience||[]).map((exp,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10}}>
+                        <div style={{fontSize:22}}>🚢</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{exp.brand} {exp.length&&`· ${exp.length} pies`}</div>
+                          <div style={{fontSize:11,color:"#64748b"}}>{exp.role}{exp.period&&` · ${exp.period}`}</div>
+                          {exp.notes&&<div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{exp.notes}</div>}
+                        </div>
+                        <button onClick={()=>deleteExperience(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
+                      </div>
+                    ))}
+                  </div>
+              }
+            </div>
+
+            {/* Formulario nueva experiencia */}
+            <div style={{...s.card,marginTop:16,border:"1.5px solid #bfdbfe"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Experiencia</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div>
+                  <label style={s.label}>Marca del barco</label>
+                  <input value={newExp.brand} onChange={e=>setNewExp({...newExp,brand:e.target.value})} placeholder="Ej: Sea Ray" style={s.input}/>
+                </div>
+                <div>
+                  <label style={s.label}>Eslora (pies)</label>
+                  <input value={newExp.length} onChange={e=>setNewExp({...newExp,length:e.target.value})} placeholder="Ej: 65" style={s.input}/>
+                </div>
+                <div>
+                  <label style={s.label}>Tu rol</label>
+                  <select value={newExp.role} onChange={e=>setNewExp({...newExp,role:e.target.value})} style={s.input}>
+                    <option value="">Seleccionar...</option>
+                    {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={s.label}>Período</label>
+                  <select value={newExp.period} onChange={e=>setNewExp({...newExp,period:e.target.value})} style={s.input}>
+                    <option value="">Seleccionar...</option>
+                    <option>Menos de 3 meses</option>
+                    <option>3 a 6 meses</option>
+                    <option>6 meses a 1 año</option>
+                    <option>1 a 2 años</option>
+                    <option>2 a 3 años</option>
+                    <option>3 a 5 años</option>
+                    <option>5 a 10 años</option>
+                    <option>Más de 10 años</option>
+                  </select>
+                </div>
               </div>
+              <div style={{marginBottom:14}}>
+                <label style={s.label}>Notas</label>
+                <input value={newExp.notes} onChange={e=>setNewExp({...newExp,notes:e.target.value})} placeholder="Rutas frecuentes, tipo de operación, etc." style={s.input}/>
+              </div>
+              <button onClick={addExperience} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                Agregar a mi perfil
+              </button>
             </div>
           </div>
         )}
@@ -733,6 +832,85 @@ export default function CrewProfile({ user, onLogout }) {
                   );
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── DOCUMENTOS ── */}
+        {tab==="documentos"&&(
+          <div style={{maxWidth:760}}>
+            <div style={s.card}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>📁 Mis Documentos</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Cédula, pasaporte, licencias y certificados · Organiza en carpetas</div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{const n=prompt("Nombre de la nueva carpeta:"); if(n) addFolder(n);}}
+                    style={{padding:"7px 12px",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#475569",fontWeight:600}}>
+                    ＋ Carpeta
+                  </button>
+                  <label style={{padding:"7px 14px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700}}>
+                    ⬆ Subir
+                    <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
+                      const f=e.target.files[0];
+                      const folder=prompt("¿En qué carpeta? (Identidad, Licencias, Certificados o nueva)","General");
+                      uploadDocument(f, folder);
+                    }}/>
+                  </label>
+                </div>
+              </div>
+
+              {/* Carpetas con documentos */}
+              {(() => {
+                const folders = [...new Set([...(profile.doc_folders||["Identidad","Licencias","Certificados"]), ...((profile.documents||[]).map(d=>d.folder||"General"))])];
+                const docs = profile.documents||[];
+                if (docs.length===0) return (
+                  <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
+                    <div style={{fontSize:40,marginBottom:8}}>📁</div>
+                    <div style={{fontWeight:600}}>Sin documentos</div>
+                    <div style={{fontSize:12,marginTop:4}}>Tu cédula aparecerá aquí al subirla · Agrega licencias y certificados</div>
+                  </div>
+                );
+                return (
+                  <div style={{display:"flex",flexDirection:"column",gap:16,marginTop:16}}>
+                    {folders.map(folder=>{
+                      const folderDocs = docs.filter(d=>(d.folder||"General")===folder);
+                      if (folderDocs.length===0) return null;
+                      return (
+                        <div key={folder}>
+                          <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                            📂 {folder} <span style={{color:"#94a3b8",fontWeight:400}}>({folderDocs.length})</span>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+                            {folderDocs.map((doc)=>{
+                              const realIdx = docs.indexOf(doc);
+                              const isImg = /\.(jpg|jpeg|png|webp|gif)/i.test(doc.url) || doc.url.includes("?t=");
+                              return (
+                                <div key={realIdx} style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden",background:"#fff"}}>
+                                  <a href={doc.url} target="_blank" rel="noreferrer">
+                                    {isImg
+                                      ? <img src={doc.url} style={{width:"100%",height:100,objectFit:"cover"}} alt={doc.name}/>
+                                      : <div style={{width:"100%",height:100,background:"#f1f5f9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:34}}>📄</div>
+                                    }
+                                  </a>
+                                  <div style={{padding:"8px 10px"}}>
+                                    <div style={{fontSize:11,fontWeight:600,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
+                                      <span style={{fontSize:9,color:"#94a3b8"}}>{new Date(doc.uploaded).toLocaleDateString("es-VE")}</span>
+                                      {doc.type!=="cedula"&&<button onClick={()=>deleteDocument(realIdx)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>🗑</button>}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -811,6 +989,31 @@ export default function CrewProfile({ user, onLogout }) {
           </div>
         )}
 
+        {/* Popup de verificación exitosa */}
+        {showVerifyPopup&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowVerifyPopup(false)}>
+            <div style={{background:"#fff",borderRadius:20,padding:"32px 28px",maxWidth:380,textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
+              <div style={{width:72,height:72,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,margin:"0 auto 16px"}}>✅</div>
+              <div style={{fontSize:20,fontWeight:800,color:"#16a34a",marginBottom:8}}>¡Identidad Verificada!</div>
+              <div style={{fontSize:13,color:"#475569",lineHeight:1.5,marginBottom:6}}>
+                Tu cédula y foto fueron verificadas exitosamente con inteligencia artificial.
+              </div>
+              {verifyResult?.extracted_name&&(
+                <div style={{fontSize:12,color:"#64748b",background:"#f8fafc",borderRadius:10,padding:"10px 14px",margin:"12px 0"}}>
+                  <div><strong>{verifyResult.extracted_name}</strong></div>
+                  {verifyResult.id_number&&<div style={{marginTop:2}}>{verifyResult.id_number}</div>}
+                </div>
+              )}
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:20,padding:"6px 14px",margin:"8px 0 16px"}}>
+                <span>✅</span><span style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>Usuario Certificado</span>
+              </div>
+              <button onClick={()=>setShowVerifyPopup(false)} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
+
         {msg&&(
           <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"10px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:999,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>
             {msg}
@@ -819,7 +1022,7 @@ export default function CrewProfile({ user, onLogout }) {
       </div>
 
       {/* Guardar flotante */}
-      {(tab==="perfil"||tab==="certs"||tab==="historial"||tab==="pagos")&&(
+      {(tab==="perfil"||tab==="pagos")&&(
         <div style={{position:"fixed",bottom:24,right:24,zIndex:100}}>
           <button onClick={saveProfile} disabled={saving} style={{padding:"12px 24px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(29,78,216,0.4)",opacity:saving?0.7:1}}>
             {saving?"⏳ Guardando...":"💾 Guardar"}
