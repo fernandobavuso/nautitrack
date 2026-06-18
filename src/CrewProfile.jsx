@@ -78,6 +78,7 @@ export default function CrewProfile({ user, onLogout }) {
   const [showVerifyPopup, setShowVerifyPopup] = useState(false);
   const [newCert, setNewCert] = useState({name:"",custom_name:"",date:"",expiry:"",doc_url:""});
   const [newExp, setNewExp]   = useState({brand:"",length:"",role:"",period:"",notes:""});
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const photoRef  = useRef();
   const docRef    = useRef();
 
@@ -363,23 +364,64 @@ export default function CrewProfile({ user, onLogout }) {
             <div style={{fontSize:10,color:"#64748b"}}>Perfil Tripulación</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-          {TABS.map(t=>(
-            <button key={t.key} onClick={()=>setTab(t.key)} style={{
-              padding:"6px 10px",background:tab===t.key?"#eff6ff":"transparent",
-              border:"none",borderRadius:8,cursor:"pointer",fontSize:11,
-              color:tab===t.key?"#2563eb":"#64748b",fontWeight:tab===t.key?700:400
-            }}>{t.icon} {t.label}
-              {t.key==="solicitudes"&&requests.filter(r=>r.status==="pending").length>0&&(
-                <span style={{marginLeft:4,background:"#ef4444",color:"#fff",borderRadius:"50%",padding:"1px 5px",fontSize:9}}>
-                  {requests.filter(r=>r.status==="pending").length}
-                </span>
-              )}
-            </button>
-          ))}
-          <button onClick={onLogout} style={{padding:"5px 10px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:11,color:"#94a3b8",marginLeft:4}}>Salir</button>
-        </div>
+
+        {isMobile ? (
+          <button onClick={()=>setMobileMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",flexDirection:"column",gap:4}}>
+            <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+            <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+            <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+          </button>
+        ) : (
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+            {TABS.map(t=>(
+              <button key={t.key} onClick={()=>setTab(t.key)} style={{
+                padding:"6px 10px",background:tab===t.key?"#eff6ff":"transparent",
+                border:"none",borderRadius:8,cursor:"pointer",fontSize:11,
+                color:tab===t.key?"#2563eb":"#64748b",fontWeight:tab===t.key?700:400
+              }}>{t.icon} {t.label}
+                {t.key==="solicitudes"&&requests.filter(r=>r.status==="pending").length>0&&(
+                  <span style={{marginLeft:4,background:"#ef4444",color:"#fff",borderRadius:"50%",padding:"1px 5px",fontSize:9}}>
+                    {requests.filter(r=>r.status==="pending").length}
+                  </span>
+                )}
+              </button>
+            ))}
+            <button onClick={onLogout} style={{padding:"5px 10px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:11,color:"#94a3b8",marginLeft:4}}>Salir</button>
+          </div>
+        )}
       </nav>
+
+      {/* Menú móvil deslizante */}
+      {isMobile&&mobileMenuOpen&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:200}} onClick={()=>setMobileMenuOpen(false)}>
+          <div style={{position:"absolute",left:0,top:0,bottom:0,width:260,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Menú</div>
+              <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
+            </div>
+            <div style={{padding:"12px"}}>
+              {TABS.map(t=>(
+                <button key={t.key} onClick={()=>{setTab(t.key);setMobileMenuOpen(false);}} style={{
+                  display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",textAlign:"left",
+                  padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",marginBottom:2,
+                  background:tab===t.key?"#eff6ff":"transparent",color:tab===t.key?"#2563eb":"#1e293b",
+                  fontWeight:tab===t.key?700:500,fontSize:14
+                }}>
+                  <span>{t.icon} {t.label}</span>
+                  {t.key==="solicitudes"&&requests.filter(r=>r.status==="pending").length>0&&(
+                    <span style={{background:"#ef4444",color:"#fff",borderRadius:"50%",padding:"1px 6px",fontSize:10}}>
+                      {requests.filter(r=>r.status==="pending").length}
+                    </span>
+                  )}
+                </button>
+              ))}
+              <div style={{borderTop:"1px solid #f1f5f9",marginTop:8,paddingTop:8}}>
+                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#dc2626",fontWeight:600,fontSize:14}}>🚪 Cerrar Sesión</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{...s.content, padding:isMobile?"16px 14px":"24px 28px"}}>
 

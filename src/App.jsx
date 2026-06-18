@@ -489,11 +489,100 @@ export default function App() {
   );
 }
 
+const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
+
 function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,page,setPage,onLogout }) {
   const { isMobile } = useResponsive();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
+
+  // ─── Vista móvil: logo + hamburguesa ───
+  if (isMobile) {
+    return (
+      <>
+        <nav style={{...s.nav, padding:"0 16px", justifyContent:"space-between"}} onClick={e=>e.stopPropagation()}>
+          <div style={s.navLogo} onClick={()=>setPage("home")}>
+            <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+              <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".1"/>
+              <path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/>
+              <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
+              <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
+            </svg>
+            <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{position:"relative"}}>
+              <span style={{fontSize:20,cursor:"pointer"}} onClick={()=>setShowNotifications(true)}>🔔</span>
+              {totalAlerts>0&&<div style={s.bellBadge}>{totalAlerts}</div>}
+            </div>
+            <button onClick={()=>setMobileMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",flexDirection:"column",gap:4}}>
+              <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+              <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+              <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+            </button>
+          </div>
+        </nav>
+
+        {/* Overlay + panel deslizante */}
+        {mobileMenuOpen&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:200}} onClick={()=>setMobileMenuOpen(false)}>
+            <div style={{position:"absolute",left:0,top:0,bottom:0,width:280,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+              {/* Header del panel */}
+              <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
+                <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
+              </div>
+
+              {/* Perfil del usuario */}
+              <div style={{padding:"16px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:12}}>
+                <div style={s.navAvatar}>{(user?.full_name||user?.email||"?")[0].toUpperCase()}</div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,color:"#0f172a"}}>{user?.full_name||user?.email||"Mi Cuenta"}</div>
+                  <div style={{fontSize:11,color:"#94a3b8"}}>Propietario</div>
+                </div>
+              </div>
+
+              {/* Selector de embarcación */}
+              <div style={{padding:"12px 20px",borderBottom:"1px solid #f1f5f9"}}>
+                <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>EMBARCACIÓN</div>
+                {vessels.map(v=>(
+                  <button key={v.id} onClick={()=>{setVesselId(v.id);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 10px",border:"none",borderRadius:8,cursor:"pointer",background:v.id===vessel.id?"#eff6ff":"transparent",marginBottom:4,textAlign:"left"}}>
+                    <span style={{...s.dot,background:STATUS_CFG[v.status].dot}}/>
+                    <div><div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{v.name}</div><div style={{fontSize:10,color:"#94a3b8"}}>{v.type} · {v.marina}</div></div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Navegación */}
+              <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
+                {[{key:"home",label:"🏠 Inicio"},{key:"tasks",label:"☑ Tareas"},{key:"log",label:"📓 Bitácora"},{key:"records",label:"🔧 Records"},{key:"docs",label:"📄 Documentos"}].map(n=>(
+                  <button key={n.key} onClick={()=>{setPage(n.key);setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page===n.key?"#eff6ff":"transparent",color:page===n.key?"#0ea5e9":"#1e293b",fontWeight:page===n.key?700:500,fontSize:14}}>{n.label}</button>
+                ))}
+              </div>
+
+              {/* Acciones */}
+              <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
+                <button onClick={()=>{setShowProviders(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👥 Proveedores</button>
+                <button onClick={()=>{setShowCaptainManager(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>⚓ Capitanes</button>
+                <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>📱 QR Check-in</button>
+              </div>
+
+              {/* Cuenta */}
+              <div style={{padding:"12px 12px"}}>
+                <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👤 Mi Perfil</button>
+                <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>⚓ Mi Embarcación</button>
+                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}>🚪 Cerrar Sesión</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ─── Vista desktop/tablet ───
   return (
-    <nav style={{...s.nav, overflowX:isMobile?"auto":"visible", padding:isMobile?"0 12px":"0 20px", gap:isMobile?8:12}} onClick={e => e.stopPropagation()}>
+    <nav style={s.nav} onClick={e => e.stopPropagation()}>
       <div style={s.navLogo} onClick={() => setPage("home")}>
         <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
           <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".1"/>

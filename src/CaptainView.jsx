@@ -9,6 +9,7 @@ import { useResponsive } from "./useResponsive";
 export default function CaptainView({ vessel, user, onLogout }) {
   const { isMobile } = useResponsive();
   const [tab,       setTab]       = useState("dashboard");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [crewLogs,  setCrewLogs]  = useState([]);
   const [logsLoad,  setLogsLoad]  = useState(false);
 
@@ -48,7 +49,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
   return (
     <div style={s.root}>
       {/* ── NAVBAR ── */}
-      <nav style={{...s.nav, padding:isMobile?"10px 14px":"12px 24px", overflowX:isMobile?"auto":"visible"}}>
+      <nav style={{...s.nav, padding:isMobile?"10px 14px":"12px 24px"}}>
         <div style={s.navBrand}>
           <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
             <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".15"/>
@@ -61,20 +62,53 @@ export default function CaptainView({ vessel, user, onLogout }) {
             <div style={{fontSize:10, color:"#64748b"}}>Vista Capitán</div>
           </div>
         </div>
-        <div style={{display:"flex", gap:4}}>
-          {NAV.map(n=>(
-            <button key={n.key} onClick={()=>setTab(n.key)} style={{
-              padding:"6px 12px", background:tab===n.key?"#eff6ff":"transparent",
-              border:"none", borderRadius:8, cursor:"pointer",
-              fontSize:12, color:tab===n.key?"#2563eb":"#64748b",
-              fontWeight:tab===n.key?700:400
-            }}>{n.icon} {n.label}</button>
-          ))}
-          <button onClick={onLogout} style={{padding:"6px 10px", background:"none", border:"1px solid #e2e8f0", borderRadius:8, cursor:"pointer", fontSize:11, color:"#94a3b8", marginLeft:8}}>
-            Salir
+
+        {isMobile ? (
+          <button onClick={()=>setMobileMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",flexDirection:"column",gap:4}}>
+            <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+            <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
+            <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
           </button>
-        </div>
+        ) : (
+          <div style={{display:"flex", gap:4}}>
+            {NAV.map(n=>(
+              <button key={n.key} onClick={()=>setTab(n.key)} style={{
+                padding:"6px 12px", background:tab===n.key?"#eff6ff":"transparent",
+                border:"none", borderRadius:8, cursor:"pointer",
+                fontSize:12, color:tab===n.key?"#2563eb":"#64748b",
+                fontWeight:tab===n.key?700:400
+              }}>{n.icon} {n.label}</button>
+            ))}
+            <button onClick={onLogout} style={{padding:"6px 10px", background:"none", border:"1px solid #e2e8f0", borderRadius:8, cursor:"pointer", fontSize:11, color:"#94a3b8", marginLeft:8}}>
+              Salir
+            </button>
+          </div>
+        )}
       </nav>
+
+      {/* Menú móvil deslizante */}
+      {isMobile&&mobileMenuOpen&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:200}} onClick={()=>setMobileMenuOpen(false)}>
+          <div style={{position:"absolute",left:0,top:0,bottom:0,width:260,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Menú</div>
+              <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
+            </div>
+            <div style={{padding:"12px"}}>
+              {NAV.map(n=>(
+                <button key={n.key} onClick={()=>{setTab(n.key);setMobileMenuOpen(false);}} style={{
+                  display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",marginBottom:2,
+                  background:tab===n.key?"#eff6ff":"transparent",color:tab===n.key?"#2563eb":"#1e293b",
+                  fontWeight:tab===n.key?700:500,fontSize:14
+                }}>{n.icon} {n.label}</button>
+              ))}
+              <div style={{borderTop:"1px solid #f1f5f9",marginTop:8,paddingTop:8}}>
+                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#dc2626",fontWeight:600,fontSize:14}}>🚪 Cerrar Sesión</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── VESSEL BANNER ── */}
       <div style={s.vesselBanner}>
