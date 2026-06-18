@@ -7,6 +7,7 @@ import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
+import CrewMarketplace from "./CrewMarketplace";
 import { useResponsive } from "./useResponsive";
 
 
@@ -192,6 +193,7 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
+  const [showCrewMarket, setShowCrewMarket] = useState(false);
   const [captainProfile, setCaptainProfile]       = useState(null);
   const [captainVessel, setCaptainVessel]         = useState(null);
   const [crewProfile, setCrewProfile]             = useState(null);
@@ -469,6 +471,7 @@ export default function App() {
         setShowNotifications={setShowNotifications}
         setShowQRPanel={setShowQRPanel}
         setShowCaptainManager={setShowCaptainManager}
+        setShowCrewMarket={setShowCrewMarket}
         page={page} setPage={setPage}
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
       />
@@ -484,6 +487,7 @@ export default function App() {
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
       {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
       {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
+      {showCrewMarket && <CrewMarketplace vessel={vessel} user={user} onClose={() => setShowCrewMarket(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
   );
@@ -491,7 +495,7 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
-function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
   const { isMobile } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
@@ -564,6 +568,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
                 <button onClick={()=>{setShowProviders(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👥 Proveedores</button>
                 <button onClick={()=>{setShowCaptainManager(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>⚓ Capitanes</button>
+                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>🧭 Buscar Tripulación</button>
                 <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>📱 QR Check-in</button>
               </div>
 
@@ -600,6 +605,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
       <div style={s.navRight}>
         <button style={s.provBtn} onClick={() => setShowProviders(true)}>👥 Proveedores</button>
         <button style={s.provBtn} onClick={() => setShowCaptainManager(true)}>⚓ Capitanes</button>
+        <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>🧭 Tripulación</button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
             <span style={{...s.dot,background:STATUS_CFG[vessel.status].dot}} />

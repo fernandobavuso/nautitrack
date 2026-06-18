@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
+import ChatPanel from "./ChatPanel";
 
 const COUNTRY_CODES = [
   {code:"+58",flag:"🇻🇪",name:"Venezuela"},{code:"+1",flag:"🇺🇸",name:"USA/Canadá"},
@@ -83,6 +84,7 @@ export default function CrewProfile({ user, onLogout }) {
   const [newFolderName, setNewFolderName] = useState("");
   const [pendingUpload, setPendingUpload] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [activeChat, setActiveChat] = useState(null);
   const photoRef  = useRef();
   const docRef    = useRef();
 
@@ -127,9 +129,9 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const loadRequests = async () => {
-    const { data } = await supabase.from("vessel_requests")
-      .select("*, vessel:vessel_id(name,marina,type)")
-      .eq("user_id", user.id).order("created_at",{ascending:false});
+    const { data } = await supabase.from("connections")
+      .select("*, vessel:vessel_id(name,marina,type,city)")
+      .eq("crew_id", user.id).order("created_at",{ascending:false});
     setRequests(data||[]);
   };
 
@@ -341,22 +343,38 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const searchVessels = async () => {
-    if (!search.trim()) return;
     setSearching(true);
-    const { data } = await supabase.from("vessels").select("id,name,type,marina,captain").ilike("name",`%${search}%`).limit(10);
+    // Buscar por ciudad o tipo (no por nombre, el tripulante no debe buscar por nombre del barco)
+    let q = supabase.from("vessels").select("id,name,type,marina,city,captain,brand,model,lengthFt,owner_id");
+    if (search.trim()) q = q.or(`city.ilike.%${search}%,type.ilike.%${search}%`);
+    const { data } = await q.limit(20);
     setSearchRes(data||[]);
     setSearching(false);
   };
 
   const sendRequest = async (vessel) => {
-    const { error } = await supabase.from("vessel_requests").insert({
-      vessel_id:vessel.id, user_id:user.id, type:"crew_request", status:"pending",
-      role: profile.crew_role||"Marinero",
-      message:`${profile.full_name||user.email} solicita unirse como ${profile.crew_role||"Marinero"}`,
+    if (!(profile.badges||[]).includes("verified")) {
+      setMsg("⚠️ Debes verificar tu identidad antes de aplicar a un barco");
+      setTimeout(()=>setMsg(""),5000);
+      return;
+    }
+    const { error } = await supabase.from("connections").insert({
+      vessel_id:vessel.id, owner_id:vessel.owner_id||null, crew_id:user.id,
+      initiated_by:"crew_applied", status:"pending",
+      crew_role: profile.crew_role||"Marinero",
+      message:`${profile.first_name||""} aplicó como ${profile.crew_role||"Marinero"}`,
     });
-    if (error?.code==="23505") setMsg("⚠️ Ya enviaste una solicitud a este barco");
-    else { setMsg("✅ Solicitud enviada"); loadRequests(); }
+    if (error?.code==="23505") setMsg("⚠️ Ya aplicaste a este barco");
+    else if (error) setMsg("⚠️ Error: "+error.message);
+    else { setMsg("✅ ¡Aplicación enviada! El dueño la revisará"); loadRequests(); }
     setTimeout(()=>setMsg(""),4000);
+  };
+
+  const respondToInvite = async (conn, newStatus) => {
+    await supabase.from("connections").update({ status:newStatus }).eq("id", conn.id);
+    setMsg(newStatus==="matched"?"✅ ¡Match! Ya puedes chatear con el propietario":"Invitación rechazada");
+    setTimeout(()=>setMsg(""),4000);
+    loadRequests();
   };
 
   const set = (k,v) => setProfile(p=>({...p,[k]:v}));
@@ -1006,10 +1024,17 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:600}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🔍 Buscar Embarcación</div>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Busca el barco donde quieres trabajar y envía una solicitud al propietario</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Encuentra barcos por ciudad o tipo y aplica directamente</div>
+
+              {!(profile.badges||[]).includes("verified")&&(
+                <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#b45309"}}>
+                  ⚠️ Necesitas verificar tu identidad antes de aplicar a barcos. Ve a Mi Perfil → sube foto y cédula → Verificar identidad.
+                </div>
+              )}
+
               <div style={{display:"flex",gap:8,marginBottom:16}}>
                 <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchVessels()}
-                  placeholder="Nombre del barco..." style={{...s.input,flex:1}}/>
+                  placeholder="Ciudad o tipo (ej: Margarita, Yate Motor)..." style={{...s.input,flex:1}}/>
                 <button onClick={searchVessels} disabled={searching}
                   style={{padding:"10px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13}}>
                   {searching?"...":"Buscar"}
@@ -1017,24 +1042,29 @@ export default function CrewProfile({ user, onLogout }) {
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {searchRes.map(v=>{
-                  const sent=requests.some(r=>r.vessel_id===v.id);
+                  const conn=requests.find(r=>r.vessel_id===v.id);
+                  const sent=!!conn;
                   return (
                     <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10}}>
                       <div style={{fontSize:28}}>🚢</div>
                       <div style={{flex:1}}>
-                        <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{v.name}</div>
-                        <div style={{fontSize:11,color:"#64748b"}}>{v.type} · {v.marina}</div>
+                        {/* No mostramos nombre del barco — privacidad del dueño */}
+                        <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{v.type}{v.lengthFt?` · ${v.lengthFt} pies`:""}</div>
+                        <div style={{fontSize:11,color:"#64748b"}}>{v.brand||""} {v.model||""}</div>
+                        <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>📍 {v.city||"Ubicación reservada"}</div>
                       </div>
-                      <button onClick={()=>!sent&&sendRequest(v)} style={{
+                      <button onClick={()=>!sent&&sendRequest(v)} disabled={sent} style={{
                         padding:"8px 14px",border:"none",borderRadius:8,cursor:sent?"default":"pointer",
                         background:sent?"#f1f5f9":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",
-                        color:sent?"#94a3b8":"#fff",fontSize:12,fontWeight:700,
-                      }}>{sent?"✓ Enviado":"Solicitar"}</button>
+                        color:sent?"#94a3b8":"#fff",fontSize:12,fontWeight:700,whiteSpace:"nowrap",
+                      }}>{sent?(conn.status==="matched"?"✓ Match":"✓ Aplicado"):"Aplicar"}</button>
                     </div>
                   );
                 })}
-                {searchRes.length===0&&search&&!searching&&(
-                  <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>No se encontraron embarcaciones</div>
+                {searchRes.length===0&&!searching&&(
+                  <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
+                    {search?"No se encontraron embarcaciones":"Usa el buscador para ver barcos disponibles"}
+                  </div>
                 )}
               </div>
             </div>
@@ -1045,29 +1075,45 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="solicitudes"&&(
           <div style={{maxWidth:600}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:16}}>📬 Mis Solicitudes</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:16}}>📬 Mis Aplicaciones</div>
               {requests.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                   <div style={{fontSize:40,marginBottom:12}}>📬</div>
-                  <div>Sin solicitudes enviadas</div>
+                  <div>Sin aplicaciones aún</div>
+                  <div style={{fontSize:12,marginTop:4}}>Ve a "Buscar Barco" para aplicar</div>
                 </div>
               )}
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {requests.map(r=>(
-                  <div key={r.id} style={{padding:"12px 16px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{r.vessel?.name}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{r.vessel?.type} · {r.vessel?.marina}</div>
-                      <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>Rol: {r.role}</div>
+                  <div key={r.id} style={{padding:"12px 16px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{r.vessel?.type||"Embarcación"}</div>
+                        <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>📍 {r.vessel?.city||"—"} · Rol: {r.crew_role}</div>
+                        {r.initiated_by==="owner_invited"&&<div style={{fontSize:11,color:"#7c3aed",marginTop:2,fontWeight:600}}>⭐ El dueño te invitó</div>}
+                      </div>
+                      <span style={{
+                        padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",
+                        background:r.status==="matched"?"#f0fdf4":r.status==="rejected"?"#fff5f5":"#fffbeb",
+                        color:r.status==="matched"?"#16a34a":r.status==="rejected"?"#dc2626":"#d97706",
+                        border:`1px solid ${r.status==="matched"?"#bbf7d0":r.status==="rejected"?"#fecaca":"#fde68a"}`,
+                      }}>
+                        {r.status==="matched"?"✅ Match":r.status==="rejected"?"❌ Rechazado":"⏳ Pendiente"}
+                      </span>
                     </div>
-                    <span style={{
-                      padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",
-                      background:r.status==="accepted"?"#f0fdf4":r.status==="rejected"?"#fff5f5":"#fffbeb",
-                      color:r.status==="accepted"?"#16a34a":r.status==="rejected"?"#dc2626":"#d97706",
-                      border:`1px solid ${r.status==="accepted"?"#bbf7d0":r.status==="rejected"?"#fecaca":"#fde68a"}`,
-                    }}>
-                      {r.status==="accepted"?"✅ Aceptado":r.status==="rejected"?"❌ Rechazado":"⏳ Pendiente"}
-                    </span>
+                    {/* Si es invitación del dueño pendiente, botones aceptar/rechazar */}
+                    {r.status==="pending"&&r.initiated_by==="owner_invited"&&(
+                      <div style={{display:"flex",gap:8,marginTop:10}}>
+                        <button onClick={()=>respondToInvite(r,"matched")} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Aceptar</button>
+                        <button onClick={()=>respondToInvite(r,"rejected")} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Rechazar</button>
+                      </div>
+                    )}
+                    {/* Si hay match, botón de chat */}
+                    {r.status==="matched"&&(
+                      <button onClick={()=>setActiveChat(r)} style={{width:"100%",marginTop:10,padding:"8px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                        💬 Abrir chat con el propietario
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1110,6 +1156,11 @@ export default function CrewProfile({ user, onLogout }) {
         )}
 
         {/* Popup de verificación exitosa */}
+        {/* Chat interno */}
+        {activeChat&&(
+          <ChatPanel connection={activeChat} currentUserId={user.id} otherName="Propietario" onClose={()=>{setActiveChat(null);loadRequests();}}/>
+        )}
+
         {showVerifyPopup&&(
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowVerifyPopup(false)}>
             <div style={{background:"#fff",borderRadius:20,padding:"32px 28px",maxWidth:380,textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
