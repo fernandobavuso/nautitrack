@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
+import { useResponsive } from "./useResponsive";
 
 const COUNTRY_CODES = [
   {code:"+58",flag:"🇻🇪",name:"Venezuela"},{code:"+1",flag:"🇺🇸",name:"USA/Canadá"},
@@ -61,6 +62,7 @@ const PAYMENT_METHODS = [
 ];
 
 export default function CrewProfile({ user, onLogout }) {
+  const { isMobile, isTablet } = useResponsive();
   const [profile,   setProfile]   = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [saving,    setSaving]    = useState(false);
@@ -348,7 +350,7 @@ export default function CrewProfile({ user, onLogout }) {
   return (
     <div style={s.root}>
       {/* NAV */}
-      <nav style={s.nav}>
+      <nav style={{...s.nav, padding:isMobile?"10px 14px":"12px 24px"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
             <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".15"/>
@@ -379,11 +381,11 @@ export default function CrewProfile({ user, onLogout }) {
         </div>
       </nav>
 
-      <div style={s.content}>
+      <div style={{...s.content, padding:isMobile?"16px 14px":"24px 28px"}}>
 
         {/* ── MI PERFIL ── */}
         {tab==="perfil"&&(
-          <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:20}}>
 
             {/* Columna izquierda — foto + badge */}
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -561,7 +563,7 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={s.card}>
                 <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>📋 Información Personal</div>
 
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
                     <label style={s.label}>Nombre *</label>
                     <input value={profile.first_name||""} onChange={e=>set("first_name",e.target.value)} placeholder="Carlos" style={s.input}/>
@@ -582,7 +584,7 @@ export default function CrewProfile({ user, onLogout }) {
                   </div>
                 </div>
 
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
                     <label style={s.label}>Rol principal</label>
                     <select value={profile.crew_role||"Capitán"} onChange={e=>set("crew_role",e.target.value)} style={s.input}>
@@ -683,7 +685,7 @@ export default function CrewProfile({ user, onLogout }) {
                     placeholder="Especifica la certificación" style={{...s.input,marginTop:6}}/>
                 )}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                 <div>
                   <label style={s.label}>Fecha de emisión</label>
                   <input type="date" value={newCert.date} onChange={e=>setNewCert({...newCert,date:e.target.value})} style={s.input}/>
@@ -748,7 +750,7 @@ export default function CrewProfile({ user, onLogout }) {
             {/* Formulario nueva experiencia */}
             <div style={{...s.card,marginTop:16,border:"1.5px solid #bfdbfe"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Experiencia</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                 <div>
                   <label style={s.label}>Marca del barco</label>
                   <input value={newExp.brand} onChange={e=>setNewExp({...newExp,brand:e.target.value})} placeholder="Ej: Sea Ray" style={s.input}/>
@@ -882,7 +884,7 @@ export default function CrewProfile({ user, onLogout }) {
                           <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
                             📂 {folder} <span style={{color:"#94a3b8",fontWeight:400}}>({folderDocs.length})</span>
                           </div>
-                          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+                          <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
                             {folderDocs.map((doc)=>{
                               const realIdx = docs.indexOf(doc);
                               const isImg = /\.(jpg|jpeg|png|webp|gif)/i.test(doc.url) || doc.url.includes("?t=");

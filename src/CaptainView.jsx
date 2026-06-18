@@ -4,8 +4,10 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useResponsive } from "./useResponsive";
 
 export default function CaptainView({ vessel, user, onLogout }) {
+  const { isMobile } = useResponsive();
   const [tab,       setTab]       = useState("dashboard");
   const [crewLogs,  setCrewLogs]  = useState([]);
   const [logsLoad,  setLogsLoad]  = useState(false);
@@ -46,7 +48,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
   return (
     <div style={s.root}>
       {/* ── NAVBAR ── */}
-      <nav style={s.nav}>
+      <nav style={{...s.nav, padding:isMobile?"10px 14px":"12px 24px", overflowX:isMobile?"auto":"visible"}}>
         <div style={s.navBrand}>
           <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
             <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".15"/>
@@ -88,7 +90,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
         </div>
       </div>
 
-      <div style={s.content}>
+      <div style={{...s.content, padding:isMobile?"16px 14px":"24px 28px"}}>
 
         {/* ─── DASHBOARD ─── */}
         {tab==="dashboard"&&(
@@ -125,7 +127,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
             </div>
 
             {/* Stats rápidos */}
-            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10}}>
+            <div style={{display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr", gap:10}}>
               {[
                 { label:"Tareas vencidas", val:overdueTasks.length, color:"#dc2626", bg:"#fff5f5", icon:"🔴" },
                 { label:"Por vencer",      val:dueTasks.length,     color:"#d97706", bg:"#fffbeb", icon:"🟡" },
@@ -142,7 +144,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
             {/* Info embarcación — solo lectura */}
             <div style={{background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:"16px 20px"}}>
               <div style={{fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:12}}>🚢 Mi Embarcación</div>
-              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
+              <div style={{display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:8}}>
                 {[
                   ["Nombre",    vessel.name],
                   ["Tipo",      vessel.type],
@@ -313,7 +315,7 @@ function CaptainLogTab({ vessel, user }) {
 
       {showForm&&(
         <div style={{background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:12, padding:18, marginBottom:16}}>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10}}>
+          <div style={{display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10, marginBottom:10}}>
             <div>
               <label style={s2.label}>Fecha</label>
               <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={s2.input}/>

@@ -7,6 +7,7 @@ import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
+import { useResponsive } from "./useResponsive";
 
 
 
@@ -175,6 +176,7 @@ function getEquipmentList(vessel, systemId) {
   return [...base, "Otro"];
 }
 export default function App() {
+  const { isMobile } = useResponsive();
   const [user, setUser]               = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [vessels, setVessels]         = useState([]);
@@ -470,7 +472,7 @@ export default function App() {
         page={page} setPage={setPage}
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
       />
-      <div style={s.body}>
+      <div style={{...s.body, padding:isMobile?"14px 12px":"20px 24px"}}>
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
@@ -488,9 +490,10 @@ export default function App() {
 }
 
 function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,page,setPage,onLogout }) {
+  const { isMobile } = useResponsive();
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
   return (
-    <nav style={s.nav} onClick={e => e.stopPropagation()}>
+    <nav style={{...s.nav, overflowX:isMobile?"auto":"visible", padding:isMobile?"0 12px":"0 20px", gap:isMobile?8:12}} onClick={e => e.stopPropagation()}>
       <div style={s.navLogo} onClick={() => setPage("home")}>
         <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
           <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".1"/>
@@ -562,15 +565,17 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
 }
 
 function HomePage({ vessel, setPage, vessels, updateVessel }) {
+  const { isMobile } = useResponsive();
   const upcoming = [...(vessel.tasks||[])].filter(t => t.status!=="done").sort((a,b) => new Date(a.nextDue)-new Date(b.nextDue)).slice(0,5);
+  const rowStyle = { ...s.row, flexDirection: isMobile ? "column" : "row" };
   return (
     <div style={s.home}>
-      <div style={s.row}>
+      <div style={rowStyle}>
         <FleetCard vessels={vessels} vessel={vessel} updateVessel={updateVessel} />
         <AlertsCard vessel={vessel} setPage={setPage} />
         <IndicatorsCard vessel={vessel} />
       </div>
-      <div style={s.row}>
+      <div style={rowStyle}>
         <CalendarCard tasks={upcoming} setPage={setPage} />
         <LogCard vessel={vessel} setPage={setPage} />
       </div>
