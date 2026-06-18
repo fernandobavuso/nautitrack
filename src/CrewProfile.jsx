@@ -17,7 +17,7 @@ const COUNTRY_CODES = [
   {code:"+61",flag:"🇦🇺",name:"Australia"},{code:"+27",flag:"🇿🇦",name:"Sudáfrica"},
 ];
 
-const CREW_ROLES = ["Capitán","Primer Oficial","Marinero","Mecánico","Contramaestre","Cocinero","Marinero de Cubierta","Electrónico","Buceo","Otro"];
+const CREW_ROLES = ["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico","Carpintero","Soldador","Otro"];
 
 const CERT_OPTIONS = [
   "STCW Básico","Licencia de Capitán","Primeros Auxilios Marítimo",
@@ -130,6 +130,21 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const saveProfile = async () => {
+    const faltantes = [];
+    if (!profile.first_name?.trim())  faltantes.push("Nombre");
+    if (!profile.last_name?.trim())   faltantes.push("Apellido");
+    if (!profile.phone?.trim())       faltantes.push("Teléfono");
+    if (!profile.nationality?.trim()) faltantes.push("Nacionalidad");
+    if (!(profile.languages||[]).length) faltantes.push("Idiomas");
+    if (!profile.crew_role?.trim())   faltantes.push("Rol principal");
+    if (!profile.bio?.trim())         faltantes.push("Bio / CV");
+
+    if (faltantes.length > 0) {
+      setMsg("⚠️ Completa estos campos obligatorios: " + faltantes.join(", "));
+      setTimeout(()=>setMsg(""),5000);
+      return;
+    }
+
     setSaving(true);
     const full_name = `${profile.first_name||""} ${profile.last_name||""}`.trim() || profile.full_name || "";
     const badges = computeBadges(profile, full_name);
@@ -139,11 +154,11 @@ export default function CrewProfile({ user, onLogout }) {
       updated_at: new Date().toISOString(),
     });
     if (error) {
-      setMsg("⚠️ Error al guardar: " + error.message);
+      setMsg("⚠️ No se pudo guardar: " + error.message);
       console.error("[NautiTrack] saveProfile error:", error);
     } else {
       setProfile(p=>({...p, badges, full_name}));
-      setMsg("✅ Perfil guardado");
+      setMsg("✅ Perfil guardado correctamente");
     }
     setTimeout(()=>setMsg(""),4000);
     setSaving(false);
@@ -512,7 +527,7 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Cédula de identidad */}
               <div style={s.card}>
-                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>🪪 Cédula de Identidad</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>Cédula de Identidad</div>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
                 <input ref={docRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
 
@@ -603,7 +618,7 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Info básica */}
               <div style={s.card}>
-                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>📋 Información Personal</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>Información Personal</div>
 
                 <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
@@ -617,27 +632,12 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Teléfono</label>
+                  <label style={s.label}>Teléfono *</label>
                   <div style={{display:"flex",gap:6}}>
                     <select value={profile.phone_code||"+58"} onChange={e=>set("phone_code",e.target.value)} style={{...s.input,width:140,flexShrink:0}}>
                       {COUNTRY_CODES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.code} {c.name}</option>)}
                     </select>
                     <input value={profile.phone||""} onChange={e=>set("phone",e.target.value)} placeholder="4141234567" style={{...s.input,flex:1}}/>
-                  </div>
-                </div>
-
-                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
-                  <div>
-                    <label style={s.label}>Rol principal</label>
-                    <select value={profile.crew_role||"Capitán"} onChange={e=>set("crew_role",e.target.value)} style={s.input}>
-                      {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={s.label}>Nacionalidad</label>
-                    <select value={profile.nationality||"Venezolana"} onChange={e=>set("nationality",e.target.value)} style={s.input}>
-                      {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
-                    </select>
                   </div>
                 </div>
 
@@ -648,7 +648,14 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Idiomas</label>
+                  <label style={s.label}>Nacionalidad *</label>
+                  <select value={profile.nationality||"Venezolana"} onChange={e=>set("nationality",e.target.value)} style={s.input}>
+                    {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
+                  </select>
+                </div>
+
+                <div style={{marginBottom:10}}>
+                  <label style={s.label}>Idiomas *</label>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
                     {LANGUAGES.map(lang=>(
                       <button key={lang} onClick={()=>toggleLang(lang)} style={{
@@ -662,8 +669,24 @@ export default function CrewProfile({ user, onLogout }) {
                   </div>
                 </div>
 
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
+                  <div>
+                    <label style={s.label}>Rol principal *</label>
+                    <select value={profile.crew_role||"Capitán"} onChange={e=>set("crew_role",e.target.value)} style={s.input}>
+                      {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={s.label}>Otros roles</label>
+                    <select value={profile.secondary_role||""} onChange={e=>set("secondary_role",e.target.value)} style={s.input}>
+                      <option value="">Ninguno</option>
+                      {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label style={s.label}>Bio / CV breve</label>
+                  <label style={s.label}>Bio / CV breve *</label>
                   <textarea value={profile.bio||""} onChange={e=>set("bio",e.target.value)}
                     placeholder="Capitán con 10 años de experiencia en el oriente venezolano. Especialista en yates de motor de 40-70 pies..."
                     rows={3} style={{...s.input,resize:"vertical"}}/>

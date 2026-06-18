@@ -97,7 +97,6 @@ export default function Auth({ onLogin }) {
                   borderColor:userRole==="owner"?"#2563eb":"#e2e8f0",
                   background:userRole==="owner"?"#eff6ff":"#f8fafc",
                 }}>
-                  <div style={{fontSize:24,marginBottom:4}}>🚤</div>
                   <div style={{fontSize:13,fontWeight:700,color:userRole==="owner"?"#2563eb":"#475569"}}>Propietario</div>
                   <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Tengo un barco</div>
                 </button>
@@ -106,7 +105,6 @@ export default function Auth({ onLogin }) {
                   borderColor:userRole==="crew"?"#2563eb":"#e2e8f0",
                   background:userRole==="crew"?"#eff6ff":"#f8fafc",
                 }}>
-                  <div style={{fontSize:24,marginBottom:4}}>⚓</div>
                   <div style={{fontSize:13,fontWeight:700,color:userRole==="crew"?"#2563eb":"#475569"}}>Tripulación</div>
                   <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Soy capitán / marinero</div>
                 </button>
