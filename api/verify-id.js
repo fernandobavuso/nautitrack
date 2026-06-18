@@ -16,6 +16,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Se requiere imagen del documento' });
   }
 
+  // Detectar tipo de imagen desde los primeros bytes del base64
+  const detectMediaType = (b64) => {
+    if (!b64) return "image/jpeg";
+    if (b64.startsWith("/9j/")) return "image/jpeg";
+    if (b64.startsWith("iVBOR")) return "image/png";
+    if (b64.startsWith("R0lGOD")) return "image/gif";
+    if (b64.startsWith("UklGR")) return "image/webp";
+    return "image/jpeg";
+  };
+
   try {
     const messages = [];
 
@@ -25,13 +35,13 @@ export default async function handler(req, res) {
     if (profilePhotoBase64) {
       userContent.push({
         type: "image",
-        source: { type: "base64", media_type: "image/jpeg", data: profilePhotoBase64 }
+        source: { type: "base64", media_type: detectMediaType(profilePhotoBase64), data: profilePhotoBase64 }
       });
     }
 
     userContent.push({
       type: "image",
-      source: { type: "base64", media_type: "image/jpeg", data: idDocBase64 }
+      source: { type: "base64", media_type: detectMediaType(idDocBase64), data: idDocBase64 }
     });
 
     userContent.push({
@@ -77,7 +87,7 @@ Por favor responde SOLO con un JSON válido con este formato exacto:
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         messages,
       }),

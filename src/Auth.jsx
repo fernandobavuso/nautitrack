@@ -180,7 +180,7 @@ const s = {
   successBox:{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:8, padding:"9px 12px", fontSize:12, color:"#16a34a" },
   footer:   { marginTop:24, paddingTop:20, borderTop:"1px solid #f1f5f9" },
   featuresGrid: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 },
-  feature:  { display:"flex", alignItems:"center", gap:8, padding:"9px 12px", background:"#f8fafc", borderRadius:9, border:"1px solid #e2e8f0" },
+  feature:  { display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"9px 12px", background:"#f8fafc", borderRadius:9, border:"1px solid #e2e8f0" },
   featureIcon: { fontSize:16 },
   featureText: { fontSize:12, color:"#475569", fontWeight:500 },
 };

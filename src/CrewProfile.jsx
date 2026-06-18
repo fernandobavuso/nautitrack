@@ -79,6 +79,10 @@ export default function CrewProfile({ user, onLogout }) {
   const [newCert, setNewCert] = useState({name:"",custom_name:"",date:"",expiry:"",doc_url:""});
   const [newExp, setNewExp]   = useState({brand:"",length:"",role:"",period:"",notes:""});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [pendingUpload, setPendingUpload] = useState(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const photoRef  = useRef();
   const docRef    = useRef();
 
@@ -151,7 +155,6 @@ export default function CrewProfile({ user, onLogout }) {
     const { error } = await supabase.from("profiles").upsert({
       id: user.id, email: profile.email||user.email,
       full_name, ...profile, badges,
-      updated_at: new Date().toISOString(),
     });
     if (error) {
       setMsg("⚠️ No se pudo guardar: " + error.message);
@@ -209,10 +212,11 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const verifyIdentity = async () => {
-    if (!profile.id_doc_url) { setMsg("⚠️ Sube tu cédula primero"); return; }
+    if (!profile.id_doc_url) { setMsg("⚠️ Sube tu cédula primero"); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.photo_url)  { setMsg("⚠️ Sube tu foto de perfil primero"); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.legal_name?.trim()) { setMsg("⚠️ Escribe tu nombre completo como aparece en la cédula"); setTimeout(()=>setMsg(""),4000); return; }
     setVerifying(true); setMsg("");
     try {
-      // Convertir URLs a base64
       const toBase64 = async (url) => {
         const r = await fetch(url);
         const blob = await r.blob();
@@ -223,8 +227,8 @@ export default function CrewProfile({ user, onLogout }) {
         });
       };
 
-      const idDocBase64   = await toBase64(profile.id_doc_url);
-      const profilePhotoBase64 = profile.photo_url ? await toBase64(profile.photo_url) : null;
+      const idDocBase64        = await toBase64(profile.id_doc_url);
+      const profilePhotoBase64 = await toBase64(profile.photo_url);
 
       const resp = await fetch('/api/verify-id', {
         method: 'POST',
@@ -232,10 +236,19 @@ export default function CrewProfile({ user, onLogout }) {
         body: JSON.stringify({ profilePhotoBase64, idDocBase64, legalName: profile.legal_name }),
       });
       const data = await resp.json();
-      if (data.success) {
+      console.log("[NautiTrack] verify-id respuesta:", data);
+
+      if (data.error) {
+        setMsg("⚠️ Error del verificador: " + data.error);
+        setTimeout(()=>setMsg(""),6000);
+        setVerifying(false);
+        return;
+      }
+
+      if (data.success && data.result) {
         setVerifyResult(data.result);
         const passed = data.result.is_official_doc && data.result.face_in_doc &&
-          (!profilePhotoBase64 || data.result.faces_match !== false);
+          (data.result.faces_match !== false);
         if (passed) {
           const badges = [...new Set([...(profile.badges||[]), "verified"])];
           const updates = {
@@ -245,15 +258,22 @@ export default function CrewProfile({ user, onLogout }) {
           };
           setProfile(p=>({...p, ...updates}));
           await supabase.from("profiles").update(updates).eq("id", user.id);
-          setShowVerifyPopup(true); // POPUP de éxito
+          setShowVerifyPopup(true);
         } else {
-          setMsg("⚠️ No se pudo verificar. Revisa que la foto de perfil sea tu cara y la cédula sea legible.");
-          setTimeout(()=>setMsg(""),5000);
+          let razon = "No se pudo verificar. ";
+          if (!data.result.face_in_doc) razon += "No se detectó foto en la cédula. ";
+          if (data.result.faces_match===false) razon += "La foto de perfil no coincide con la cédula. ";
+          if (!data.result.is_official_doc) razon += "El documento no parece oficial. ";
+          setMsg("⚠️ " + razon);
+          setTimeout(()=>setMsg(""),6000);
         }
+      } else {
+        setMsg("⚠️ El verificador no devolvió resultado. Intenta de nuevo.");
+        setTimeout(()=>setMsg(""),5000);
       }
     } catch(e) {
-      setMsg("Error al verificar: " + e.message);
-      setTimeout(()=>setMsg(""),5000);
+      setMsg("⚠️ Error al verificar: " + e.message);
+      setTimeout(()=>setMsg(""),6000);
     }
     setVerifying(false);
   };
@@ -474,16 +494,16 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{marginTop:16,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
                   <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>DISPONIBILIDAD DE TRABAJO</div>
                   {(() => {
-                    const unlocked = !!(profile.photo_url && profile.id_doc_url);
+                    const unlocked = (profile.badges||[]).includes("verified");
                     const isOn = unlocked && profile.available;
                     return (
                       <>
                         <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>
-                          {unlocked ? "Activa para que los propietarios te encuentren" : "🔒 Sube tu foto de perfil y cédula para activar"}
+                          {unlocked ? "Activa para que los propietarios te encuentren" : "🔒 Verifica tu identidad con IA para activar"}
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <div onClick={async ()=>{
-                            if (!unlocked) { setMsg("🔒 Necesitas subir tu foto de perfil y cédula primero"); setTimeout(()=>setMsg(""),4000); return; }
+                            if (!unlocked) { setMsg("🔒 Primero verifica tu identidad: sube foto, cédula, nombre y presiona Verificar identidad"); setTimeout(()=>setMsg(""),5000); return; }
                             const newVal = !profile.available;
                             set("available", newVal);
                             await supabase.from("profiles").update({ available:newVal }).eq("id", user.id);
@@ -535,7 +555,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{marginBottom:10}}>
                   <label style={s.label}>Nombre completo como aparece en la cédula *</label>
                   <input value={profile.legal_name||""} onChange={e=>set("legal_name",e.target.value)}
-                    placeholder="Ej: Fernando Ignacio Bavuso Larrazabal" style={s.input}/>
+                    placeholder="Ej: Pedro Enrique Aguilar López" style={s.input}/>
                 </div>
 
                 {profile.id_doc_url
@@ -547,7 +567,7 @@ export default function CrewProfile({ user, onLogout }) {
                       {(profile.badges||[]).includes("verified")
                         ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ Identidad verificada por IA</div>
                         : <button onClick={verifyIdentity} disabled={verifying||!profile.legal_name} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:(verifying||!profile.legal_name)?0.5:1}}>
-                            {verifying?"⏳ Verificando...":"🤖 Verificar identidad con IA"}
+                            {verifying?"Verificando...":"Verificar identidad con IA"}
                           </button>
                       }
                       {!profile.legal_name&&<div style={{fontSize:10,color:"#f59e0b"}}>⚠️ Escribe tu nombre legal arriba para verificar</div>}
@@ -913,7 +933,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Cédula, pasaporte, licencias y certificados · Organiza en carpetas</div>
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{const n=prompt("Nombre de la nueva carpeta:"); if(n) addFolder(n);}}
+                  <button onClick={()=>{setNewFolderName("");setShowFolderModal(true);}}
                     style={{padding:"7px 12px",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#475569",fontWeight:600}}>
                     ＋ Carpeta
                   </button>
@@ -921,8 +941,7 @@ export default function CrewProfile({ user, onLogout }) {
                     ⬆ Subir
                     <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
                       const f=e.target.files[0];
-                      const folder=prompt("¿En qué carpeta? (Identidad, Licencias, Certificados o nueva)","General");
-                      uploadDocument(f, folder);
+                      if(f){ setPendingUpload(f); setShowUploadModal(true); }
                     }}/>
                   </label>
                 </div>
@@ -1052,6 +1071,40 @@ export default function CrewProfile({ user, onLogout }) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal nueva carpeta */}
+        {showFolderModal&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowFolderModal(false)}>
+            <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:14}}>Nueva carpeta</div>
+              <input value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Ej: Licencias de navegación" autoFocus style={{...s.input,marginBottom:16}}/>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setShowFolderModal(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>Cancelar</button>
+                <button onClick={async()=>{ if(newFolderName.trim()){ await addFolder(newFolderName.trim()); setMsg("✅ Carpeta '"+newFolderName.trim()+"' creada"); setTimeout(()=>setMsg(""),3000);} setShowFolderModal(false);}} style={{flex:1,padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#fff",fontWeight:700}}>Crear</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal subir documento — elegir carpeta */}
+        {showUploadModal&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>{setShowUploadModal(false);setPendingUpload(null);}}>
+            <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:6}}>Guardar documento</div>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>{pendingUpload?.name}</div>
+              <label style={s.label}>Elige la carpeta</label>
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+                {[...new Set([...(profile.doc_folders||["Identidad","Licencias","Certificados"]), "General"])].map(folder=>(
+                  <button key={folder} onClick={async()=>{ await uploadDocument(pendingUpload, folder); setShowUploadModal(false); setPendingUpload(null);}}
+                    style={{padding:"10px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:13,color:"#1e293b",textAlign:"left",fontWeight:500}}>
+                    📂 {folder}
+                  </button>
+                ))}
+              </div>
+              <button onClick={()=>{setShowUploadModal(false);setPendingUpload(null);}} style={{width:"100%",padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>Cancelar</button>
             </div>
           </div>
         )}
