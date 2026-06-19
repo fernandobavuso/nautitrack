@@ -1,17 +1,28 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { notify } from "./notifications";
 
 // Panel de Day Trips para el tripulante: ve solicitudes abiertas y se postula
 export default function DayTripsCrew({ user, profile }) {
   const [trips, setTrips] = useState([]);
   const [myApps, setMyApps] = useState([]);
+  const [completedTrips, setCompletedTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [applyTrip, setApplyTrip] = useState(null);
   const [proposedPay, setProposedPay] = useState("");
   const [message, setMessage] = useState("");
   const [msg, setMsg] = useState("");
 
-  useEffect(() => { loadTrips(); loadMyApps(); }, []);
+  useEffect(() => { loadTrips(); loadMyApps(); loadCompleted(); }, []);
+
+  const loadCompleted = async () => {
+    // Viajes donde este tripulante fue seleccionado y ya se completaron
+    const { data } = await supabase.from("day_trips")
+      .select("*, owner:owner_id(full_name)")
+      .eq("selected_crew_id", user.id).eq("status","completed")
+      .order("trip_date",{ascending:false});
+    setCompletedTrips(data||[]);
+  };
 
   const loadTrips = async () => {
     const { data } = await supabase.from("day_trips")
@@ -52,7 +63,16 @@ export default function DayTripsCrew({ user, profile }) {
     });
     if (error?.code==="23505") setMsg("⚠️ Ya te postulaste a este viaje");
     else if (error) setMsg("⚠️ Error: "+error.message);
-    else { setMsg("¡Postulación enviada!"); loadMyApps(); }
+    else {
+      setMsg("¡Postulación enviada!"); loadMyApps();
+      // Notificar al dueño del viaje
+      const myName = profile?.full_name?.trim() || `${profile?.first_name||""} ${profile?.last_name||""}`.trim() || "Un tripulante";
+      notify(applyTrip.owner_id, {
+        type:"application", title:"Nueva postulación",
+        body:`${myName} se postuló para tu viaje de ${applyTrip.crew_role}`,
+        link:"tripulacion",
+      });
+    }
     setApplyTrip(null); setProposedPay(""); setMessage("");
     setTimeout(()=>setMsg(""),4000);
   };
@@ -63,6 +83,32 @@ export default function DayTripsCrew({ user, profile }) {
 
   return (
     <div>
+      {/* Mis postulaciones con su estado */}
+      {myApps.length>0&&(
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Mis postulaciones</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {myApps.map(a=>{
+              const t=a.trip||{};
+              const estado = a.status==="accepted"?"Aceptada":a.status==="rejected"?"No seleccionada":"Pendiente";
+              const color = a.status==="accepted"?"#16a34a":a.status==="rejected"?"#dc2626":"#d97706";
+              const bg = a.status==="accepted"?"#f0fdf4":a.status==="rejected"?"#fff5f5":"#fffbeb";
+              const border = a.status==="accepted"?"#bbf7d0":a.status==="rejected"?"#fecaca":"#fde68a";
+              return (
+                <div key={a.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.crew_role||"Viaje"} · {t.vessel_type||""}</div>
+                    <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("es-VE"):""}{t.city?` · ${t.city}`:""}</div>
+                    {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>El propietario te contactará. Revisa tus notificaciones.</div>}
+                  </div>
+                  <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",background:bg,color,border:`1px solid ${border}`}}>{estado}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>Viajes que coinciden con tu rol ({profile?.crew_role||"—"}) y tu zona ({profile?.work_zone||"sin zona"}). Postúlate a los que te interesen.</div>
 
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -105,6 +151,22 @@ export default function DayTripsCrew({ user, profile }) {
         })}
       </div>
 
+      {/* Mis viajes completados — reseñar al dueño */}
+      {completedTrips.length>0&&(
+        <div style={{marginTop:20}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Mis viajes completados</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {completedTrips.map(trip=>(
+              <div key={trip.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.vessel_type||"Embarcación"}</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.city||"—"}</div>
+                <CrewReviewButton trip={trip} user={user} onDone={loadCompleted}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Modal postularse */}
       {applyTrip&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setApplyTrip(null)}>
@@ -133,5 +195,56 @@ export default function DayTripsCrew({ user, profile }) {
 }
 
 function trip_label(t){ return `${t.crew_role} · ${new Date(t.trip_date).toLocaleDateString("es-VE")} · ${t.duration}`; }
+
+// Botón + modal para que el tripulante reseñe al dueño/barco
+function CrewReviewButton({ trip, user, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    supabase.from("reviews").select("id").eq("trip_id",trip.id).eq("reviewer_id",user.id).maybeSingle()
+      .then(({data})=>{ if(data) setDone(true); });
+  }, []);
+
+  const submit = async () => {
+    if (!rating) return;
+    await supabase.from("reviews").insert({
+      trip_id:trip.id, reviewer_id:user.id, reviewee_id:trip.owner_id,
+      direction:"crew_to_owner", rating, comment,
+    });
+    notify(trip.owner_id, {
+      type:"review", title:"Recibiste una reseña",
+      body:`Un tripulante calificó tu viaje con ${rating} estrella${rating>1?"s":""}`,
+      link:"tripulacion",
+    });
+    setDone(true); setOpen(false); onDone&&onDone();
+  };
+
+  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>Reseña enviada</div>;
+
+  return (
+    <>
+      <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,color:"#d97706",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+        Calificar al propietario / barco
+      </button>
+      {open&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setOpen(false)}>
+          <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:14,textAlign:"center"}}>¿Cómo fue tu experiencia con el barco?</div>
+            <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:16}}>
+              {[1,2,3,4,5].map(n=>(
+                <button key={n} onClick={()=>setRating(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:32,color:n<=rating?"#f59e0b":"#cbd5e1"}}>★</button>
+              ))}
+            </div>
+            <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3} placeholder="¿Cómo te trataron? ¿Pagaron lo acordado? (opcional)" style={{...inp,resize:"vertical",marginBottom:14}}/>
+            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(135deg,#1d4ed8,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 const lbl = {display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:5};
 const inp = {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"};

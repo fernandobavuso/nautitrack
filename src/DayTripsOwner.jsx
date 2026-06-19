@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { getReputations, Stars } from "./reputation.jsx";
+import { notify } from "./notifications";
 
 // Preferencias estilo Uber que el dueño puede activar
 const TRIP_PREFERENCES = [
@@ -136,6 +137,12 @@ export default function DayTripsOwner({ vessel, user }) {
   const acceptApplication = async (trip, app) => {
     await supabase.from("day_trip_applications").update({status:"accepted"}).eq("id", app.id);
     await supabase.from("day_trips").update({status:"filled", selected_crew_id:app.crew_id}).eq("id", trip.id);
+    // Notificar al tripulante seleccionado
+    notify(app.crew_id, {
+      type:"selected", title:"¡Te seleccionaron!",
+      body:`Fuiste elegido para el viaje de ${trip.crew_role} el ${new Date(trip.trip_date).toLocaleDateString("es-VE")}`,
+      link:"daytrips",
+    });
     setMsg("Tripulante seleccionado");
     setTimeout(()=>setMsg(""),3000);
     loadTrips(); setSelectedTrip(null);
@@ -466,6 +473,11 @@ function ReviewButton({ trip, user, onDone }) {
     await supabase.from("reviews").insert({
       trip_id:trip.id, reviewer_id:user.id, reviewee_id:trip.selected_crew_id,
       direction:"owner_to_crew", rating, comment,
+    });
+    notify(trip.selected_crew_id, {
+      type:"review", title:"Recibiste una reseña",
+      body:`El propietario te calificó con ${rating} estrella${rating>1?"s":""}`,
+      link:"daytrips",
     });
     setDone(true); setOpen(false); onDone&&onDone();
   };

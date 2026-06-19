@@ -3,6 +3,9 @@ import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
 import DayTripsCrew from "./DayTripsCrew";
+import NotifPanel from "./NotifPanel";
+import { countUnread } from "./notifications";
+import { getReputation, Stars } from "./reputation.jsx";
 
 const COUNTRY_CODES = [
   {code:"+58",flag:"🇻🇪",name:"Venezuela"},{code:"+1",flag:"🇺🇸",name:"USA/Canadá"},
@@ -68,8 +71,11 @@ export default function CrewProfile({ user, onLogout }) {
   const [profile,   setProfile]   = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [saving,    setSaving]    = useState(false);
-  const [tab,       setTab]       = useState("perfil");
+  const [tab,       setTab]       = useState("inicio");
   const [requests,  setRequests]  = useState([]);
+  const [myRep, setMyRep] = useState({avg:null,count:0});
+  const [completedCount, setCompletedCount] = useState(0);
+  const [openApps, setOpenApps] = useState(0);
   const [search,    setSearch]    = useState("");
   const [searchRes, setSearchRes] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -86,21 +92,43 @@ export default function CrewProfile({ user, onLogout }) {
   const [pendingUpload, setPendingUpload] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [activeChat, setActiveChat] = useState(null);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    const load = async () => { const n = await countUnread(user.id); if (active) setUnreadCount(n); };
+    load();
+    const interval = setInterval(load, 20000);
+    return () => { active = false; clearInterval(interval); };
+  }, [user?.id, showNotifPanel]);
   const photoRef  = useRef();
   const docRef    = useRef();
 
   const TABS = [
-    {key:"perfil",   icon:"👤", label:"Mi Perfil"},
-    {key:"documentos",icon:"📁", label:"Documentos"},
-    {key:"certs",    icon:"📜", label:"Certificaciones"},
-    {key:"historial",icon:"🚢", label:"Historial"},
-    {key:"pagos",    icon:"💳", label:"Pagos"},
-    {key:"buscar",   icon:"🔍", label:"Buscar Barco"},
+    {key:"inicio",   icon:"", label:"Inicio"},
+    {key:"perfil",   icon:"", label:"Mi Perfil"},
+    {key:"documentos",icon:"", label:"Documentos"},
+    {key:"certs",    icon:"", label:"Certificaciones"},
+    {key:"historial",icon:"", label:"Historial"},
+    {key:"pagos",    icon:"", label:"Pagos"},
+    {key:"buscar",   icon:"", label:"Buscar Barco"},
     {key:"daytrips", icon:"", label:"Day Trips"},
-    {key:"solicitudes",icon:"📬", label:"Solicitudes"},
+    {key:"solicitudes",icon:"", label:"Solicitudes"},
   ];
 
-  useEffect(() => { loadProfile(); loadRequests(); }, []);
+  useEffect(() => { loadProfile(); loadRequests(); loadStats(); }, []);
+
+  const loadStats = async () => {
+    setMyRep(await getReputation(user.id));
+    const { count: comp } = await supabase.from("day_trips")
+      .select("id",{count:"exact",head:true}).eq("selected_crew_id",user.id).eq("status","completed");
+    setCompletedCount(comp||0);
+    const { count: apps } = await supabase.from("day_trip_applications")
+      .select("id",{count:"exact",head:true}).eq("crew_id",user.id).eq("status","pending");
+    setOpenApps(apps||0);
+  };
 
   const loadProfile = async () => {
     const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
@@ -444,6 +472,10 @@ export default function CrewProfile({ user, onLogout }) {
                 )}
               </button>
             ))}
+            <div style={{position:"relative",marginLeft:4}}>
+              <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifPanel(true)}>🔔</span>
+              {unreadCount>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#dc2626",color:"#fff",fontSize:9,fontWeight:700,minWidth:15,height:15,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{unreadCount}</div>}
+            </div>
             <button onClick={onLogout} style={{padding:"5px 10px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:11,color:"#94a3b8",marginLeft:4}}>Salir</button>
           </div>
         )}
@@ -482,6 +514,54 @@ export default function CrewProfile({ user, onLogout }) {
       )}
 
       <div style={{...s.content, padding:isMobile?"16px 14px":"24px 28px"}}>
+
+        {/* ── INICIO (dashboard resumido) ── */}
+        {tab==="inicio"&&(
+          <div style={{maxWidth:760}}>
+            <div style={{fontSize:20,fontWeight:800,color:"#0f172a",marginBottom:4}}>Hola{profile.first_name?`, ${profile.first_name}`:""}</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>Este es tu resumen como tripulante</div>
+
+            {/* Tarjetas de resumen */}
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:24}}>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>MI REPUTACIÓN</div>
+                <Stars avg={myRep.avg} count={myRep.count} size={15}/>
+              </div>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>VIAJES COMPLETADOS</div>
+                <div style={{fontSize:24,fontWeight:800,color:"#0f172a"}}>{completedCount}</div>
+              </div>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>POSTULACIONES ACTIVAS</div>
+                <div style={{fontSize:24,fontWeight:800,color:"#0f172a"}}>{openApps}</div>
+              </div>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>ESTADO</div>
+                <div style={{fontSize:14,fontWeight:700,color:(profile.badges||[]).includes("verified")?"#16a34a":"#d97706"}}>
+                  {(profile.badges||[]).includes("verified")?"Verificado":"Sin verificar"}
+                </div>
+              </div>
+            </div>
+
+            {/* Aviso si no está verificado */}
+            {!(profile.badges||[]).includes("verified")&&(
+              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16,marginBottom:16}}>
+                <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>Completa tu verificación</div>
+                <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Verifica tu identidad para poder aplicar a barcos y recibir solicitudes de viaje.</div>
+                <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Ir a Mi Perfil</button>
+              </div>
+            )}
+
+            {/* Accesos rápidos */}
+            <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Accesos rápidos</div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+              <button onClick={()=>setTab("daytrips")} style={qaBtn}>Ver viajes disponibles (Day Trips)</button>
+              <button onClick={()=>setTab("buscar")} style={qaBtn}>Buscar barcos para trabajar</button>
+              <button onClick={()=>setTab("perfil")} style={qaBtn}>Editar mi perfil</button>
+              <button onClick={()=>setTab("solicitudes")} style={qaBtn}>Ver mis solicitudes</button>
+            </div>
+          </div>
+        )}
 
         {/* ── MI PERFIL ── */}
         {tab==="perfil"&&(
@@ -1179,6 +1259,10 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* Popup de verificación exitosa */}
         {/* Chat interno */}
+        {showNotifPanel&&(
+          <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="daytrips")setTab("daytrips"); }}/>
+        )}
+
         {activeChat&&(
           <ChatPanel connection={activeChat} currentUserId={user.id} otherName="Propietario" onClose={()=>{setActiveChat(null);loadRequests();}}/>
         )}
@@ -1234,3 +1318,5 @@ const s = {
   label:   {display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:5},
   input:   {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"},
 };
+
+const qaBtn = {padding:"14px 16px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,fontSize:13,fontWeight:600,color:"#1e293b",cursor:"pointer",textAlign:"left"};

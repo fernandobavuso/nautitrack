@@ -8,6 +8,8 @@ import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 import CrewMarketplace from "./CrewMarketplace";
+import NotifPanel from "./NotifPanel";
+import { countUnread } from "./notifications";
 import { useResponsive } from "./useResponsive";
 
 
@@ -191,6 +193,8 @@ export default function App() {
   const [showProviders, setShowProviders]         = useState(false);
   const [showProfile, setShowProfile]             = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
   const [showCrewMarket, setShowCrewMarket] = useState(false);
@@ -378,6 +382,16 @@ export default function App() {
     return false;
   }, [fetchTasks, fetchLog]);
 
+  // Contador de notificaciones in-app no leídas (polling cada 20s)
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    const load = async () => { const n = await countUnread(user.id); if (active) setUnreadCount(n); };
+    load();
+    const interval = setInterval(load, 20000);
+    return () => { active = false; clearInterval(interval); };
+  }, [user?.id, showNotifPanel]);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
@@ -469,6 +483,8 @@ export default function App() {
         setShowVesselDetails={setShowVesselDetails}
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
         setShowNotifications={setShowNotifications}
+        setShowNotifPanel={setShowNotifPanel}
+        unreadCount={unreadCount}
         setShowQRPanel={setShowQRPanel}
         setShowCaptainManager={setShowCaptainManager}
         setShowCrewMarket={setShowCrewMarket}
@@ -488,6 +504,7 @@ export default function App() {
       {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
       {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
       {showCrewMarket && <CrewMarketplace vessel={vessel} user={user} onClose={() => setShowCrewMarket(false)} />}
+      {showNotifPanel && <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="tripulacion")setShowCrewMarket(true); }} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
   );
@@ -495,7 +512,7 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
-function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
@@ -517,8 +534,8 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{position:"relative"}}>
-              <span style={{fontSize:20,cursor:"pointer"}} onClick={()=>setShowNotifications(true)}>🔔</span>
-              {totalAlerts>0&&<div style={s.bellBadge}>{totalAlerts}</div>}
+              <span style={{fontSize:20,cursor:"pointer"}} onClick={()=>setShowNotifPanel(true)}>🔔</span>
+              {unreadCount>0&&<div style={s.bellBadge}>{unreadCount}</div>}
             </div>
             <button onClick={()=>setMobileMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",flexDirection:"column",gap:4}}>
               <div style={{width:22,height:2.5,background:"#0f172a",borderRadius:2}}/>
@@ -623,8 +640,8 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
           )}
         </div>
         <div style={s.bellWrap}>
-          <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifications(true)}>🔔</span>
-          {totalAlerts > 0 && <div style={s.bellBadge}>{totalAlerts}</div>}
+          <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifPanel(true)}>🔔</span>
+          {unreadCount > 0 && <div style={s.bellBadge}>{unreadCount}</div>}
         </div>
         <div style={{position:"relative"}}>
           <button onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12,color:"#0369a1",fontWeight:700,display:"flex",alignItems:"center",gap:5}}>

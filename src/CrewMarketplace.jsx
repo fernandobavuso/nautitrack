@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import ChatPanel from "./ChatPanel";
 import DayTripsOwner from "./DayTripsOwner";
+import { getReputations, Stars } from "./reputation.jsx";
 
 // Panel del dueño para gestionar tripulantes
 // Props: vessel (barco actual), user (dueño), onClose
@@ -9,6 +10,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const [tab, setTab] = useState("aplicaciones");
   const [applications, setApplications] = useState([]);
   const [crew, setCrew] = useState([]);
+  const [reps, setReps] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -54,6 +56,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
       .eq("vessel_id", vessel.id)
       .order("created_at", { ascending: false });
     setApplications(data || []);
+    const ar = await getReputations((data||[]).map(a=>a.crew_id));
+    setReps(prev=>({...prev, ...ar}));
     setLoading(false);
   };
 
@@ -81,6 +85,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
     }
     if (roleFilter) results = results.filter(c => c.crew_role===roleFilter || c.secondary_role===roleFilter);
     setCrew(results);
+    const r = await getReputations(results.map(c=>c.id));
+    setReps(prev=>({...prev, ...r}));
     setLoading(false);
   };
 
@@ -163,7 +169,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                 </div>
               )}
               {pendingApps.map(app=>(
-                <CrewCard key={app.id} crew={app.crew} badgeIcons={BADGE_ICONS}
+                <CrewCard key={app.id} crew={app.crew} rep={reps[app.crew_id]} badgeIcons={BADGE_ICONS}
                   onView={()=>setSelectedCrew(app.crew)}
                   actions={
                     <div style={{display:"flex",gap:8}}>
@@ -200,7 +206,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                 {crew.map(c=>{
                   const conn = myConnections.find(x=>x.crew_id===c.id && x.vessel_id===vessel.id);
                   return (
-                    <CrewCard key={c.id} crew={c} badgeIcons={BADGE_ICONS}
+                    <CrewCard key={c.id} crew={c} rep={reps[c.id]} badgeIcons={BADGE_ICONS}
                       onView={()=>setSelectedCrew(c)}
                       actions={
                         <button onClick={()=>!conn&&inviteCrew(c)} disabled={!!conn} style={{
@@ -225,7 +231,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                 </div>
               )}
               {matches.map(app=>(
-                <CrewCard key={app.id} crew={app.crew} badgeIcons={BADGE_ICONS}
+                <CrewCard key={app.id} crew={app.crew} rep={reps[app.crew_id]} badgeIcons={BADGE_ICONS}
                   onView={()=>setSelectedCrew(app.crew)}
                   actions={
                     <button onClick={()=>setActiveChat(app)} style={{width:"100%",padding:"8px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer"}}>
@@ -302,20 +308,22 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
 }
 
 // Tarjeta compacta de tripulante
-function CrewCard({ crew, badgeIcons, onView, actions }) {
+function CrewCard({ crew, rep, badgeIcons, onView, actions }) {
   if (!crew) return null;
   const badges = crew.badges||[];
+  const name = crew.full_name?.trim() || `${crew.first_name||""} ${crew.last_name||""}`.trim() || "Tripulante";
   return (
     <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
       <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
         {crew.photo_url
           ? <img src={crew.photo_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
-          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18,flexShrink:0}}>{(crew.full_name||"?")[0].toUpperCase()}</div>
+          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18,flexShrink:0}}>{name[0].toUpperCase()}</div>
         }
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{crew.full_name||"Tripulante"}</div>
+          <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{name}</div>
           <div style={{fontSize:12,color:"#0ea5e9",fontWeight:600}}>{crew.crew_role}{crew.secondary_role?` · ${crew.secondary_role}`:""}</div>
           <div style={{fontSize:11,color:"#94a3b8",marginTop:1}}>{crew.nationality}{(crew.languages||[]).length?` · ${(crew.languages||[]).join(", ")}`:""}</div>
+          {rep&&<div style={{marginTop:3}}><Stars avg={rep.avg} count={rep.count} size={12}/></div>}
           {badges.length>0&&(
             <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
               {badges.map(b=><span key={b} style={{fontSize:13}} title={b}>{badgeIcons[b]||"🏅"}</span>)}
