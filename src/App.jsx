@@ -496,12 +496,13 @@ export default function App() {
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
 function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
+  const useHamburger = isMobile || isTablet;
 
-  // ─── Vista móvil: logo + hamburguesa ───
-  if (isMobile) {
+  // ─── Vista móvil/tablet: logo + hamburguesa ───
+  if (useHamburger) {
     return (
       <>
         <nav style={{...s.nav, padding:"0 16px", justifyContent:"space-between"}} onClick={e=>e.stopPropagation()}>
@@ -741,6 +742,12 @@ function AlertsCard({ vessel, setPage }) {
 
 function IndicatorsCard({ vessel }) {
   const fc = vessel.fuel>50?"#16a34a":vessel.fuel>25?"#d97706":"#dc2626";
+  // Calcular próximo servicio real de las tareas pendientes
+  const pendingTasks = (vessel.tasks||[]).filter(t=>t.status!=="done"&&t.nextDue).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
+  const nextService = pendingTasks[0];
+  const nextServiceVal = nextService
+    ? new Date(nextService.nextDue).toLocaleDateString("es-VE",{day:"numeric",month:"short"})
+    : "Ninguno";
   return (
     <div style={{...s.card,flex:1}}>
       <div style={s.cardHdr}><span style={s.cardTitle}>⚙️ Indicadores</span><span style={s.cardSub}>{vessel.name}</span></div>
@@ -749,7 +756,7 @@ function IndicatorsCard({ vessel }) {
           {icon:"⛽",val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:"Combustible",color:fc,bar:true},
           {icon:"🔧",val:`${vessel.engineHours}h`,lbl:"Horas Motor",color:"#2563eb",bar:false},
           {icon:"⚡",val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
-          {icon:"📅",val:"20 May",lbl:"Próx. Serv. Motor",color:"#dc2626",bar:false},
+          {icon:"📅",val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (
           <div key={ind.lbl} style={s.indBox}>
             <div style={{fontSize:20,marginBottom:4}}>{ind.icon}</div>
@@ -2951,8 +2958,8 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
   // General info editable
   const [gen, setGen] = useState({
     name:         vessel.name    || "",
-    type:         vessel.details?.vesselType || vessel.type?.split(" ")[0] || "",
-    eslora:       vessel.details?.eslora || vessel.type?.split(" ").slice(1).join(" ") || "",
+    type:         vessel.details?.type || vessel.details?.vesselType || vessel.type?.replace(/\s*\d+['m].*$/,"").trim() || "",
+    eslora:       vessel.details?.eslora || (vessel.type?.match(/\d+['m][^\s]*/)?.[0]) || "",
     marina:       vessel.marina  || "",
     city:         vessel.details?.city         || "",
     state:        vessel.details?.state        || "",
@@ -3392,11 +3399,11 @@ const s = {
   dot:        { width:8, height:8, borderRadius:"50%", flexShrink:0 },
   drop:       { position:"absolute", top:"calc(100% + 6px)", right:0, background:"#fff", border:"1px solid #e2e8f0", borderRadius:10, zIndex:30, minWidth:220, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", overflow:"hidden" },
   dropItem:   { display:"flex", alignItems:"center", gap:10, width:"100%", padding:"9px 14px", border:"none", borderBottom:"1px solid #f1f5f9", cursor:"pointer", textAlign:"left", background:"#fff" },
-  userBtn:    { display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:"4px 6px", borderRadius:8 },
+  userBtn:    { display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:"4px 6px", borderRadius:8, flexShrink:0 },
   bellWrap:   { position:"relative" },
   bellBadge:  { position:"absolute", top:-4, right:-4, background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, width:16, height:16, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
   navAvatar:  { width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", color:"#fff", fontWeight:700, fontSize:11, display:"flex", alignItems:"center", justifyContent:"center" },
-  navName:    { fontSize:12, fontWeight:600, color:"#0f172a" },
+  navName:    { fontSize:12, fontWeight:600, color:"#0f172a", maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   navRole:    { fontSize:10, color:"#94a3b8" },
   body:       { padding:"20px 24px", maxWidth:1440, margin:"0 auto" },
   home:       { display:"flex", flexDirection:"column", gap:16 },

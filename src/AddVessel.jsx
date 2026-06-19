@@ -35,6 +35,9 @@ export default function AddVessel({ onAdd, onSkip }) {
         gen_hours:    0,
         status:       "ok",
         details: {
+          city:      form.city || "",
+          state:     "",
+          country:   form.country || "Venezuela",
           _profile: {
             brand:     form.brand || "",
             model:     form.model || "",
