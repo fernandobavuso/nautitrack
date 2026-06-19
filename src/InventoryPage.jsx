@@ -6,7 +6,7 @@ import { notify } from "./notifications";
 const CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Eléctrico","Seguridad","Limpieza","Ánodos","Impulsores","Otro"];
 const UNITS = ["unidad","litros","galones","metros","kit"];
 
-export default function InventoryPage({ vessel, user, setShowProfile }) {
+export default function InventoryPage({ vessel, user, setShowProfile, role="owner", captainLimit }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // item en edición o "new"
@@ -41,6 +41,29 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
   };
   const reopenRequest = async (id) => {
     await supabase.from("part_requests").update({ status:"open" }).eq("id", id);
+    loadRequests();
+  };
+
+  // Aprobar una solicitud del capitán que superó el tope → se publica a tiendas
+  const approveRequest = async (r) => {
+    await supabase.from("part_requests").update({ status:"open", approval_status:"approved", needs_approval:false }).eq("id", r.id);
+    // Publicar a tiendas que calzan
+    const city = r.city||"";
+    const { data: stores } = await supabase.from("profiles").select("id,store_categories,store_city,store_ships_nationwide").eq("role","store");
+    const cityL = city.toLowerCase();
+    (stores||[]).forEach(st => {
+      const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
+      const catMatch = cats.includes((r.category||"").toLowerCase());
+      const stCity = (st.store_city||"").toLowerCase();
+      const cityMatch = st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
+      if (catMatch && cityMatch) notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${r.item_name} (${r.category})${city?` en ${city}`:""}`, link:"solicitudes" });
+    });
+    if (r.requested_by) notify(r.requested_by, { type:"parts_approved", title:"Repuesto aprobado", body:`El dueño aprobó tu solicitud: ${r.item_name}`, link:"inventory" });
+    loadRequests();
+  };
+  const rejectRequest = async (r) => {
+    await supabase.from("part_requests").update({ status:"cancelled", approval_status:"rejected" }).eq("id", r.id);
+    if (r.requested_by) notify(r.requested_by, { type:"parts_rejected", title:"Repuesto no aprobado", body:`El dueño no aprobó: ${r.item_name}`, link:"inventory" });
     loadRequests();
   };
 
@@ -126,19 +149,29 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {myRequests.map(r=>{
               const resolved = r.status==="resolved";
+              const pendingApproval = r.status==="pending_approval";
               const resp = r.responses||[];
               return (
-                <div key={r.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14,opacity:resolved?0.7:1}}>
+                <div key={r.id} style={{background:"#fff",border:`1px solid ${pendingApproval?"#fde68a":"#e2e8f0"}`,borderRadius:12,padding:14,opacity:resolved?0.7:1}}>
+                  {pendingApproval&&(
+                    <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#b45309",marginBottom:6}}>{r.requested_by_name||"El capitán"} pide aprobación{r.est_amount?` (~$${r.est_amount})`:""}</div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>approveRequest(r)} style={{flex:1,padding:"7px",background:"#16a34a",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Aprobar y publicar</button>
+                        <button onClick={()=>rejectRequest(r)} style={{flex:1,padding:"7px",background:"#fff",border:"1px solid #fecaca",borderRadius:7,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Rechazar</button>
+                      </div>
+                    </div>
+                  )}
                   <div style={{display:"flex",gap:12,marginBottom:resp.length?10:0}}>
                     {r.photo_url&&<img src={r.photo_url} style={{width:54,height:54,borderRadius:8,objectFit:"cover",flexShrink:0}} alt=""/>}
                     <div style={{flex:1}}>
                       <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{r.item_name}{r.urgent&&<span style={{marginLeft:8,fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>URGENTE</span>}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{r.category}{r.part_num?` · ${r.part_num}`:""} · {resolved?"Cerrado":`${resp.length} respuesta${resp.length!==1?"s":""}`}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{r.category}{r.part_num?` · ${r.part_num}`:""}{r.requested_by_name&&r.requested_by_name!=="Dueño"?` · pedido por ${r.requested_by_name}`:""} · {resolved?"Cerrado":pendingApproval?"Esperando tu aprobación":`${resp.length} respuesta${resp.length!==1?"s":""}`}</div>
                     </div>
-                    {resolved
+                    {!pendingApproval&&(resolved
                       ? <button onClick={()=>reopenRequest(r.id)} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,padding:"5px 10px",fontSize:11,color:"#64748b",cursor:"pointer",fontWeight:600,height:"fit-content"}}>Reabrir</button>
                       : <button onClick={()=>closeRequest(r.id)} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"5px 10px",fontSize:11,color:"#16a34a",cursor:"pointer",fontWeight:700,height:"fit-content"}}>Cerrar</button>
-                    }
+                    )}
                   </div>
                   {/* Respuestas de tiendas */}
                   {resp.length>0&&(
@@ -261,7 +294,7 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
       )}
 
       {requesting&&(
-        <RequestPartModal vessel={vessel} user={user} item={requesting==="new"?null:requesting} onClose={()=>setRequesting(null)} onDone={()=>{ setRequesting(null); loadRequests(); setFilter("requests"); setMsg("Solicitud publicada. Te avisaremos cuando una tienda responda."); setTimeout(()=>setMsg(""),4000); }}/>
+        <RequestPartModal vessel={vessel} user={user} item={requesting==="new"?null:requesting} role={role} captainLimit={captainLimit} onClose={()=>setRequesting(null)} onDone={()=>{ setRequesting(null); loadRequests(); setFilter("requests"); setMsg("Solicitud publicada. Te avisaremos cuando una tienda responda."); setTimeout(()=>setMsg(""),4000); }}/>
       )}
 
       {msg&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:3000}}>{msg}</div>}
@@ -276,14 +309,19 @@ const chip = (active) => ({padding:"6px 14px",borderRadius:20,fontSize:12,fontWe
 
 const REQ_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
 
-function RequestPartModal({ vessel, user, item, onClose, onDone }) {
+function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", captainLimit }) {
   const [form, setForm] = useState({
     item_name: item?.name||"", category: item?.category||"Filtros",
-    part_num: item?.part_num||"", description:"", urgent:false,
+    part_num: item?.part_num||"", description:"", urgent:false, est_amount:"",
   });
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isCaptain = role === "captain";
+  const limit = captainLimit != null ? Number(captainLimit) : 100;
+  const estAmount = parseFloat(form.est_amount) || 0;
+  const needsApproval = isCaptain && estAmount > limit;
 
   const uploadPhoto = async (file) => {
     if (!file) return;
@@ -304,29 +342,39 @@ function RequestPartModal({ vessel, user, item, onClose, onDone }) {
     if (!form.item_name.trim()) return;
     setSaving(true);
     const city = vessel.details?.city||vessel.marina||"";
-    const { error } = await supabase.from("part_requests").insert({
-      owner_id:user.id, vessel_id:vessel.id,
+    const authorName = user?.full_name || user?.email || (isCaptain?"Capitán":"Dueño");
+    const { data: inserted, error } = await supabase.from("part_requests").insert({
+      owner_id: vessel.owner_id || user.id, vessel_id:vessel.id,
       item_name:form.item_name, category:form.category, part_num:form.part_num,
-      description:form.description, photo_url:photoUrl, city, urgent:form.urgent, status:"open",
-    });
+      description:form.description, photo_url:photoUrl, city, urgent:form.urgent,
+      status: needsApproval ? "pending_approval" : "open",
+      requested_by: user.id, requested_by_name: authorName,
+      needs_approval: needsApproval, approval_status: needsApproval ? "pending" : null,
+      est_amount: estAmount || null,
+    }).select().single();
     if (!error) {
-      // Notificar a tiendas que calzan categoría + ciudad
-      const { data: stores } = await supabase.from("profiles")
-        .select("id,store_categories,store_city,store_ships_nationwide,store_phone")
-        .eq("role","store");
-      const cityL = city.toLowerCase();
-      (stores||[]).forEach(st => {
-        const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
-        const catMatch = cats.includes(form.category.toLowerCase());
-        const stCity = (st.store_city||"").toLowerCase();
-        const cityMatch = st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
-        if (catMatch && cityMatch) {
-          notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${form.item_name} (${form.category})${city?` en ${city}`:""}`, link:"solicitudes" });
-        }
-      });
+      if (needsApproval) {
+        // Pedir aprobación al dueño — no se publica a tiendas todavía
+        notify(vessel.owner_id, { type:"parts_approval", title:"Aprobación de repuesto", body:`${authorName} quiere pedir ${form.item_name} (~$${estAmount}). Supera el tope de $${limit}.`, link:"inventory" });
+      } else {
+        // Publicar a tiendas que calzan
+        const { data: stores } = await supabase.from("profiles")
+          .select("id,store_categories,store_city,store_ships_nationwide,store_phone")
+          .eq("role","store");
+        const cityL = city.toLowerCase();
+        (stores||[]).forEach(st => {
+          const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
+          const catMatch = cats.includes(form.category.toLowerCase());
+          const stCity = (st.store_city||"").toLowerCase();
+          const cityMatch = st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
+          if (catMatch && cityMatch) {
+            notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${form.item_name} (${form.category})${city?` en ${city}`:""}`, link:"solicitudes" });
+          }
+        });
+      }
     }
     setSaving(false);
-    onDone();
+    onDone(needsApproval);
   };
 
   return (
@@ -363,13 +411,24 @@ function RequestPartModal({ vessel, user, item, onClose, onDone }) {
           </label>
           {photoUrl&&<img src={photoUrl} style={{width:"100%",maxHeight:140,objectFit:"cover",borderRadius:8,marginTop:8}} alt=""/>}
         </div>
+        {isCaptain&&(
+          <div style={{marginBottom:10}}>
+            <label style={lbl}>Costo estimado (USD)</label>
+            <input type="number" value={form.est_amount} onChange={e=>setForm({...form,est_amount:e.target.value})} placeholder="¿Cuánto crees que cuesta?" style={inp}/>
+            {needsApproval&&(
+              <div style={{marginTop:8,padding:"10px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#b45309"}}>
+                Este monto supera tu tope de ${limit}. Al enviarlo, el dueño recibirá tu solicitud para aprobarla antes de publicarla a las tiendas.
+              </div>
+            )}
+          </div>
+        )}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 12px",background:"#fff5f5",border:"1px solid #fecaca",borderRadius:8}}>
           <input type="checkbox" id="urgent" checked={form.urgent} onChange={e=>setForm({...form,urgent:e.target.checked})} style={{width:15,height:15}}/>
           <label htmlFor="urgent" style={{fontSize:12,color:"#b91c1c",cursor:"pointer",fontWeight:600}}>Urgente — barco varado o necesito esto ya</label>
         </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-          <button onClick={submit} disabled={saving||!form.item_name.trim()} style={{flex:2,padding:"11px",background:(saving||!form.item_name.trim())?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{saving?"Publicando...":"Publicar solicitud"}</button>
+          <button onClick={submit} disabled={saving||!form.item_name.trim()} style={{flex:2,padding:"11px",background:(saving||!form.item_name.trim())?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{saving?"Publicando...":needsApproval?"Enviar para aprobación":"Publicar solicitud"}</button>
         </div>
       </div>
     </div>

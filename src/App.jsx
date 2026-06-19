@@ -221,6 +221,7 @@ export default function App() {
       interval: t.interval, nextDue: t.next_due, status: t.status,
       notes: t.notes, photos: t.photos || [],
       dueHours: t.due_hours, everyHours: t.every_hours,
+      createdByName: t.created_by_name, createdByRole: t.created_by_role,
     }));
   };
 
@@ -251,6 +252,7 @@ export default function App() {
       next_due: task.nextDue, status: task.status,
       notes: task.notes, photos: task.photos || [],
       due_hours: task.dueHours ?? null, every_hours: task.everyHours ?? null,
+      created_by: ownerId, created_by_name: user?.full_name || user?.email || "Dueño", created_by_role: "owner",
     }).select().single();
     if (data) {
       const mapped = { ...task, id: data.id };
@@ -1080,7 +1082,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
                     <tr key={`e${task.id}`}>
                       <td colSpan={8} style={{padding:0,background:"#f0f7ff",borderBottom:"2px solid #bfdbfe"}}>
                         <div style={{padding:"16px 24px",display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-                          {[{l:"Sistema",v:task.system},{l:"Equipo",v:task.equipment},{l:"Intervalo",v:task.interval},{l:"Próx. Venc.",v:task.nextDue},{l:"Asignado",v:task.assigned},{l:"Estado",v:p.l},{l:"Notas",v:task.notes||"—"},{l:"Fotos",v:(task.photos||[]).length>0?`${task.photos.length} foto(s)`:"Sin fotos"}].map((c,i) => (
+                          {[{l:"Sistema",v:task.system},{l:"Equipo",v:task.equipment},{l:"Intervalo",v:task.interval},{l:"Próx. Venc.",v:task.nextDue},{l:"Asignado",v:task.assigned},{l:"Estado",v:p.l},{l:"Notas",v:task.notes||"—"},{l:"Fotos",v:(task.photos||[]).length>0?`${task.photos.length} foto(s)`:"Sin fotos"},{l:"Creada por",v:task.createdByName?`${task.createdByName}${task.createdByRole==="captain"?" (Capitán)":""}`:"—"}].map((c,i) => (
                             <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 14px"}}>
                               <div style={{fontSize:10,color:"#94a3b8",fontWeight:600,marginBottom:3}}>{c.l}</div>
                               <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{c.v}</div>

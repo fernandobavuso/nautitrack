@@ -49,6 +49,11 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
     loadAssigned();
   };
 
+  const updateCaptainPerms = async (capId, fields) => {
+    await supabase.from("captain_profiles").update(fields).eq("id", capId);
+    loadAssigned();
+  };
+
   const loadApplications = async () => {
     // Aplicaciones recibidas para este barco (crew aplicó)
     const { data } = await supabase.from("connections")
@@ -260,13 +265,32 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                   </div>
                 )}
                 {assignedCrew.map(cap=>(
-                  <div key={cap.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
-                    <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#1e3a5f,#2563eb)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{(cap.full_name||"?")[0].toUpperCase()}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{cap.full_name}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{cap.role} · {cap.user?.email}</div>
+                  <div key={cap.id} style={{padding:"12px 14px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#1e3a5f,#2563eb)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{(cap.full_name||"?")[0].toUpperCase()}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{cap.full_name}</div>
+                        <div style={{fontSize:11,color:"#64748b"}}>{cap.role} · {cap.user?.email}</div>
+                      </div>
+                      <button onClick={()=>removeAssigned(cap)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
                     </div>
-                    <button onClick={()=>removeAssigned(cap)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
+                    {/* Permisos del capitán */}
+                    <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #f1f5f9",display:"flex",flexDirection:"column",gap:10}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                        <div>
+                          <div style={{fontSize:12,fontWeight:600,color:"#374151"}}>Tope para pedir repuestos</div>
+                          <div style={{fontSize:10,color:"#94a3b8"}}>Sobre este monto, te pedirá aprobación</div>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:13,color:"#64748b"}}>$</span>
+                          <input type="number" defaultValue={cap.parts_limit??100} onBlur={e=>updateCaptainPerms(cap.id,{parts_limit:parseFloat(e.target.value)||0})} style={{width:70,padding:"6px 8px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,textAlign:"right"}}/>
+                        </div>
+                      </div>
+                      <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+                        <input type="checkbox" defaultChecked={cap.can_edit_providers||false} onChange={e=>updateCaptainPerms(cap.id,{can_edit_providers:e.target.checked})} style={{width:15,height:15}}/>
+                        <span style={{fontSize:12,color:"#374151"}}>Puede agregar y editar proveedores</span>
+                      </label>
+                    </div>
                   </div>
                 ))}
               </div>
