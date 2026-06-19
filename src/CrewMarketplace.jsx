@@ -15,8 +15,36 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const [activeChat, setActiveChat] = useState(null);
   const [msg, setMsg] = useState("");
   const [myConnections, setMyConnections] = useState([]);
+  const [assignedCrew, setAssignedCrew] = useState([]);
+  const [assignForm, setAssignForm] = useState({ email:"", full_name:"", role:"Capitán", phone:"" });
+  const [assignMsg, setAssignMsg] = useState("");
 
-  useEffect(() => { loadApplications(); loadConnections(); }, []);
+  useEffect(() => { loadApplications(); loadConnections(); loadAssigned(); }, []);
+
+  const loadAssigned = async () => {
+    const { data } = await supabase.from("captain_profiles").select("*, user:user_id(email)").eq("vessel_id", vessel.id);
+    setAssignedCrew(data || []);
+  };
+
+  const assignCrew = async () => {
+    if (!assignForm.email.trim() || !assignForm.full_name.trim()) { setAssignMsg("Completa nombre y email"); return; }
+    const { data: prof } = await supabase.from("profiles").select("id").eq("email", assignForm.email.trim()).maybeSingle();
+    if (!prof) { setAssignMsg("⚠️ Ese email no tiene cuenta en NautiTrack. Pídele que se registre primero."); return; }
+    const { error } = await supabase.from("captain_profiles").insert({
+      user_id:prof.id, vessel_id:vessel.id, full_name:assignForm.full_name.trim(),
+      role:assignForm.role, phone:assignForm.phone.trim(), active:true,
+    });
+    if (error) { setAssignMsg("Error: "+error.message); return; }
+    setAssignMsg("✅ Agregado. Al iniciar sesión verá la vista de tripulante de este barco.");
+    setAssignForm({ email:"", full_name:"", role:"Capitán", phone:"" });
+    loadAssigned();
+    setTimeout(()=>setAssignMsg(""),4000);
+  };
+
+  const removeAssigned = async (cap) => {
+    await supabase.from("captain_profiles").delete().eq("id", cap.id);
+    loadAssigned();
+  };
 
   const loadApplications = async () => {
     // Aplicaciones recibidas para este barco (crew aplicó)
@@ -93,7 +121,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={onClose}>
-      <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:680,height:"85vh",display:"flex",flexDirection:"column",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:680,height:"85vh",display:"flex",flexDirection:"column",overflow:"hidden",position:"relative"}} onClick={e=>e.stopPropagation()}>
 
         {/* Header */}
         <div style={{padding:"16px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -110,6 +138,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
             {key:"aplicaciones",label:`Aplicaciones${pendingApps.length>0?` (${pendingApps.length})`:""}`},
             {key:"buscar",label:"Buscar Tripulantes"},
             {key:"matches",label:`Matches${matches.length>0?` (${matches.length})`:""}`},
+            {key:"miequipo",label:"Mi Tripulación"},
           ].map(t=>(
             <button key={t.key} onClick={()=>{setTab(t.key); if(t.key==="buscar"&&crew.length===0)searchCrew();}} style={{
               padding:"12px 14px",background:"none",border:"none",borderBottom:tab===t.key?"2px solid #0ea5e9":"2px solid transparent",
@@ -202,6 +231,47 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                     </button>
                   }/>
               ))}
+            </div>
+          )}
+          {/* ── MI TRIPULACIÓN (asignar capitanes con cuenta) ── */}
+          {tab==="miequipo"&&(
+            <div>
+              <div style={{fontSize:13,color:"#64748b",marginBottom:14}}>Asigna capitanes o tripulantes que ya tienen cuenta. Al iniciar sesión verán la vista de este barco.</div>
+
+              {/* Lista de asignados */}
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
+                {assignedCrew.length===0&&(
+                  <div style={{textAlign:"center",padding:"24px 0",color:"#94a3b8"}}>
+                    <div style={{fontSize:32,marginBottom:6}}>⚓</div>
+                    <div style={{fontWeight:600,fontSize:13}}>Sin tripulación asignada</div>
+                  </div>
+                )}
+                {assignedCrew.map(cap=>(
+                  <div key={cap.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
+                    <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#1e3a5f,#2563eb)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{(cap.full_name||"?")[0].toUpperCase()}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{cap.full_name}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{cap.role} · {cap.user?.email}</div>
+                    </div>
+                    <button onClick={()=>removeAssigned(cap)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Form asignar */}
+              <div style={{background:"#fff",border:"1.5px solid #bfdbfe",borderRadius:12,padding:16}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>Asignar a mi barco</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                  <input value={assignForm.full_name} onChange={e=>setAssignForm({...assignForm,full_name:e.target.value})} placeholder="Nombre completo" style={{padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13}}/>
+                  <select value={assignForm.role} onChange={e=>setAssignForm({...assignForm,role:e.target.value})} style={{padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13}}>
+                    {["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico"].map(r=><option key={r}>{r}</option>)}
+                  </select>
+                </div>
+                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (debe tener cuenta en NautiTrack)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
+                <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder="Teléfono (opcional)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
+                <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
+                {assignMsg&&<div style={{fontSize:11,color:assignMsg.startsWith("✅")?"#16a34a":"#dc2626",marginTop:8,textAlign:"center"}}>{assignMsg}</div>}
+              </div>
             </div>
           )}
         </div>

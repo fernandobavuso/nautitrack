@@ -567,8 +567,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
               {/* Acciones */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
                 <button onClick={()=>{setShowProviders(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👥 Proveedores</button>
-                <button onClick={()=>{setShowCaptainManager(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>⚓ Capitanes</button>
-                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>🧭 Buscar Tripulación</button>
+                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>🧭 Tripulación</button>
                 <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>📱 QR Check-in</button>
               </div>
 
@@ -604,7 +603,6 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
       </div>
       <div style={s.navRight}>
         <button style={s.provBtn} onClick={() => setShowProviders(true)}>👥 Proveedores</button>
-        <button style={s.provBtn} onClick={() => setShowCaptainManager(true)}>⚓ Capitanes</button>
         <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>🧭 Tripulación</button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>

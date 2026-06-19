@@ -44,38 +44,25 @@ export default async function handler(req, res) {
       source: { type: "base64", media_type: detectMediaType(idDocBase64), data: idDocBase64 }
     });
 
-    userContent.push({
-      type: "text",
-      text: legalName ? `El usuario dice que su nombre legal es: "${legalName}". ` + (profilePhotoBase64 ? "Analiza estas dos imágenes." : "Analiza esta cédula.") + ` Verifica si el nombre en el documento coincide con ese nombre declarado. ` : (profilePhotoBase64 ? "Analiza estas dos imágenes." : "Analiza este documento.")
-        ? `Analiza estas dos imágenes. La primera es la foto de perfil del usuario. La segunda es su cédula de identidad venezolana.
+    const promptText = `Estás verificando la identidad de un tripulante náutico. ${profilePhotoBase64 ? "La PRIMERA imagen es su foto de perfil. La SEGUNDA imagen es su cédula de identidad (puede ser escaneada o fotografiada)." : "La imagen es su cédula de identidad."}${legalName ? ` El usuario declaró que su nombre completo es: "${legalName}".` : ""}
 
-Por favor responde SOLO con un JSON válido con este formato exacto:
+IMPORTANTE: Las cédulas venezolanas tienen una foto del titular en el lado derecho. Si el documento está escaneado, la foto puede verse en blanco y negro o con baja calidad — aun así cuenta como foto válida. Sé flexible: si hay cualquier rostro visible en el documento, marca face_in_doc como true.
+
+Responde SOLO con JSON válido, sin texto adicional ni backticks:
 {
-  "face_in_profile": true o false (¿hay una cara humana clara en la foto de perfil?),
-  "face_in_doc": true o false (¿hay una foto de cara en el documento?),
-  "faces_match": true o false (¿la persona en la foto de perfil parece ser la misma que en el documento?),
-  "is_official_doc": true o false (¿parece un documento de identidad oficial?),
-  "extracted_name": "nombre completo tal como aparece en el documento",
-  "id_number": "número de cédula o pasaporte",
+  ${profilePhotoBase64 ? '"face_in_profile": true/false (¿hay un rostro humano en la foto de perfil?),\n  "faces_match": true/false (¿parecen la misma persona la foto de perfil y la foto del documento? Sé razonablemente flexible con calidad/edad/barba),' : ''}
+  "face_in_doc": true/false (¿hay algún rostro visible en la cédula, aunque sea escaneada o de baja calidad?),
+  "is_official_doc": true/false (¿parece una cédula o documento de identidad oficial?),
+  "extracted_name": "nombre completo que aparece en el documento",
+  "id_number": "número de cédula",
   "birth_date": "fecha de nacimiento si aparece",
   "expiry_date": "fecha de vencimiento si aparece",
-  "country": "país emisor del documento",
-  "notes": "cualquier observación relevante en español"
-}`
-        : `Analiza este documento de identidad (cédula o pasaporte).
+  "country": "país emisor",
+  "name_matches": true/false (¿el nombre del documento coincide con el nombre declarado?),
+  "notes": "observación breve en español"
+}`;
 
-Por favor responde SOLO con un JSON válido con este formato exacto:
-{
-  "face_in_doc": true o false (¿hay una foto de cara en el documento?),
-  "is_official_doc": true o false (¿parece un documento de identidad oficial?),
-  "extracted_name": "nombre completo tal como aparece en el documento",
-  "id_number": "número de cédula o pasaporte",
-  "birth_date": "fecha de nacimiento si aparece",
-  "expiry_date": "fecha de vencimiento si aparece",
-  "country": "país emisor del documento",
-  "notes": "cualquier observación relevante en español"
-}`
-    });
+    userContent.push({ type: "text", text: promptText });
 
     messages.push({ role: "user", content: userContent });
 

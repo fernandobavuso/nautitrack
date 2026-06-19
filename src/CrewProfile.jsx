@@ -120,7 +120,7 @@ export default function CrewProfile({ user, onLogout }) {
       setProfile({
         full_name:"", bio:"", phone:"", phone_code:"+58", crew_role:"Capitán",
         certifications:[], experience:[], badges:[], available:false, location:"",
-        nationality:"Venezolana", languages:["Español"], fun_facts:{},
+        nationality:"", languages:["Español"], fun_facts:{},
         payment_methods:{}, photo_url:null, id_doc_url:null, passport_url:null, legal_name:'', has_passport:false,
         first_name:"", last_name:"", email: user.email||"", documents:[],
       });
@@ -687,7 +687,8 @@ export default function CrewProfile({ user, onLogout }) {
 
                 <div style={{marginBottom:10}}>
                   <label style={s.label}>Nacionalidad *</label>
-                  <select value={profile.nationality||"Venezolana"} onChange={e=>set("nationality",e.target.value)} style={s.input}>
+                  <select value={profile.nationality||""} onChange={e=>set("nationality",e.target.value)} style={s.input}>
+                    <option value="">Selecciona tu nacionalidad...</option>
                     {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
                   </select>
                 </div>
