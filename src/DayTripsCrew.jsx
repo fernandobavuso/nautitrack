@@ -35,7 +35,7 @@ export default function DayTripsCrew({ user, profile }) {
     });
     if (error?.code==="23505") setMsg("⚠️ Ya te postulaste a este viaje");
     else if (error) setMsg("⚠️ Error: "+error.message);
-    else { setMsg("✅ ¡Postulación enviada!"); loadMyApps(); }
+    else { setMsg("¡Postulación enviada!"); loadMyApps(); }
     setApplyTrip(null); setProposedPay(""); setMessage("");
     setTimeout(()=>setMsg(""),4000);
   };
@@ -51,7 +51,7 @@ export default function DayTripsCrew({ user, profile }) {
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {trips.length===0&&(
           <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-            <div style={{fontSize:40,marginBottom:8}}>🧭</div>
+            <div style={{fontSize:40,marginBottom:8}}></div>
             <div style={{fontWeight:600}}>No hay viajes disponibles ahora</div>
             <div style={{fontSize:12,marginTop:4}}>Vuelve pronto, se publican seguido</div>
           </div>
@@ -63,11 +63,11 @@ export default function DayTripsCrew({ user, profile }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.vessel_type||"Embarcación"}</div>
-                  <div style={{fontSize:12,color:"#64748b"}}>📅 {new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.duration}</div>
-                  <div style={{fontSize:12,color:"#64748b"}}>📍 {trip.city||"—"}{trip.num_persons?` · ${trip.num_persons} personas`:""}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.duration}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{trip.city||"—"}{trip.num_persons?` · ${trip.num_persons} personas`:""}</div>
                 </div>
                 <div style={{fontSize:13,fontWeight:700,color:"#16a34a",textAlign:"right",whiteSpace:"nowrap"}}>
-                  {trip.pay_open?"💬 Propón":trip.pay_amount}
+                  {trip.pay_open?"Propón":trip.pay_amount}
                 </div>
               </div>
               {trip.preferences?.length>0&&(

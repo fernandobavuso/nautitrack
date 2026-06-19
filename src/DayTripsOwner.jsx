@@ -9,8 +9,9 @@ const TRIP_PREFERENCES = [
   "Ayuda con limpieza","Primeros auxilios",
 ];
 
-const DURATIONS = ["Medio día (4h)","Día completo (8h)","Fin de semana","Varios días"];
-const TRIP_ROLES = ["Capitán","Primer Oficial","Marinero","Chef","Camarero","Mecánico","Cualquiera"];
+const DURATIONS = ["4 horas","6 horas","8 horas","Varios días"];
+const TRIP_ROLES = ["Capitán","Primer Oficial","Marinero","Chef","Camarero","Mecánico"];
+const SLEEP_OPTIONS = ["El tripulante regresa a casa cada noche","El tripulante duerme a bordo"];
 
 // ── PANEL DAY TRIPS PARA EL DUEÑO ──
 export default function DayTripsOwner({ vessel, user }) {
@@ -20,8 +21,10 @@ export default function DayTripsOwner({ vessel, user }) {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({
-    vessel_label:"mi_embarcacion", crew_role:"Marinero", trip_date:"",
-    duration:"Día completo (8h)", num_persons:"", pay_amount:"", pay_open:false,
+    vessel_label:"mi_embarcacion", crew_role:"Marinero", trip_date:"", end_date:"",
+    duration:"8 horas", sleep_option:"El tripulante regresa a casa cada noche",
+    num_persons:"", pay_amount:"", pay_open:false, pay_period:"por día",
+    other_vessel_brand:"", other_vessel_type:"", other_vessel_length:"",
     preferences:[], notes:"",
   });
 
@@ -38,23 +41,27 @@ export default function DayTripsOwner({ vessel, user }) {
   const togglePref = (p) => setForm(f=>({...f, preferences: f.preferences.includes(p)?f.preferences.filter(x=>x!==p):[...f.preferences,p]}));
 
   const publishTrip = async () => {
-    if (!form.trip_date) { setMsg("⚠️ Indica la fecha del viaje"); setTimeout(()=>setMsg(""),3000); return; }
-    if (!form.pay_open && !form.pay_amount) { setMsg("⚠️ Indica la paga o marca 'abierto a propuestas'"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!form.trip_date) { setMsg("Indica la fecha del viaje"); setTimeout(()=>setMsg(""),3000); return; }
+    if (form.duration==="Varios días" && !form.end_date) { setMsg("Indica la fecha de fin del viaje"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!form.pay_open && !form.pay_amount) { setMsg("Indica la paga o marca 'abierto a propuestas'"); setTimeout(()=>setMsg(""),3000); return; }
+    const isOther = form.vessel_label==="otra";
     const { error } = await supabase.from("day_trips").insert({
       owner_id:user.id,
-      vessel_id: form.vessel_label==="mi_embarcacion"?vessel.id:null,
+      vessel_id: isOther?null:vessel.id,
       vessel_label: form.vessel_label,
-      vessel_type: form.vessel_label==="mi_embarcacion"?vessel.type:"Otra embarcación",
-      crew_role: form.crew_role, trip_date: form.trip_date, duration: form.duration,
+      vessel_type: isOther?`${form.other_vessel_brand} ${form.other_vessel_type} ${form.other_vessel_length?form.other_vessel_length+" pies":""}`.trim()||"Otra embarcación":vessel.type,
+      crew_role: form.crew_role, trip_date: form.trip_date,
+      duration: form.duration==="Varios días"?`Varios días (${form.sleep_option})`:form.duration,
       num_persons: form.num_persons?parseInt(form.num_persons):null,
       city: vessel.details?.city||vessel.marina||"",
-      pay_amount: form.pay_open?null:form.pay_amount, pay_open: form.pay_open,
+      pay_amount: form.pay_open?null:`${form.pay_amount} ${form.pay_period}`,
+      pay_open: form.pay_open,
       preferences: form.preferences, notes: form.notes, status:"open",
     });
-    if (error) { setMsg("⚠️ Error: "+error.message); }
+    if (error) { setMsg("Error: "+error.message); }
     else {
-      setMsg("✅ ¡Solicitud publicada! Les llegará a los tripulantes");
-      setForm({vessel_label:"mi_embarcacion",crew_role:"Marinero",trip_date:"",duration:"Día completo (8h)",num_persons:"",pay_amount:"",pay_open:false,preferences:[],notes:""});
+      setMsg("¡Solicitud publicada! Les llegará a los tripulantes");
+      setForm({vessel_label:"mi_embarcacion",crew_role:"Marinero",trip_date:"",end_date:"",duration:"8 horas",sleep_option:"El tripulante regresa a casa cada noche",num_persons:"",pay_amount:"",pay_open:false,pay_period:"por día",other_vessel_brand:"",other_vessel_type:"",other_vessel_length:"",preferences:[],notes:""});
       setCreating(false); loadTrips();
     }
     setTimeout(()=>setMsg(""),4000);
@@ -63,14 +70,14 @@ export default function DayTripsOwner({ vessel, user }) {
   const acceptApplication = async (trip, app) => {
     await supabase.from("day_trip_applications").update({status:"accepted"}).eq("id", app.id);
     await supabase.from("day_trips").update({status:"filled", selected_crew_id:app.crew_id}).eq("id", trip.id);
-    setMsg("✅ Tripulante seleccionado");
+    setMsg("Tripulante seleccionado");
     setTimeout(()=>setMsg(""),3000);
     loadTrips(); setSelectedTrip(null);
   };
 
   const markCompleted = async (trip) => {
     await supabase.from("day_trips").update({status:"completed"}).eq("id", trip.id);
-    setMsg("✅ Viaje completado. Ya puedes dejar tu reseña");
+    setMsg("Viaje completado. Ya puedes dejar tu reseña");
     setTimeout(()=>setMsg(""),3000);
     loadTrips();
   };
@@ -93,6 +100,24 @@ export default function DayTripsOwner({ vessel, user }) {
             <option value="otra">Otra embarcación</option>
           </select>
 
+          {/* Datos de otra embarcación */}
+          {form.vessel_label==="otra"&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10,padding:12,background:"#f8fafc",borderRadius:8}}>
+              <div>
+                <label style={lbl}>Marca</label>
+                <input value={form.other_vessel_brand} onChange={e=>setForm({...form,other_vessel_brand:e.target.value})} placeholder="Sea Ray" style={inp}/>
+              </div>
+              <div>
+                <label style={lbl}>Tipo</label>
+                <input value={form.other_vessel_type} onChange={e=>setForm({...form,other_vessel_type:e.target.value})} placeholder="Yate Motor" style={inp}/>
+              </div>
+              <div>
+                <label style={lbl}>Eslora (pies)</label>
+                <input value={form.other_vessel_length} onChange={e=>setForm({...form,other_vessel_length:e.target.value})} placeholder="48" style={inp}/>
+              </div>
+            </div>
+          )}
+
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
             <div>
               <label style={lbl}>Rol buscado</label>
@@ -101,20 +126,36 @@ export default function DayTripsOwner({ vessel, user }) {
               </select>
             </div>
             <div>
-              <label style={lbl}>Fecha del viaje</label>
-              <input type="date" value={form.trip_date} onChange={e=>setForm({...form,trip_date:e.target.value})} style={inp}/>
-            </div>
-            <div>
               <label style={lbl}>Duración</label>
               <select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})} style={inp}>
                 {DURATIONS.map(d=><option key={d}>{d}</option>)}
               </select>
             </div>
             <div>
+              <label style={lbl}>{form.duration==="Varios días"?"Fecha de inicio":"Fecha del viaje"}</label>
+              <input type="date" value={form.trip_date} onChange={e=>setForm({...form,trip_date:e.target.value})} style={inp}/>
+            </div>
+            {form.duration==="Varios días"&&(
+              <div>
+                <label style={lbl}>Fecha de fin</label>
+                <input type="date" value={form.end_date} onChange={e=>setForm({...form,end_date:e.target.value})} style={inp}/>
+              </div>
+            )}
+            <div>
               <label style={lbl}>N° de personas a bordo</label>
               <input type="number" value={form.num_persons} onChange={e=>setForm({...form,num_persons:e.target.value})} placeholder="Ej: 6" style={inp}/>
             </div>
           </div>
+
+          {/* Opción de pernocta solo si es varios días */}
+          {form.duration==="Varios días"&&(
+            <div style={{marginTop:10}}>
+              <label style={lbl}>¿Dónde duerme el tripulante?</label>
+              <select value={form.sleep_option} onChange={e=>setForm({...form,sleep_option:e.target.value})} style={inp}>
+                {SLEEP_OPTIONS.map(o=><option key={o}>{o}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Paga */}
           <div style={{marginTop:10}}>
@@ -124,7 +165,12 @@ export default function DayTripsOwner({ vessel, user }) {
               <label htmlFor="payopen" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>Abierto a propuestas (que el tripulante diga cuánto cobra)</label>
             </div>
             {!form.pay_open&&(
-              <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder="Ej: $50, 50 USD, Bs. 2000" style={inp}/>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder="Ej: $50, Bs. 2000" style={{...inp,flex:1}}/>
+                <span style={{fontSize:13,color:"#64748b",whiteSpace:"nowrap"}}>
+                  {form.duration==="Varios días"?"por día":`por ${form.duration}`}
+                </span>
+              </div>
             )}
           </div>
 
@@ -161,7 +207,7 @@ export default function DayTripsOwner({ vessel, user }) {
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {trips.length===0&&!creating&&(
           <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
-            <div style={{fontSize:36,marginBottom:6}}>🧭</div>
+            <div style={{fontSize:36,marginBottom:6}}></div>
             <div style={{fontWeight:600,fontSize:13}}>Sin solicitudes de viaje</div>
           </div>
         )}
@@ -173,7 +219,7 @@ export default function DayTripsOwner({ vessel, user }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.duration}</div>
-                  <div style={{fontSize:12,color:"#64748b"}}>📅 {new Date(trip.trip_date).toLocaleDateString("es-VE")} · 📍 {trip.city||"—"}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.city||"—"}</div>
                   <div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginTop:2}}>{trip.pay_open?"Paga: abierta a propuestas":`Paga: ${trip.pay_amount}`}</div>
                 </div>
                 <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",
@@ -225,7 +271,7 @@ export default function DayTripsOwner({ vessel, user }) {
                       <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{app.crew?.full_name}</div>
                       <div style={{fontSize:11,color:"#64748b"}}>{app.crew?.crew_role}</div>
                     </div>
-                    {(app.crew?.badges||[]).includes("verified")&&<span title="Verificado">✅</span>}
+                    {(app.crew?.badges||[]).includes("verified")&&<span title="Verificado"></span>}
                   </div>
                   {app.proposed_pay&&<div style={{fontSize:12,color:"#16a34a",marginBottom:4}}>Propone: {app.proposed_pay}</div>}
                   {app.message&&<div style={{fontSize:12,color:"#475569",marginBottom:8}}>{app.message}</div>}
@@ -266,12 +312,12 @@ function ReviewButton({ trip, user, onDone }) {
     setDone(true); setOpen(false); onDone&&onDone();
   };
 
-  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>✅ Reseña enviada</div>;
+  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>Reseña enviada</div>;
 
   return (
     <>
       <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,color:"#d97706",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-        ⭐ Calificar al tripulante
+        ★ Calificar al tripulante
       </button>
       {open&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setOpen(false)}>
@@ -279,7 +325,7 @@ function ReviewButton({ trip, user, onDone }) {
             <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:14,textAlign:"center"}}>¿Cómo te fue con el tripulante?</div>
             <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:16}}>
               {[1,2,3,4,5].map(n=>(
-                <button key={n} onClick={()=>setRating(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:32,opacity:n<=rating?1:0.3}}>⭐</button>
+                <button key={n} onClick={()=>setRating(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:32,opacity:n<=rating?1:0.3}}>★</button>
               ))}
             </div>
             <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3} placeholder="¿Cómo fue tu experiencia? (opcional)" style={{...inp,resize:"vertical",marginBottom:14}}/>

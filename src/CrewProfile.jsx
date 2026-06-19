@@ -96,7 +96,7 @@ export default function CrewProfile({ user, onLogout }) {
     {key:"historial",icon:"🚢", label:"Historial"},
     {key:"pagos",    icon:"💳", label:"Pagos"},
     {key:"buscar",   icon:"🔍", label:"Buscar Barco"},
-    {key:"daytrips", icon:"🧭", label:"Day Trips"},
+    {key:"daytrips", icon:"", label:"Day Trips"},
     {key:"solicitudes",icon:"📬", label:"Solicitudes"},
   ];
 
@@ -1078,7 +1078,7 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="daytrips"&&(
           <div style={{maxWidth:600}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:12}}>🧭 Viajes Disponibles</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:12}}>Viajes Disponibles</div>
               <DayTripsCrew user={user} profile={profile}/>
             </div>
           </div>
