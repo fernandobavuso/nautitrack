@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { hasFeature, PremiumLock } from "./plans.jsx";
+import { notify } from "./notifications";
 
 const CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Eléctrico","Seguridad","Limpieza","Ánodos","Impulsores","Otro"];
 const UNITS = ["unidad","litros","galones","metros","kit"];
@@ -11,6 +12,7 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
   const [editing, setEditing] = useState(null); // item en edición o "new"
   const [msg, setMsg] = useState("");
   const [filter, setFilter] = useState("all"); // all / low
+  const [requesting, setRequesting] = useState(null); // item para pedir o "new"
   const blank = { name:"", category:"Filtros", part_num:"", quantity:"", min_quantity:"", unit:"unidad", location:"", notes:"" };
   const [form, setForm] = useState(blank);
 
@@ -70,9 +72,14 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
           <div style={{fontSize:20,fontWeight:800,color:"#0f172a"}}>Repuestos de {vessel.name}</div>
           <div style={{fontSize:13,color:"#64748b"}}>Inventario a bordo y alertas de reposición</div>
         </div>
-        <button onClick={openNew} style={{padding:"10px 18px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-          Agregar repuesto
-        </button>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setRequesting("new")} style={{padding:"10px 16px",background:"#fff",border:"1.5px solid #1d4ed8",borderRadius:10,color:"#1d4ed8",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            Pedir repuesto
+          </button>
+          <button onClick={openNew} style={{padding:"10px 18px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            Agregar repuesto
+          </button>
+        </div>
       </div>
 
       {/* Alerta de reposición */}
@@ -178,6 +185,10 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
         </div>
       )}
 
+      {requesting&&(
+        <RequestPartModal vessel={vessel} user={user} item={requesting==="new"?null:requesting} onClose={()=>setRequesting(null)} onDone={()=>{ setRequesting(null); setMsg("Solicitud publicada. Te avisaremos cuando una tienda responda."); setTimeout(()=>setMsg(""),4000); }}/>
+      )}
+
       {msg&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:3000}}>{msg}</div>}
     </div>
   );
@@ -187,3 +198,105 @@ const lbl = {display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBo
 const inp = {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"};
 const qtyBtn = {width:30,height:30,borderRadius:8,border:"1.5px solid #e2e8f0",background:"#f8fafc",cursor:"pointer",fontSize:16,fontWeight:700,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"};
 const chip = (active) => ({padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",background:active?"#eff6ff":"#fff",borderColor:active?"#2563eb":"#e2e8f0",color:active?"#2563eb":"#64748b"});
+
+const REQ_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
+
+function RequestPartModal({ vessel, user, item, onClose, onDone }) {
+  const [form, setForm] = useState({
+    item_name: item?.name||"", category: item?.category||"Filtros",
+    part_num: item?.part_num||"", description:"", urgent:false,
+  });
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const uploadPhoto = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `part-requests/${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("manuales").upload(path, file, { upsert:true });
+      if (!error) {
+        const { data } = supabase.storage.from("manuales").getPublicUrl(path);
+        setPhotoUrl(data.publicUrl);
+      }
+    } catch(e) {}
+    setUploading(false);
+  };
+
+  const submit = async () => {
+    if (!form.item_name.trim()) return;
+    setSaving(true);
+    const city = vessel.details?.city||vessel.marina||"";
+    const { error } = await supabase.from("part_requests").insert({
+      owner_id:user.id, vessel_id:vessel.id,
+      item_name:form.item_name, category:form.category, part_num:form.part_num,
+      description:form.description, photo_url:photoUrl, city, urgent:form.urgent, status:"open",
+    });
+    if (!error) {
+      // Notificar a tiendas que calzan categoría + ciudad
+      const { data: stores } = await supabase.from("profiles")
+        .select("id,store_categories,store_city,store_ships_nationwide,store_phone")
+        .eq("role","store");
+      const cityL = city.toLowerCase();
+      (stores||[]).forEach(st => {
+        const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
+        const catMatch = cats.includes(form.category.toLowerCase());
+        const stCity = (st.store_city||"").toLowerCase();
+        const cityMatch = st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
+        if (catMatch && cityMatch) {
+          notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${form.item_name} (${form.category})${city?` en ${city}`:""}`, link:"solicitudes" });
+        }
+      });
+    }
+    setSaving(false);
+    onDone();
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={onClose}>
+      <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:420,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>Pedir repuesto</div>
+        <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Tu solicitud llegará a las tiendas de esta categoría en tu zona</div>
+
+        <div style={{marginBottom:10}}>
+          <label style={lbl}>¿Qué necesitas? *</label>
+          <input value={form.item_name} onChange={e=>setForm({...form,item_name:e.target.value})} placeholder="Ej: Filtro de aceite Fleetguard FF5052" style={inp}/>
+        </div>
+        <div style={{display:"flex",gap:8,marginBottom:10}}>
+          <div style={{flex:1}}>
+            <label style={lbl}>Categoría</label>
+            <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inp}>
+              {REQ_CATEGORIES.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{flex:1}}>
+            <label style={lbl}>N° de parte</label>
+            <input value={form.part_num} onChange={e=>setForm({...form,part_num:e.target.value})} placeholder="Opcional" style={inp}/>
+          </div>
+        </div>
+        <div style={{marginBottom:10}}>
+          <label style={lbl}>Detalles</label>
+          <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} rows={2} placeholder="Marca del motor, año, cantidad que necesitas..." style={{...inp,resize:"vertical"}}/>
+        </div>
+        <div style={{marginBottom:10}}>
+          <label style={lbl}>Foto del repuesto (recomendado)</label>
+          <label style={{display:"block",border:"2px dashed #bae6fd",borderRadius:10,padding:14,textAlign:"center",background:"#f0f9ff",cursor:"pointer",fontSize:12,color:"#0369a1"}}>
+            {uploading?"Subiendo...":photoUrl?"Foto cargada — cambiar":"Toca para subir una foto"}
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadPhoto(e.target.files[0])}/>
+          </label>
+          {photoUrl&&<img src={photoUrl} style={{width:"100%",maxHeight:140,objectFit:"cover",borderRadius:8,marginTop:8}} alt=""/>}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 12px",background:"#fff5f5",border:"1px solid #fecaca",borderRadius:8}}>
+          <input type="checkbox" id="urgent" checked={form.urgent} onChange={e=>setForm({...form,urgent:e.target.checked})} style={{width:15,height:15}}/>
+          <label htmlFor="urgent" style={{fontSize:12,color:"#b91c1c",cursor:"pointer",fontWeight:600}}>Urgente — barco varado o necesito esto ya</label>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
+          <button onClick={submit} disabled={saving||!form.item_name.trim()} style={{flex:2,padding:"11px",background:(saving||!form.item_name.trim())?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{saving?"Publicando...":"Publicar solicitud"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}

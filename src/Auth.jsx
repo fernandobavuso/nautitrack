@@ -91,22 +91,30 @@ export default function Auth({ onLogin }) {
           {mode==="register"&&(
             <div>
               <label style={s.label}>¿Cuál es tu rol?</label>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                 <button type="button" onClick={()=>setUserRole("owner")} style={{
-                  padding:"12px 8px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
+                  padding:"12px 6px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
                   borderColor:userRole==="owner"?"#2563eb":"#e2e8f0",
                   background:userRole==="owner"?"#eff6ff":"#f8fafc",
                 }}>
-                  <div style={{fontSize:13,fontWeight:700,color:userRole==="owner"?"#2563eb":"#475569"}}>Propietario</div>
-                  <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Tengo un barco</div>
+                  <div style={{fontSize:12,fontWeight:700,color:userRole==="owner"?"#2563eb":"#475569"}}>Propietario</div>
+                  <div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>Tengo un barco</div>
                 </button>
                 <button type="button" onClick={()=>setUserRole("crew")} style={{
-                  padding:"12px 8px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
+                  padding:"12px 6px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
                   borderColor:userRole==="crew"?"#2563eb":"#e2e8f0",
                   background:userRole==="crew"?"#eff6ff":"#f8fafc",
                 }}>
-                  <div style={{fontSize:13,fontWeight:700,color:userRole==="crew"?"#2563eb":"#475569"}}>Tripulación</div>
-                  <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>Soy capitán / marinero</div>
+                  <div style={{fontSize:12,fontWeight:700,color:userRole==="crew"?"#2563eb":"#475569"}}>Tripulación</div>
+                  <div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>Capitán / marinero</div>
+                </button>
+                <button type="button" onClick={()=>setUserRole("store")} style={{
+                  padding:"12px 6px",border:"2px solid",borderRadius:10,cursor:"pointer",textAlign:"center",
+                  borderColor:userRole==="store"?"#2563eb":"#e2e8f0",
+                  background:userRole==="store"?"#eff6ff":"#f8fafc",
+                }}>
+                  <div style={{fontSize:12,fontWeight:700,color:userRole==="store"?"#2563eb":"#475569"}}>Tienda</div>
+                  <div style={{fontSize:9,color:"#94a3b8",marginTop:2}}>Vendo repuestos</div>
                 </button>
               </div>
             </div>

@@ -13,6 +13,7 @@ import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
+import StoreView from "./StoreView";
 import { countUnread } from "./notifications";
 import { getPlan } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
@@ -209,6 +210,7 @@ export default function App() {
   const [captainProfile, setCaptainProfile]       = useState(null);
   const [captainVessel, setCaptainVessel]         = useState(null);
   const [crewProfile, setCrewProfile]             = useState(null);
+  const [storeProfile, setStoreProfile]           = useState(null);
 
   // ── Supabase helpers ──────────────────────────────────────────────────────
   const fetchTasks = async (vesselId) => {
@@ -392,6 +394,12 @@ export default function App() {
     if (prof?.role) role = prof.role;
     console.log("[NautiTrack] checkIfCaptain — uid:", uid, "knownRole:", knownRole, "profileRole:", prof?.role, "finalRole:", role, "profErr:", profErr?.message);
 
+    if (role === "store") {
+      setStoreProfile({ role });
+      setVesselsLoading(false);
+      return true;
+    }
+
     if (role === "crew") {
       const { data: cap } = await supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", uid).eq("active", true).maybeSingle();
       if (cap) {
@@ -510,6 +518,10 @@ export default function App() {
   );
 
   // Si es crew sin barco asignado → mostrar perfil crew
+  if (storeProfile) return (
+    <StoreView user={user} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVesselsLoading(false); setCheckingRole(true); setStoreProfile(null); setCrewProfile(null); setCaptainProfile(null); setCaptainVessel(null); }}/>
+  );
+
   if (crewProfile && !captainProfile) return (
     <CrewProfile user={user} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVesselsLoading(false); setCheckingRole(true); setCrewProfile(null); setCaptainProfile(null); setCaptainVessel(null); }}/>
   );
