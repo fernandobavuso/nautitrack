@@ -11,7 +11,9 @@ import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
+import FleetPage from "./FleetPage";
 import { countUnread } from "./notifications";
+import { getPlan } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
 
 
@@ -197,6 +199,8 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [addingVessel, setAddingVessel] = useState(false);
+  const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
   const [showCrewMarket, setShowCrewMarket] = useState(false);
@@ -459,7 +463,19 @@ export default function App() {
       };
       setVessels(v => [...v, mapped]);
       setVesselId(mapped.id);
+      setAddingVessel(false);
     }
+  };
+
+  // Intentar agregar barco respetando el límite del plan
+  const tryAddVessel = () => {
+    const plan = getPlan(vessels.find(v=>v.id===vesselId) || vessels[0]);
+    if (vessels.length >= plan.maxVessels) {
+      setPlanMsg("Tu plan gratis permite 1 embarcación. Mejora a Pro para administrar varios barcos.");
+      setTimeout(()=>setPlanMsg(""),5000);
+      return;
+    }
+    setAddingVessel(true);
   };
 
   // ── Early returns AFTER all hooks ────────────────────────────────────────────
@@ -505,11 +521,15 @@ export default function App() {
     }}/>
   );
 
+  if (addingVessel) return (
+    <AddVessel onAdd={handleAddVessel} onSkip={()=>setAddingVessel(false)}/>
+  );
+
   const vessel = vessels.find(v => v.id === vesselId) || vessels[0];
 
   return (
     <div style={s.root} onClick={() => { setShowVesselMenu(false); setShowUserMenu(false); }}>
-      <TopNav vessel={vessel} vessels={vessels} user={user}
+      <TopNav vessel={vessel} vessels={vessels} user={user} tryAddVessel={tryAddVessel}
         setVesselId={(id) => { setVesselId(id); setPage("home"); }}
         showVesselMenu={showVesselMenu} setShowVesselMenu={setShowVesselMenu}
         showUserMenu={showUserMenu} setShowUserMenu={setShowUserMenu}
@@ -531,6 +551,7 @@ export default function App() {
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
         {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={setShowProfile} />}
+        {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={setShowProfile} />}
         {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={setShowProfile} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
@@ -540,6 +561,7 @@ export default function App() {
       {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
       {showCrewMarket && <CrewMarketplace vessel={vessel} user={user} onClose={() => setShowCrewMarket(false)} />}
       {showNotifPanel && <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="tripulacion")setShowCrewMarket(true); }} />}
+      {planMsg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:4000,maxWidth:340,textAlign:"center"}}>{planMsg}</div>}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
   );
@@ -547,7 +569,7 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
-function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,tryAddVessel,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
@@ -612,7 +634,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
 
               {/* Navegación */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                {[{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n=>(
+                {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n=>(
                   <button key={n.key} onClick={()=>{setPage(n.key);setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page===n.key?"#eff6ff":"transparent",color:page===n.key?"#0ea5e9":"#1e293b",fontWeight:page===n.key?700:500,fontSize:14}}>{n.label}</button>
                 ))}
               </div>
@@ -650,7 +672,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
         <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
       </div>
       <div style={s.navLinks}>
-        {[{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
+        {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
           <button key={n.key} onClick={() => setPage(n.key)} style={{...s.navLink,color:page===n.key?"#0ea5e9":"#64748b",borderBottom:page===n.key?"2px solid #0ea5e9":"2px solid transparent",fontWeight:page===n.key?600:400}}>{n.label}</button>
         ))}
       </div>
@@ -671,6 +693,9 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
                   <div><div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{v.name}</div><div style={{fontSize:11,color:"#94a3b8"}}>{v.type} · {v.marina}</div></div>
                 </button>
               ))}
+              <button onClick={()=>{setShowVesselMenu(false);tryAddVessel&&tryAddVessel();}} style={{...s.dropItem,color:"#2563eb",fontWeight:700,fontSize:13,borderTop:"1px solid #f1f5f9"}}>
+                ＋ Agregar embarcación
+              </button>
             </div>
           )}
         </div>
