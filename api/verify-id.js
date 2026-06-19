@@ -44,21 +44,23 @@ export default async function handler(req, res) {
       source: { type: "base64", media_type: detectMediaType(idDocBase64), data: idDocBase64 }
     });
 
-    const promptText = `Estás verificando la identidad de un tripulante náutico. ${profilePhotoBase64 ? "La PRIMERA imagen es su foto de perfil. La SEGUNDA imagen es su cédula de identidad (puede ser escaneada o fotografiada)." : "La imagen es su cédula de identidad."}${legalName ? ` El usuario declaró que su nombre completo es: "${legalName}".` : ""}
+    const promptText = `Eres un verificador de identidad. ${profilePhotoBase64 ? "Recibes DOS imágenes: (1) foto de perfil de la persona, (2) su cédula de identidad." : "Recibes la imagen de una cédula de identidad."}${legalName ? ` La persona declaró llamarse: "${legalName}".` : ""}
 
-IMPORTANTE: Las cédulas venezolanas tienen una foto del titular en el lado derecho. Si el documento está escaneado, la foto puede verse en blanco y negro o con baja calidad — aun así cuenta como foto válida. Sé flexible: si hay cualquier rostro visible en el documento, marca face_in_doc como true.
+INSTRUCCIONES CLAVE:
+- Las cédulas venezolanas SIEMPRE tienen una fotografía del titular en el lado derecho. Búscala ahí. Si la imagen muestra una cédula, ASUME que tiene foto salvo que esté completamente recortada o ilegible. Marca face_in_doc=true si ves cualquier rostro.
+- Sé GENEROSO al comparar rostros: la misma persona puede verse distinta por barba, iluminación, edad o calidad del escaneo. Solo marca faces_match=false si claramente son personas diferentes.
+- Un escaneo o foto de cédula con los datos visibles (nombre, número, república) ES un documento oficial: is_official_doc=true.
 
-Responde SOLO con JSON válido, sin texto adicional ni backticks:
-{
-  ${profilePhotoBase64 ? '"face_in_profile": true/false (¿hay un rostro humano en la foto de perfil?),\n  "faces_match": true/false (¿parecen la misma persona la foto de perfil y la foto del documento? Sé razonablemente flexible con calidad/edad/barba),' : ''}
-  "face_in_doc": true/false (¿hay algún rostro visible en la cédula, aunque sea escaneada o de baja calidad?),
-  "is_official_doc": true/false (¿parece una cédula o documento de identidad oficial?),
-  "extracted_name": "nombre completo que aparece en el documento",
+Responde ÚNICAMENTE con este JSON, sin texto antes ni después:
+{${profilePhotoBase64 ? '\n  "face_in_profile": true/false,\n  "faces_match": true/false,' : ''}
+  "face_in_doc": true/false,
+  "is_official_doc": true/false,
+  "extracted_name": "nombre completo del documento",
   "id_number": "número de cédula",
-  "birth_date": "fecha de nacimiento si aparece",
-  "expiry_date": "fecha de vencimiento si aparece",
-  "country": "país emisor",
-  "name_matches": true/false (¿el nombre del documento coincide con el nombre declarado?),
+  "birth_date": "fecha de nacimiento",
+  "expiry_date": "fecha de vencimiento",
+  "country": "país",
+  "name_matches": true/false,
   "notes": "observación breve en español"
 }`;
 
@@ -81,11 +83,33 @@ Responde SOLO con JSON válido, sin texto adicional ni backticks:
     });
 
     const data = await response.json();
-    const text = data.content?.[0]?.text || '{}';
 
-    // Limpiar y parsear JSON
-    const clean = text.replace(/```json|```/g, '').trim();
-    const result = JSON.parse(clean);
+    // Si la API de Anthropic devolvió error
+    if (data.error) {
+      console.error('Anthropic API error:', JSON.stringify(data.error));
+      return res.status(500).json({ error: 'Error del verificador: ' + (data.error.message||'desconocido') });
+    }
+
+    const text = data.content?.[0]?.text || '';
+    console.log('verify-id IA respuesta cruda:', text);
+
+    // Extraer el JSON aunque venga con texto alrededor
+    let result;
+    try {
+      const clean = text.replace(/```json|```/g, '').trim();
+      result = JSON.parse(clean);
+    } catch {
+      // Buscar el primer bloque { ... } en el texto
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        try { result = JSON.parse(match[0]); } catch {}
+      }
+    }
+
+    if (!result) {
+      console.error('No se pudo parsear JSON de:', text);
+      return res.status(200).json({ success: false, error: 'El verificador no devolvió un resultado legible', raw: text });
+    }
 
     return res.status(200).json({ success: true, result });
 

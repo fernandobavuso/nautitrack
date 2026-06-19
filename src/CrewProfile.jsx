@@ -223,10 +223,13 @@ export default function CrewProfile({ user, onLogout }) {
     try {
       const toBase64 = async (url) => {
         const r = await fetch(url);
+        if (!r.ok) throw new Error("No se pudo leer la imagen ("+r.status+")");
         const blob = await r.blob();
-        return new Promise(res => {
+        if (blob.size < 100) throw new Error("La imagen está vacía o corrupta");
+        return new Promise((res,rej) => {
           const reader = new FileReader();
           reader.onload = () => res(reader.result.split(',')[1]);
+          reader.onerror = () => rej(new Error("Error leyendo la imagen"));
           reader.readAsDataURL(blob);
         });
       };
