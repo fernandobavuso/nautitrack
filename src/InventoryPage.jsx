@@ -11,20 +11,37 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // item en edición o "new"
   const [msg, setMsg] = useState("");
-  const [filter, setFilter] = useState("all"); // all / low
+  const [filter, setFilter] = useState("all"); // all / low / requests
   const [requesting, setRequesting] = useState(null); // item para pedir o "new"
+  const [myRequests, setMyRequests] = useState([]);
   const blank = { name:"", category:"Filtros", part_num:"", quantity:"", min_quantity:"", unit:"unidad", location:"", notes:"" };
   const [form, setForm] = useState(blank);
 
   const allowed = hasFeature(vessel, "inventory");
 
-  useEffect(() => { if (allowed) loadItems(); }, []);
+  useEffect(() => { if (allowed) { loadItems(); loadRequests(); } }, []);
 
   const loadItems = async () => {
     const { data } = await supabase.from("inventory")
       .select("*").eq("vessel_id", vessel.id).order("name");
     setItems(data||[]);
     setLoading(false);
+  };
+
+  const loadRequests = async () => {
+    const { data } = await supabase.from("part_requests")
+      .select("*, responses:part_responses(*, store:store_id(store_name,store_phone,store_city))")
+      .eq("owner_id", user.id).order("created_at",{ascending:false});
+    setMyRequests(data||[]);
+  };
+
+  const closeRequest = async (id) => {
+    await supabase.from("part_requests").update({ status:"resolved" }).eq("id", id);
+    loadRequests();
+  };
+  const reopenRequest = async (id) => {
+    await supabase.from("part_requests").update({ status:"open" }).eq("id", id);
+    loadRequests();
   };
 
   const openNew = () => { setForm(blank); setEditing("new"); };
@@ -94,8 +111,64 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         <button onClick={()=>setFilter("all")} style={chip(filter==="all")}>Todos ({items.length})</button>
         <button onClick={()=>setFilter("low")} style={chip(filter==="low")}>Por reponer ({lowItems.length})</button>
+        <button onClick={()=>setFilter("requests")} style={chip(filter==="requests")}>Mis pedidos ({myRequests.filter(r=>r.status==="open").length})</button>
       </div>
 
+      {/* ── MIS PEDIDOS ── */}
+      {filter==="requests" ? (
+        <div>
+          {myRequests.length===0&&(
+            <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
+              <div style={{fontWeight:600}}>No has pedido repuestos</div>
+              <div style={{fontSize:12,marginTop:4}}>Usa "Pedir repuesto" para que las tiendas de tu zona te coticen</div>
+            </div>
+          )}
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {myRequests.map(r=>{
+              const resolved = r.status==="resolved";
+              const resp = r.responses||[];
+              return (
+                <div key={r.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14,opacity:resolved?0.7:1}}>
+                  <div style={{display:"flex",gap:12,marginBottom:resp.length?10:0}}>
+                    {r.photo_url&&<img src={r.photo_url} style={{width:54,height:54,borderRadius:8,objectFit:"cover",flexShrink:0}} alt=""/>}
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{r.item_name}{r.urgent&&<span style={{marginLeft:8,fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>URGENTE</span>}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{r.category}{r.part_num?` · ${r.part_num}`:""} · {resolved?"Cerrado":`${resp.length} respuesta${resp.length!==1?"s":""}`}</div>
+                    </div>
+                    {resolved
+                      ? <button onClick={()=>reopenRequest(r.id)} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,padding:"5px 10px",fontSize:11,color:"#64748b",cursor:"pointer",fontWeight:600,height:"fit-content"}}>Reabrir</button>
+                      : <button onClick={()=>closeRequest(r.id)} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"5px 10px",fontSize:11,color:"#16a34a",cursor:"pointer",fontWeight:700,height:"fit-content"}}>Cerrar</button>
+                    }
+                  </div>
+                  {/* Respuestas de tiendas */}
+                  {resp.length>0&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:8,borderTop:"1px solid #f1f5f9",paddingTop:10}}>
+                      {resp.map(rp=>(
+                        <div key={rp.id} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{rp.store?.store_name||"Tienda"}{rp.store?.store_city?` · ${rp.store.store_city}`:""}</div>
+                              <div style={{fontSize:12,marginTop:2,fontWeight:600,color:rp.response_type==="have"?"#16a34a":rp.response_type==="have_questions"?"#d97706":"#94a3b8"}}>
+                                {rp.response_type==="have"?`Disponible · ${rp.currency==="USD"?"$":"Bs."} ${rp.price}`:rp.response_type==="have_questions"?"Disponible, tiene preguntas":"No disponible"}
+                              </div>
+                              {rp.message&&<div style={{fontSize:12,color:"#475569",marginTop:3}}>{rp.message}</div>}
+                            </div>
+                            {rp.response_type!=="decline"&&rp.store?.store_phone&&(
+                              <a href={`https://wa.me/${rp.store.store_phone.replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola, soy dueño de embarcación en NautiTrack. Te escribo por mi solicitud de: ${r.item_name}`)}`} target="_blank" rel="noreferrer" style={{background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#fff",fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",height:"fit-content"}}>WhatsApp</a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {resp.length===0&&!resolved&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>Esperando respuestas de las tiendas...</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+      <>
       {loading&&<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando...</div>}
       {!loading&&shown.length===0&&(
         <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
@@ -128,6 +201,8 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
           );
         })}
       </div>
+      </>
+      )}
 
       {/* Modal crear/editar */}
       {editing&&(
@@ -186,7 +261,7 @@ export default function InventoryPage({ vessel, user, setShowProfile }) {
       )}
 
       {requesting&&(
-        <RequestPartModal vessel={vessel} user={user} item={requesting==="new"?null:requesting} onClose={()=>setRequesting(null)} onDone={()=>{ setRequesting(null); setMsg("Solicitud publicada. Te avisaremos cuando una tienda responda."); setTimeout(()=>setMsg(""),4000); }}/>
+        <RequestPartModal vessel={vessel} user={user} item={requesting==="new"?null:requesting} onClose={()=>setRequesting(null)} onDone={()=>{ setRequesting(null); loadRequests(); setFilter("requests"); setMsg("Solicitud publicada. Te avisaremos cuando una tienda responda."); setTimeout(()=>setMsg(""),4000); }}/>
       )}
 
       {msg&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:3000}}>{msg}</div>}
