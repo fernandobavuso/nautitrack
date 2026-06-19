@@ -17,7 +17,21 @@ export default function DayTripsCrew({ user, profile }) {
     const { data } = await supabase.from("day_trips")
       .select("*, owner:owner_id(full_name)")
       .eq("status","open").order("trip_date",{ascending:true});
-    setTrips(data||[]);
+
+    // MATCHING INTELIGENTE: filtrar por rol y zona del tripulante
+    const myRoles = [profile?.crew_role, profile?.secondary_role].filter(Boolean).map(r=>r.toLowerCase());
+    const myZone = (profile?.work_zone||"").toLowerCase().trim();
+
+    const filtered = (data||[]).filter(trip => {
+      // Filtro por rol: el rol buscado debe coincidir con rol principal o secundario
+      const roleMatch = myRoles.length===0 || myRoles.includes((trip.crew_role||"").toLowerCase());
+      // Filtro por zona: la ciudad del viaje debe coincidir con la zona del tripulante
+      const tripCity = (trip.city||"").toLowerCase();
+      const zoneMatch = !myZone || !tripCity || tripCity.includes(myZone) || myZone.includes(tripCity);
+      return roleMatch && zoneMatch;
+    });
+
+    setTrips(filtered);
     setLoading(false);
   };
 
@@ -46,7 +60,7 @@ export default function DayTripsCrew({ user, profile }) {
 
   return (
     <div>
-      <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>Viajes disponibles publicados por propietarios. Postúlate a los que te interesen.</div>
+      <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>Viajes que coinciden con tu rol ({profile?.crew_role||"—"}) y tu zona ({profile?.work_zone||"sin zona"}). Postúlate a los que te interesen.</div>
 
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {trips.length===0&&(

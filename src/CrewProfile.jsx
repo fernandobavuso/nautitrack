@@ -696,6 +696,12 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginBottom:10}}>
+                  <label style={s.label}>Zona de trabajo *</label>
+                  <input value={profile.work_zone||""} onChange={e=>set("work_zone",e.target.value)} placeholder="Ej: Lechería, Puerto La Cruz, Margarita" style={s.input}/>
+                  <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>La ciudad o zona donde trabajas. Recibirás solicitudes de viaje de tu zona.</div>
+                </div>
+
+                <div style={{marginBottom:10}}>
                   <label style={s.label}>Idiomas *</label>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
                     {LANGUAGES.map(lang=>(

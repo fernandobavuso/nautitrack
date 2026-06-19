@@ -23,7 +23,7 @@ export default function DayTripsOwner({ vessel, user }) {
   const [form, setForm] = useState({
     vessel_label:"mi_embarcacion", crew_role:"Marinero", trip_date:"", end_date:"",
     duration:"8 horas", sleep_option:"El tripulante regresa a casa cada noche",
-    num_persons:"", pay_amount:"", pay_open:false, pay_period:"por día",
+    num_persons:"", pay_amount:"", pay_currency:"USD", pay_open:false, pay_period:"por día",
     other_vessel_brand:"", other_vessel_type:"", other_vessel_length:"",
     preferences:[], notes:"",
   });
@@ -54,14 +54,14 @@ export default function DayTripsOwner({ vessel, user }) {
       duration: form.duration==="Varios días"?`Varios días (${form.sleep_option})`:form.duration,
       num_persons: form.num_persons?parseInt(form.num_persons):null,
       city: vessel.details?.city||vessel.marina||"",
-      pay_amount: form.pay_open?null:`${form.pay_amount} ${form.pay_period}`,
+      pay_amount: form.pay_open?null:`${form.pay_currency==="USD"?"$":"Bs."} ${form.pay_amount} ${form.pay_period}`,
       pay_open: form.pay_open,
       preferences: form.preferences, notes: form.notes, status:"open",
     });
     if (error) { setMsg("Error: "+error.message); }
     else {
       setMsg("¡Solicitud publicada! Les llegará a los tripulantes");
-      setForm({vessel_label:"mi_embarcacion",crew_role:"Marinero",trip_date:"",end_date:"",duration:"8 horas",sleep_option:"El tripulante regresa a casa cada noche",num_persons:"",pay_amount:"",pay_open:false,pay_period:"por día",other_vessel_brand:"",other_vessel_type:"",other_vessel_length:"",preferences:[],notes:""});
+      setForm({vessel_label:"mi_embarcacion",crew_role:"Marinero",trip_date:"",end_date:"",duration:"8 horas",sleep_option:"El tripulante regresa a casa cada noche",num_persons:"",pay_amount:"",pay_currency:"USD",pay_open:false,pay_period:"por día",other_vessel_brand:"",other_vessel_type:"",other_vessel_length:"",preferences:[],notes:""});
       setCreating(false); loadTrips();
     }
     setTimeout(()=>setMsg(""),4000);
@@ -166,7 +166,11 @@ export default function DayTripsOwner({ vessel, user }) {
             </div>
             {!form.pay_open&&(
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder="Ej: $50, Bs. 2000" style={{...inp,flex:1}}/>
+                <select value={form.pay_currency} onChange={e=>setForm({...form,pay_currency:e.target.value})} style={{...inp,width:110,flexShrink:0}}>
+                  <option value="USD">Dólares ($)</option>
+                  <option value="VES">Bolívares (Bs.)</option>
+                </select>
+                <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder="Ej: 50" style={{...inp,flex:1}}/>
                 <span style={{fontSize:13,color:"#64748b",whiteSpace:"nowrap"}}>
                   {form.duration==="Varios días"?"por día":`por ${form.duration}`}
                 </span>
