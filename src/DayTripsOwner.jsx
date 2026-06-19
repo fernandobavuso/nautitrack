@@ -32,7 +32,7 @@ export default function DayTripsOwner({ vessel, user }) {
 
   const loadTrips = async () => {
     const { data } = await supabase.from("day_trips")
-      .select("*, applications:day_trip_applications(*, crew:crew_id(full_name,photo_url,crew_role,badges))")
+      .select("*, applications:day_trip_applications(*, crew:crew_id(full_name,first_name,last_name,photo_url,crew_role,secondary_role,nationality,badges,bio,work_zone,languages,experience,certifications))")
       .eq("owner_id", user.id).order("created_at",{ascending:false});
     setTrips(data||[]);
     setLoading(false);
@@ -264,24 +264,58 @@ export default function DayTripsOwner({ vessel, user }) {
               <button onClick={()=>setSelectedTrip(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#94a3b8"}}>✕</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {(selectedTrip.applications||[]).filter(a=>a.status==="pending").map(app=>(
-                <div key={app.id} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:12}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                    {app.crew?.photo_url
-                      ? <img src={app.crew.photo_url} style={{width:40,height:40,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                      : <div style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{(app.crew?.full_name||"?")[0]}</div>
+              {(selectedTrip.applications||[]).filter(a=>a.status==="pending").map(app=>{
+                const c = app.crew||{};
+                const name = c.full_name?.trim() || `${c.first_name||""} ${c.last_name||""}`.trim() || "Tripulante";
+                const verified = (c.badges||[]).includes("verified");
+                return (
+                <div key={app.id} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:14}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    {c.photo_url
+                      ? <img src={c.photo_url} style={{width:48,height:48,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                      : <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18}}>{name[0].toUpperCase()}</div>
                     }
                     <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{app.crew?.full_name}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{app.crew?.crew_role}</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#0f172a",display:"flex",alignItems:"center",gap:6}}>
+                        {name}
+                        {verified&&<span style={{fontSize:10,background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:12,fontWeight:700}}>Verificado</span>}
+                      </div>
+                      <div style={{fontSize:12,color:"#0ea5e9",fontWeight:600}}>{c.crew_role}{c.secondary_role?` · ${c.secondary_role}`:""}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{c.nationality}{c.work_zone?` · ${c.work_zone}`:""}</div>
                     </div>
-                    {(app.crew?.badges||[]).includes("verified")&&<span title="Verificado"></span>}
                   </div>
-                  {app.proposed_pay&&<div style={{fontSize:12,color:"#16a34a",marginBottom:4}}>Propone: {app.proposed_pay}</div>}
-                  {app.message&&<div style={{fontSize:12,color:"#475569",marginBottom:8}}>{app.message}</div>}
-                  <button onClick={()=>acceptApplication(selectedTrip,app)} style={{width:"100%",padding:"7px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Seleccionar</button>
+
+                  {(c.languages||[]).length>0&&(
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
+                      {(c.languages||[]).map(l=><span key={l} style={{fontSize:10,padding:"2px 8px",background:"#eff6ff",borderRadius:12,color:"#2563eb"}}>{l}</span>)}
+                    </div>
+                  )}
+
+                  {c.bio&&<div style={{fontSize:12,color:"#475569",marginBottom:8,lineHeight:1.4}}>{c.bio}</div>}
+
+                  {(c.experience||[]).length>0&&(
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>EXPERIENCIA</div>
+                      {(c.experience||[]).slice(0,3).map((e,i)=>(
+                        <div key={i} style={{fontSize:11,color:"#475569"}}>• {e.brand} {e.length?`${e.length} pies`:""} {e.role?`— ${e.role}`:""}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {(c.certifications||[]).length>0&&(
+                    <div style={{marginBottom:8}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>CERTIFICACIONES</div>
+                      {(c.certifications||[]).slice(0,3).map((cert,i)=>(
+                        <div key={i} style={{fontSize:11,color:"#475569"}}>• {cert.name==="Otro"?cert.custom_name:cert.name}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {app.proposed_pay&&<div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginBottom:4}}>Propone cobrar: {app.proposed_pay}</div>}
+                  {app.message&&<div style={{fontSize:12,color:"#475569",marginBottom:10,fontStyle:"italic",background:"#fff",padding:"8px 10px",borderRadius:8,border:"1px solid #e2e8f0"}}>"{app.message}"</div>}
+                  <button onClick={()=>acceptApplication(selectedTrip,app)} style={{width:"100%",padding:"9px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Seleccionar este tripulante</button>
                 </div>
-              ))}
+              );})}
               {(selectedTrip.applications||[]).filter(a=>a.status==="pending").length===0&&(
                 <div style={{textAlign:"center",padding:20,color:"#94a3b8",fontSize:13}}>Sin postulaciones todavía</div>
               )}
