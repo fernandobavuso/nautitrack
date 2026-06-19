@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import ChatPanel from "./ChatPanel";
+import DayTripsOwner from "./DayTripsOwner";
 
 // Panel del dueño para gestionar tripulantes
 // Props: vessel (barco actual), user (dueño), onClose
@@ -138,6 +139,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
             {key:"aplicaciones",label:`Aplicaciones${pendingApps.length>0?` (${pendingApps.length})`:""}`},
             {key:"buscar",label:"Buscar Tripulantes"},
             {key:"matches",label:`Matches${matches.length>0?` (${matches.length})`:""}`},
+            {key:"daytrips",label:"🧭 Day Trips"},
             {key:"miequipo",label:"Mi Tripulación"},
           ].map(t=>(
             <button key={t.key} onClick={()=>{setTab(t.key); if(t.key==="buscar"&&crew.length===0)searchCrew();}} style={{
@@ -233,6 +235,11 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
               ))}
             </div>
           )}
+          {/* ── DAY TRIPS ── */}
+          {tab==="daytrips"&&(
+            <DayTripsOwner vessel={vessel} user={user}/>
+          )}
+
           {/* ── MI TRIPULACIÓN (asignar capitanes con cuenta) ── */}
           {tab==="miequipo"&&(
             <div>

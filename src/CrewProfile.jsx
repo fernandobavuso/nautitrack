@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
+import DayTripsCrew from "./DayTripsCrew";
 
 const COUNTRY_CODES = [
   {code:"+58",flag:"🇻🇪",name:"Venezuela"},{code:"+1",flag:"🇺🇸",name:"USA/Canadá"},
@@ -95,6 +96,7 @@ export default function CrewProfile({ user, onLogout }) {
     {key:"historial",icon:"🚢", label:"Historial"},
     {key:"pagos",    icon:"💳", label:"Pagos"},
     {key:"buscar",   icon:"🔍", label:"Buscar Barco"},
+    {key:"daytrips", icon:"🧭", label:"Day Trips"},
     {key:"solicitudes",icon:"📬", label:"Solicitudes"},
   ];
 
@@ -1068,6 +1070,16 @@ export default function CrewProfile({ user, onLogout }) {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── DAY TRIPS ── */}
+        {tab==="daytrips"&&(
+          <div style={{maxWidth:600}}>
+            <div style={s.card}>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:12}}>🧭 Viajes Disponibles</div>
+              <DayTripsCrew user={user} profile={profile}/>
             </div>
           </div>
         )}
