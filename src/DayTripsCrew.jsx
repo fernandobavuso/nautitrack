@@ -21,8 +21,11 @@ export default function DayTripsCrew({ user, profile }) {
     // MATCHING INTELIGENTE: filtrar por rol y zona del tripulante
     const myRoles = [profile?.crew_role, profile?.secondary_role].filter(Boolean).map(r=>r.toLowerCase());
     const myZone = (profile?.work_zone||"").toLowerCase().trim();
+    const iAmVerified = (profile?.badges||[]).includes("verified");
 
     const filtered = (data||[]).filter(trip => {
+      // Si el viaje es solo para verificados y el tripulante no lo está, ocultar
+      if (trip.only_verified && !iAmVerified) return false;
       // Filtro por rol: el rol buscado debe coincidir con rol principal o secundario
       const roleMatch = myRoles.length===0 || myRoles.includes((trip.crew_role||"").toLowerCase());
       // Filtro por zona: la ciudad del viaje debe coincidir con la zona del tripulante
@@ -77,8 +80,10 @@ export default function DayTripsCrew({ user, profile }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.vessel_type||"Embarcación"}</div>
-                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.duration}</div>
+                  {trip.trip_type&&<div style={{fontSize:11,color:"#2563eb",fontWeight:600}}>{trip.trip_type}</div>}
+                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")}{trip.departure_time?` · ${trip.departure_time}`:""} · {trip.duration}</div>
                   <div style={{fontSize:12,color:"#64748b"}}>{trip.city||"—"}{trip.num_persons?` · ${trip.num_persons} personas`:""}</div>
+                  {trip.meeting_point&&<div style={{fontSize:11,color:"#94a3b8",marginTop:1}}>Encuentro: {trip.meeting_point}</div>}
                 </div>
                 <div style={{fontSize:13,fontWeight:700,color:"#16a34a",textAlign:"right",whiteSpace:"nowrap"}}>
                   {trip.pay_open?"Propón":trip.pay_amount}
