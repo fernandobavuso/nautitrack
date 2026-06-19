@@ -212,6 +212,7 @@ export default function App() {
       equipment: t.equipment, name: t.name, assigned: t.assigned,
       interval: t.interval, nextDue: t.next_due, status: t.status,
       notes: t.notes, photos: t.photos || [],
+      dueHours: t.due_hours, everyHours: t.every_hours,
     }));
   };
 
@@ -241,6 +242,7 @@ export default function App() {
       assigned: task.assigned, interval: task.interval,
       next_due: task.nextDue, status: task.status,
       notes: task.notes, photos: task.photos || [],
+      due_hours: task.dueHours ?? null, every_hours: task.everyHours ?? null,
     }).select().single();
     if (data) {
       const mapped = { ...task, id: data.id };
@@ -286,6 +288,23 @@ export default function App() {
         if (entry.type === "Combustible" && entry.fuelQty != null) {
           updated.fuel = entry.fuelQty;
           updated.fuelUnit = entry.fuelUnit || v.fuelUnit;
+        }
+        // Si la salida trae horas finales de motor/generador, actualizarlas
+        if (entry.type === "Salida") {
+          if (entry.engineHrsIn != null && !isNaN(Number(entry.engineHrsIn))) updated.engineHours = Number(entry.engineHrsIn);
+          if (entry.genHrsIn != null && !isNaN(Number(entry.genHrsIn))) updated.genHours = Number(entry.genHrsIn);
+          // Recalcular estado de tareas por horas de motor
+          const eng = Number(updated.engineHours)||0;
+          updated.tasks = (updated.tasks||[]).map(t => {
+            if (t.interval==="Por horas" && t.dueHours!=null && t.status!=="done") {
+              const remaining = Number(t.dueHours) - eng;
+              let status="ok"; if(remaining<=0)status="overdue"; else if(remaining<=20)status="due";
+              return {...t, status};
+            }
+            return t;
+          });
+          // Persistir horas en la BD
+          supabase.from("vessels").update({ engine_hours: updated.engineHours, gen_hours: updated.genHours }).eq("id", vesselId).then(()=>{});
         }
         return updated;
       }));
@@ -1014,7 +1033,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
                     <td style={{...s.td,fontWeight:500,color:"#1e293b"}}>{task.name}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.assigned?.split(" ")[0]}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.interval}</td>
-                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{fmtDate(task.nextDue)}</td>
+                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{task.interval==="Por horas"?`${task.dueHours} h motor`:fmtDate(task.nextDue)}</td>
                     <td style={s.td}><span style={{...s.statusPill,background:p.bg,color:p.c}}>{p.l}</span></td>
                     <td style={{...s.td,color:"#94a3b8",fontSize:12,maxWidth:180}}>{task.notes||"—"}</td>
                   </tr>
@@ -1067,6 +1086,8 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   const [assigned, setAssigned]       = useState(vessel.captain||vessel.captain||'');
   const [interval, setInterval]       = useState("");
   const [nextDue, setNextDue]         = useState("");
+  const [dueHours, setDueHours]       = useState("");      // horas de motor a las que toca
+  const [everyHours, setEveryHours]   = useState("");      // cada cuántas horas se repite
   const [notes, setNotes]             = useState("");
   const [errors, setErrors]           = useState({});
   const [showAddSys, setShowAddSys]   = useState(false);
@@ -1112,7 +1133,9 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     if (equipment==="Otro"&&!otherEquip.trim()) e.otherEquip="Especifica el equipo";
     if (!name.trim()) e.name="Requerido";
     if (!interval) e.interval="Requerido";
-    if (!nextDue) e.nextDue="Requerido";
+    if (interval==="Por horas") {
+      if (!dueHours) e.dueHours="Requerido";
+    } else if (!nextDue) e.nextDue="Requerido";
     setErrors(e); return Object.keys(e).length===0;
   };
 
@@ -1120,9 +1143,19 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     if (!validate()) return;
     const finalEquip = equipment==="Otro"?otherEquip:equipment;
     if (equipment==="Otro"&&otherEquip.trim()) saveCustomEquip(systemId, otherEquip.trim());
-    const today=new Date(),nd=new Date(nextDue),diff=Math.round((nd-today)/(1000*60*60*24));
-    let status="ok"; if(diff<0)status="overdue"; else if(diff<=14)status="due";
-    onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,nextDue,status,notes,photos:[]});
+    if (interval==="Por horas") {
+      // Recordatorio por horas de motor
+      const currentHours = Number(vessel.engineHours)||0;
+      const target = Number(dueHours);
+      const remaining = target - currentHours;
+      let status="ok"; if(remaining<=0)status="overdue"; else if(remaining<=20)status="due";
+      onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,
+        dueHours:target, everyHours:Number(everyHours)||null, nextDue:null, status,notes,photos:[]});
+    } else {
+      const today=new Date(),nd=new Date(nextDue),diff=Math.round((nd-today)/(1000*60*60*24));
+      let status="ok"; if(diff<0)status="overdue"; else if(diff<=14)status="due";
+      onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,nextDue,status,notes,photos:[]});
+    }
   };
 
   return (
@@ -1213,11 +1246,28 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
             </div>
           </div>
 
-          <div>
-            <label style={s.label}>Próximo Vencimiento <span style={{color:"#dc2626"}}>*</span></label>
-            <input type="date" value={nextDue} onChange={e=>setNextDue(e.target.value)} style={{...s.input,borderColor:errors.nextDue?"#dc2626":"#e2e8f0"}}/>
-            {errors.nextDue&&<div style={s.errMsg}>{errors.nextDue}</div>}
-          </div>
+          {interval==="Por horas" ? (
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:14}}>
+              <div style={{fontSize:11,color:"#0369a1",marginBottom:10,fontWeight:600}}>Motor actual: {Number(vessel.engineHours)||0} horas. El recordatorio se activará según las horas de motor que registres en la bitácora.</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <label style={s.label}>Toca a las (horas motor) <span style={{color:"#dc2626"}}>*</span></label>
+                  <input type="number" value={dueHours} onChange={e=>setDueHours(e.target.value)} placeholder={`Ej: ${(Number(vessel.engineHours)||0)+100}`} style={{...s.input,borderColor:errors.dueHours?"#dc2626":"#e2e8f0"}}/>
+                  {errors.dueHours&&<div style={s.errMsg}>{errors.dueHours}</div>}
+                </div>
+                <div>
+                  <label style={s.label}>Repetir cada (horas)</label>
+                  <input type="number" value={everyHours} onChange={e=>setEveryHours(e.target.value)} placeholder="Ej: 100" style={s.input}/>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label style={s.label}>Próximo Vencimiento <span style={{color:"#dc2626"}}>*</span></label>
+              <input type="date" value={nextDue} onChange={e=>setNextDue(e.target.value)} style={{...s.input,borderColor:errors.nextDue?"#dc2626":"#e2e8f0"}}/>
+              {errors.nextDue&&<div style={s.errMsg}>{errors.nextDue}</div>}
+            </div>
+          )}
 
           <div>
             <label style={s.label}>Notas</label>
