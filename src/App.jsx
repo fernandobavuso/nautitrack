@@ -12,6 +12,7 @@ import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
 import FleetPage from "./FleetPage";
+import PlansModal from "./PlansModal";
 import { countUnread } from "./notifications";
 import { getPlan } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
@@ -200,6 +201,7 @@ export default function App() {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [addingVessel, setAddingVessel] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
@@ -471,8 +473,7 @@ export default function App() {
   const tryAddVessel = () => {
     const plan = getPlan(vessels.find(v=>v.id===vesselId) || vessels[0]);
     if (vessels.length >= plan.maxVessels) {
-      setPlanMsg("Tu plan gratis permite 1 embarcación. Mejora a Pro para administrar varios barcos.");
-      setTimeout(()=>setPlanMsg(""),5000);
+      setShowPlans(true);
       return;
     }
     setAddingVessel(true);
@@ -529,7 +530,7 @@ export default function App() {
 
   return (
     <div style={s.root} onClick={() => { setShowVesselMenu(false); setShowUserMenu(false); }}>
-      <TopNav vessel={vessel} vessels={vessels} user={user} tryAddVessel={tryAddVessel}
+      <TopNav vessel={vessel} vessels={vessels} user={user} tryAddVessel={tryAddVessel} setShowPlans={setShowPlans}
         setVesselId={(id) => { setVesselId(id); setPage("home"); }}
         showVesselMenu={showVesselMenu} setShowVesselMenu={setShowVesselMenu}
         showUserMenu={showUserMenu} setShowUserMenu={setShowUserMenu}
@@ -550,9 +551,9 @@ export default function App() {
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
-        {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={setShowProfile} />}
-        {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={setShowProfile} />}
-        {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={setShowProfile} />}
+        {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
+        {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
+        {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
       {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
@@ -562,6 +563,7 @@ export default function App() {
       {showCrewMarket && <CrewMarketplace vessel={vessel} user={user} onClose={() => setShowCrewMarket(false)} />}
       {showNotifPanel && <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="tripulacion")setShowCrewMarket(true); }} />}
       {planMsg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:4000,maxWidth:340,textAlign:"center"}}>{planMsg}</div>}
+      {showPlans && <PlansModal vessel={vessel} user={user} onClose={()=>setShowPlans(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
   );
@@ -569,7 +571,7 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
-function TopNav({ vessel,vessels,user,tryAddVessel,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,page,setPage,onLogout }) {
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
@@ -720,7 +722,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setVesselId,showVesselMenu,se
               {[
                 {icon:"👤",label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
                 {icon:"⚓",label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
-                {icon:"💳",label:"Suscripción",      action:() => { setShowProfile(true); setShowUserMenu(false); }},
+                {icon:"💳",label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
                 {icon:"🚪",label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
                 <button key={item.label} onClick={item.action} style={{...s.dropItem,gap:10}}>

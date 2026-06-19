@@ -4,23 +4,29 @@
 export const PLANS = {
   free: {
     name: "Gratis",
+    priceMonthly: 0, priceYearly: 0,
     maxVessels: 1,
+    tagline: "Para empezar a organizar tu barco",
     features: {
-      tasks: true,
-      log: true,
-      docs: true,
-      weather: true,
-      marketplace: true,   // buscar tripulantes y day trips: abierto para dar liquidez
-      costs: false,        // PREMIUM
-      inventory: false,    // PREMIUM
-      hourReminders: false,// PREMIUM
-      multiFleet: false,   // PREMIUM
-      pdfReports: false,   // PREMIUM
+      tasks: true, log: true, docs: true, weather: true, marketplace: true,
+      costs: false, inventory: false, hourReminders: false, multiFleet: false, pdfReports: false,
     },
   },
   pro: {
     name: "Pro",
+    priceMonthly: 25, priceYearly: 250,
+    maxVessels: 1,
+    tagline: "Control total de tu embarcación",
+    features: {
+      tasks: true, log: true, docs: true, weather: true, marketplace: true,
+      costs: true, inventory: true, hourReminders: true, multiFleet: false, pdfReports: true,
+    },
+  },
+  fleet: {
+    name: "Flota",
+    priceMonthly: 70, priceYearly: 700,
     maxVessels: 99,
+    tagline: "Para managers y empresas con varios barcos",
     features: {
       tasks: true, log: true, docs: true, weather: true, marketplace: true,
       costs: true, inventory: true, hourReminders: true, multiFleet: true, pdfReports: true,
