@@ -10,6 +10,7 @@ import CaptainView from "./CaptainView";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
+import InventoryPage from "./InventoryPage";
 import { countUnread } from "./notifications";
 import { useResponsive } from "./useResponsive";
 
@@ -511,6 +512,7 @@ export default function App() {
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
         {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={setShowProfile} />}
+        {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={setShowProfile} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
       {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
@@ -591,7 +593,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
 
               {/* Navegación */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                {[{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"docs",label:"Documentos"}].map(n=>(
+                {[{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n=>(
                   <button key={n.key} onClick={()=>{setPage(n.key);setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page===n.key?"#eff6ff":"transparent",color:page===n.key?"#0ea5e9":"#1e293b",fontWeight:page===n.key?700:500,fontSize:14}}>{n.label}</button>
                 ))}
               </div>
@@ -629,7 +631,7 @@ function TopNav({ vessel,vessels,user,setVesselId,showVesselMenu,setShowVesselMe
         <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
       </div>
       <div style={s.navLinks}>
-        {[{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"docs",label:"Documentos"}].map(n => (
+        {[{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
           <button key={n.key} onClick={() => setPage(n.key)} style={{...s.navLink,color:page===n.key?"#0ea5e9":"#64748b",borderBottom:page===n.key?"2px solid #0ea5e9":"2px solid transparent",fontWeight:page===n.key?600:400}}>{n.label}</button>
         ))}
       </div>
