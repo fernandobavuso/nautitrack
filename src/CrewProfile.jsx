@@ -33,16 +33,16 @@ const CERT_OPTIONS = [
 const LANGUAGES = ["Español","Inglés","Portugués","Francés","Italiano","Alemán","Holandés","Chino","Japonés","Árabe","Ruso"];
 
 const NATIONALITIES = [
-  "Venezolana","Estadounidense","Colombiana","Española","Mexicana","Peruana","Chilena","Argentina",
-  "Brasileña","Ecuatoriana","Panameña","Cubana","Dominicana","Puertorriqueña","Costarricense",
-  "Guatemalteca","Hondureña","Nicaragüense","Salvadoreña","Boliviana","Paraguaya","Uruguaya",
-  "Británica","Francesa","Alemana","Italiana","Portuguesa","Holandesa","Belga","Suiza","Austríaca",
-  "Sueca","Noruega","Danesa","Finlandesa","Polaca","Checa","Húngara","Rumana","Griega","Turca",
-  "Rusa","Ucraniana","Israelí","Árabe Saudí","Emiratí","Libanesa","Egipcia","Marroquí","Nigeriana",
-  "Sudafricana","Keniana","Etíope","Ghanesa","Senegalesa","Camerunesa","Angoleña","Mozambiqueña",
-  "China","Japonesa","Coreana","India","Paquistaní","Bangladesí","Vietnamita","Tailandesa",
-  "Filipina","Indonesia","Malasia","Singapurense","Australiana","Neozelandesa","Canadiense",
-  "Jamaicana","Trinitense","Barbadense","Bahameña","Haitiana","Otra",
+  "Venezuela","Estados Unidos","Colombia","España","México","Perú","Chile","Argentina",
+  "Brasil","Ecuador","Panamá","Cuba","República Dominicana","Puerto Rico","Costa Rica",
+  "Guatemala","Honduras","Nicaragua","El Salvador","Bolivia","Paraguay","Uruguay",
+  "Reino Unido","Francia","Alemania","Italia","Portugal","Países Bajos","Bélgica","Suiza","Austria",
+  "Suecia","Noruega","Dinamarca","Finlandia","Polonia","República Checa","Hungría","Rumania","Grecia","Turquía",
+  "Rusia","Ucrania","Israel","Arabia Saudita","Emiratos Árabes Unidos","Líbano","Egipto","Marruecos","Nigeria",
+  "Sudáfrica","Kenia","Etiopía","Ghana","Senegal","Camerún","Angola","Mozambique",
+  "China","Japón","Corea del Sur","India","Pakistán","Bangladés","Vietnam","Tailandia",
+  "Filipinas","Indonesia","Malasia","Singapur","Australia","Nueva Zelanda","Canadá",
+  "Jamaica","Trinidad y Tobago","Barbados","Bahamas","Haití","Otro",
 ];
 
 const BADGE_DEFS = [
@@ -170,7 +170,7 @@ export default function CrewProfile({ user, onLogout }) {
     if (!profile.first_name?.trim())  faltantes.push("Nombre");
     if (!profile.last_name?.trim())   faltantes.push("Apellido");
     if (!profile.phone?.trim())       faltantes.push("Teléfono");
-    if (!profile.nationality?.trim()) faltantes.push("Nacionalidad");
+    if (!profile.nationality?.trim()) faltantes.push("País de origen");
     if (!(profile.languages||[]).length) faltantes.push("Idiomas");
     if (!profile.crew_role?.trim())   faltantes.push("Rol principal");
     if (!profile.bio?.trim())         faltantes.push("Bio / CV");
@@ -236,17 +236,17 @@ export default function CrewProfile({ user, onLogout }) {
     const url = data.publicUrl + "?t=" + Date.now();
     set("id_doc_url", url);
     // Guardar inmediatamente + agregar a documentos
-    const docs = [...(profile.documents||[]).filter(d=>d.type!=="cedula"), {type:"cedula", name:"Cédula de Identidad", url, folder:"Identidad", uploaded:new Date().toISOString()}];
+    const docs = [...(profile.documents||[]).filter(d=>d.type!=="cedula"), {type:"cedula", name:"Documento de Identidad", url, folder:"Identidad", uploaded:new Date().toISOString()}];
     set("documents", docs);
     await supabase.from("profiles").update({ id_doc_url: url, documents: docs }).eq("id", user.id);
-    setMsg("✅ Cédula subida y guardada");
+    setMsg("✅ Documento subido y guardada");
     setTimeout(()=>setMsg(""),3000);
   };
 
   const verifyIdentity = async () => {
-    if (!profile.id_doc_url) { setMsg("⚠️ Sube tu cédula primero"); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.id_doc_url) { setMsg("⚠️ Sube tu documento de identidad primero"); setTimeout(()=>setMsg(""),4000); return; }
     if (!profile.photo_url)  { setMsg("⚠️ Sube tu foto de perfil primero"); setTimeout(()=>setMsg(""),4000); return; }
-    if (!profile.legal_name?.trim()) { setMsg("⚠️ Escribe tu nombre completo como aparece en la cédula"); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.legal_name?.trim()) { setMsg("⚠️ Escribe tu nombre completo como aparece en el documento"); setTimeout(()=>setMsg(""),4000); return; }
     setVerifying(true); setMsg("");
     try {
       const toBase64 = async (url) => {
@@ -296,8 +296,8 @@ export default function CrewProfile({ user, onLogout }) {
           setShowVerifyPopup(true);
         } else {
           let razon = "No se pudo verificar. ";
-          if (!data.result.face_in_doc) razon += "No se detectó foto en la cédula. ";
-          if (data.result.faces_match===false) razon += "La foto de perfil no coincide con la cédula. ";
+          if (!data.result.face_in_doc) razon += "No se detectó foto en el documento. ";
+          if (data.result.faces_match===false) razon += "La foto de perfil no coincide con el documento. ";
           if (!data.result.is_official_doc) razon += "El documento no parece oficial. ";
           setMsg("⚠️ " + razon);
           setTimeout(()=>setMsg(""),6000);
@@ -606,7 +606,7 @@ export default function CrewProfile({ user, onLogout }) {
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <div onClick={async ()=>{
-                            if (!unlocked) { setMsg("🔒 Primero verifica tu identidad: sube foto, cédula, nombre y presiona Verificar identidad"); setTimeout(()=>setMsg(""),5000); return; }
+                            if (!unlocked) { setMsg("🔒 Primero verifica tu identidad: sube foto, documento, nombre y presiona Verificar identidad"); setTimeout(()=>setMsg(""),5000); return; }
                             const newVal = !profile.available;
                             set("available", newVal);
                             await supabase.from("profiles").update({ available:newVal }).eq("id", user.id);
@@ -648,15 +648,15 @@ export default function CrewProfile({ user, onLogout }) {
                 )}
               </div>
 
-              {/* Cédula de identidad */}
+              {/* Documento de identidad */}
               <div style={s.card}>
-                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>Cédula de Identidad</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>Documento de Identidad</div>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
                 <input ref={docRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
 
                 {/* Campo nombre legal */}
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Nombre completo como aparece en la cédula *</label>
+                  <label style={s.label}>Nombre completo como aparece en el documento *</label>
                   <input value={profile.legal_name||""} onChange={e=>set("legal_name",e.target.value)}
                     placeholder="Ej: Pedro Enrique Aguilar López" style={s.input}/>
                 </div>
@@ -664,7 +664,7 @@ export default function CrewProfile({ user, onLogout }) {
                 {profile.id_doc_url
                   ? <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Cédula subida</span>
+                        <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento subido</span>
                         <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>Cambiar</button>
                       </div>
                       {(profile.badges||[]).includes("verified")
@@ -677,13 +677,13 @@ export default function CrewProfile({ user, onLogout }) {
                       {verifyResult&&(
                         <div style={{fontSize:10,color:"#64748b",background:"#f8fafc",padding:"8px",borderRadius:7,border:"1px solid #e2e8f0"}}>
                           {verifyResult.extracted_name&&<div>Nombre detectado: <strong>{verifyResult.extracted_name}</strong></div>}
-                          {verifyResult.id_number&&<div>Cédula: <strong>{verifyResult.id_number}</strong></div>}
+                          {verifyResult.id_number&&<div>Documento: <strong>{verifyResult.id_number}</strong></div>}
                           {verifyResult.notes&&<div style={{marginTop:4,color:"#94a3b8"}}>{verifyResult.notes}</div>}
                         </div>
                       )}
                     </div>
                   : <button onClick={()=>docRef.current.click()} style={{width:"100%",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
-                      📷 Subir foto de cédula
+                      📷 Subir foto del documento de identidad
                     </button>
                 }
 
@@ -771,9 +771,9 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Nacionalidad *</label>
+                  <label style={s.label}>País de origen *</label>
                   <select value={profile.nationality||""} onChange={e=>set("nationality",e.target.value)} style={s.input}>
-                    <option value="">Selecciona tu nacionalidad...</option>
+                    <option value="">Selecciona tu país...</option>
                     {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
                   </select>
                 </div>
@@ -1040,7 +1040,7 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                 <div>
                   <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>📁 Mis Documentos</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Cédula, pasaporte, licencias y certificados · Organiza en carpetas</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Documento de identidad, pasaporte, licencias y certificados · Organiza en carpetas</div>
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>{setNewFolderName("");setShowFolderModal(true);}}
@@ -1065,7 +1065,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                     <div style={{fontSize:40,marginBottom:8}}>📁</div>
                     <div style={{fontWeight:600}}>Sin documentos</div>
-                    <div style={{fontSize:12,marginTop:4}}>Tu cédula aparecerá aquí al subirla · Agrega licencias y certificados</div>
+                    <div style={{fontSize:12,marginTop:4}}>Tu documento aparecerá aquí al subirlo · Agrega licencias y certificados</div>
                   </div>
                 );
                 return (
@@ -1120,7 +1120,7 @@ export default function CrewProfile({ user, onLogout }) {
 
               {!(profile.badges||[]).includes("verified")&&(
                 <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#b45309"}}>
-                  ⚠️ Necesitas verificar tu identidad antes de aplicar a barcos. Ve a Mi Perfil → sube foto y cédula → Verificar identidad.
+                  ⚠️ Necesitas verificar tu identidad antes de aplicar a barcos. Ve a Mi Perfil → sube foto y documento → Verificar identidad.
                 </div>
               )}
 
@@ -1273,7 +1273,7 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{width:72,height:72,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,margin:"0 auto 16px"}}>✅</div>
               <div style={{fontSize:20,fontWeight:800,color:"#16a34a",marginBottom:8}}>¡Identidad Verificada!</div>
               <div style={{fontSize:13,color:"#475569",lineHeight:1.5,marginBottom:6}}>
-                Tu cédula y foto fueron verificadas exitosamente con inteligencia artificial.
+                Tu documento y foto fueron verificados exitosamente con inteligencia artificial.
               </div>
               {verifyResult?.extracted_name&&(
                 <div style={{fontSize:12,color:"#64748b",background:"#f8fafc",borderRadius:10,padding:"10px 14px",margin:"12px 0"}}>

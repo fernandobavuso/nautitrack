@@ -44,22 +44,26 @@ export default async function handler(req, res) {
       source: { type: "base64", media_type: detectMediaType(idDocBase64), data: idDocBase64 }
     });
 
-    const promptText = `Eres un verificador de identidad. ${profilePhotoBase64 ? "Recibes DOS imágenes: (1) foto de perfil de la persona, (2) su cédula de identidad." : "Recibes la imagen de una cédula de identidad."}${legalName ? ` La persona declaró llamarse: "${legalName}".` : ""}
+    const promptText = `Eres un verificador de identidad internacional. ${profilePhotoBase64 ? "Recibes DOS imágenes: (1) foto de perfil de la persona, (2) su documento de identidad." : "Recibes la imagen de un documento de identidad."}${legalName ? ` La persona declaró llamarse: "${legalName}".` : ""}
+
+El documento puede ser de CUALQUIER país: cédula, DNI, pasaporte, licencia de conducir u otra identificación oficial con foto.
 
 INSTRUCCIONES CLAVE:
-- Las cédulas venezolanas SIEMPRE tienen una fotografía del titular en el lado derecho. Búscala ahí. Si la imagen muestra una cédula, ASUME que tiene foto salvo que esté completamente recortada o ilegible. Marca face_in_doc=true si ves cualquier rostro.
+- La mayoría de documentos de identidad tienen una fotografía del titular. Búscala. Si la imagen muestra un documento de identidad, ASUME que tiene foto salvo que esté completamente recortada o ilegible. Marca face_in_doc=true si ves cualquier rostro.
 - Sé GENEROSO al comparar rostros: la misma persona puede verse distinta por barba, iluminación, edad o calidad del escaneo. Solo marca faces_match=false si claramente son personas diferentes.
-- Un escaneo o foto de cédula con los datos visibles (nombre, número, república) ES un documento oficial: is_official_doc=true.
+- Un escaneo o foto de un documento con los datos visibles (nombre, número, país emisor) ES un documento oficial: is_official_doc=true.
+- Extrae el sexo/género si aparece en el documento (M/F u otro).
 
 Responde ÚNICAMENTE con este JSON, sin texto antes ni después:
 {${profilePhotoBase64 ? '\n  "face_in_profile": true/false,\n  "faces_match": true/false,' : ''}
   "face_in_doc": true/false,
   "is_official_doc": true/false,
   "extracted_name": "nombre completo del documento",
-  "id_number": "número de cédula",
+  "id_number": "número del documento",
   "birth_date": "fecha de nacimiento",
   "expiry_date": "fecha de vencimiento",
-  "country": "país",
+  "sex": "M / F / otro / no visible",
+  "country": "país emisor del documento",
   "name_matches": true/false,
   "notes": "observación breve en español"
 }`;
