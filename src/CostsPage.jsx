@@ -82,7 +82,7 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
           <div style={{fontSize:20,fontWeight:800,color:"#0f172a"}}>Costos de {vessel.name}</div>
-          <div style={{fontSize:13,color:"#64748b"}}>Cuánto te cuesta tu embarcación</div>
+          <div style={{fontSize:13,color:"#64748b"}}>Cuánto te cuesta tu embarcación. Los gastos que registras en la bitácora aparecen aquí automáticamente.</div>
         </div>
         <button onClick={()=>setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           Registrar gasto
@@ -146,7 +146,7 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
           <div key={e.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:4,height:36,borderRadius:2,background:CAT_COLORS[e.category]||"#64748b",flexShrink:0}}/>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>desde bitácora</span>:""}</div>
               <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("es-VE")}</div>
             </div>
             <div style={{fontSize:14,fontWeight:800,color:"#0f172a",whiteSpace:"nowrap"}}>

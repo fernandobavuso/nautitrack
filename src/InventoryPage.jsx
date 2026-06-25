@@ -5,6 +5,7 @@ import { notify } from "./notifications";
 
 const CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Eléctrico","Seguridad","Limpieza","Ánodos","Impulsores","Otro"];
 const UNITS = ["unidad","litros","galones","metros","kit"];
+const LOCATIONS = ["A bordo","Dock box","Storage","Maletero / pañol","Casa","Otro"];
 
 export default function InventoryPage({ vessel, user, setShowProfile, role="owner", captainLimit }) {
   const [items, setItems] = useState([]);
@@ -14,7 +15,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
   const [filter, setFilter] = useState("all"); // all / low / requests
   const [requesting, setRequesting] = useState(null); // item para pedir o "new"
   const [myRequests, setMyRequests] = useState([]);
-  const blank = { name:"", category:"Filtros", part_num:"", quantity:"", min_quantity:"", unit:"unidad", location:"", notes:"" };
+  const blank = { name:"", category:"Filtros", brand:"", part_num:"", quantity:"", min_quantity:"", unit:"unidad", location_type:"A bordo", location:"", bought_at:"", notes:"" };
   const [form, setForm] = useState(blank);
 
   const allowed = hasFeature(vessel, "inventory");
@@ -69,7 +70,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
 
   const openNew = () => { setForm(blank); setEditing("new"); };
   const openEdit = (it) => {
-    setForm({ name:it.name||"", category:it.category||"Filtros", part_num:it.part_num||"", quantity:it.quantity??"", min_quantity:it.min_quantity??"", unit:it.unit||"unidad", location:it.location||"", notes:it.notes||"" });
+    setForm({ name:it.name||"", category:it.category||"Filtros", brand:it.brand||"", part_num:it.part_num||"", quantity:it.quantity??"", min_quantity:it.min_quantity??"", unit:it.unit||"unidad", location_type:it.location_type||"A bordo", location:it.location||"", bought_at:it.bought_at||"", notes:it.notes||"" });
     setEditing(it.id);
   };
 
@@ -77,9 +78,9 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
     if (!form.name.trim()) { setMsg("Indica el nombre del repuesto"); setTimeout(()=>setMsg(""),3000); return; }
     const payload = {
       vessel_id:vessel.id, owner_id:user.id,
-      name:form.name.trim(), category:form.category, part_num:form.part_num,
+      name:form.name.trim(), category:form.category, brand:form.brand, part_num:form.part_num,
       quantity:parseFloat(form.quantity)||0, min_quantity:parseFloat(form.min_quantity)||0,
-      unit:form.unit, location:form.location, notes:form.notes, updated_at:new Date().toISOString(),
+      unit:form.unit, location_type:form.location_type, location:form.location, bought_at:form.bought_at, notes:form.notes, updated_at:new Date().toISOString(),
     };
     let error;
     if (editing==="new") ({ error } = await supabase.from("inventory").insert(payload));
@@ -218,7 +219,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
               <div style={{display:"flex",alignItems:"center",gap:12}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{it.name}{low&&<span style={{marginLeft:8,fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>Reponer</span>}</div>
-                  <div style={{fontSize:11,color:"#64748b"}}>{it.category}{it.part_num?` · ${it.part_num}`:""}{it.location?` · ${it.location}`:""}</div>
+                  <div style={{fontSize:11,color:"#64748b"}}>{it.category}{it.brand?` · ${it.brand}`:""}{it.part_num?` · ${it.part_num}`:""}{it.location_type?` · ${it.location_type}`:""}{it.location?` (${it.location})`:""}</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <button onClick={()=>adjust(it,-1)} style={qtyBtn}>−</button>
@@ -257,6 +258,10 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                 </select>
               </div>
               <div style={{flex:1}}>
+                <label style={lbl}>Marca</label>
+                <input value={form.brand} onChange={e=>setForm({...form,brand:e.target.value})} placeholder="Ej: Fleetguard" style={inp}/>
+              </div>
+              <div style={{flex:1}}>
                 <label style={lbl}>N° de parte</label>
                 <input value={form.part_num} onChange={e=>setForm({...form,part_num:e.target.value})} placeholder="FF5052" style={inp}/>
               </div>
@@ -277,9 +282,21 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                 </select>
               </div>
             </div>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <div style={{width:150}}>
+                <label style={lbl}>Ubicación</label>
+                <select value={form.location_type} onChange={e=>setForm({...form,location_type:e.target.value})} style={inp}>
+                  {LOCATIONS.map(l=><option key={l}>{l}</option>)}
+                </select>
+              </div>
+              <div style={{flex:1}}>
+                <label style={lbl}>Detalle de ubicación</label>
+                <input value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Ej: gaveta 2, lado estribor" style={inp}/>
+              </div>
+            </div>
             <div style={{marginBottom:10}}>
-              <label style={lbl}>Ubicación a bordo</label>
-              <input value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="Ej: Pañol de proa, gaveta 2" style={inp}/>
+              <label style={lbl}>¿Dónde se compró?</label>
+              <input value={form.bought_at} onChange={e=>setForm({...form,bought_at:e.target.value})} placeholder="Ej: Náutica El Morro, Lechería" style={inp}/>
             </div>
             <div style={{marginBottom:16}}>
               <label style={lbl}>Notas</label>
@@ -312,7 +329,7 @@ const REQ_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","E
 function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", captainLimit }) {
   const [form, setForm] = useState({
     item_name: item?.name||"", category: item?.category||"Filtros",
-    part_num: item?.part_num||"", description:"", urgent:false, est_amount:"",
+    part_num: item?.part_num||"", description:"", urgent:false, est_amount:"", scope:"city",
   });
   const [photoUrl, setPhotoUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -362,11 +379,12 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
           .select("id,store_categories,store_city,store_ships_nationwide,store_phone")
           .eq("role","store");
         const cityL = city.toLowerCase();
+        const nationalSearch = form.scope === "national";
         (stores||[]).forEach(st => {
           const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
           const catMatch = cats.includes(form.category.toLowerCase());
           const stCity = (st.store_city||"").toLowerCase();
-          const cityMatch = st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
+          const cityMatch = nationalSearch || st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
           if (catMatch && cityMatch) {
             notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${form.item_name} (${form.category})${city?` en ${city}`:""}`, link:"solicitudes" });
           }
@@ -402,6 +420,13 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
         <div style={{marginBottom:10}}>
           <label style={lbl}>Detalles</label>
           <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} rows={2} placeholder="Marca del motor, año, cantidad que necesitas..." style={{...inp,resize:"vertical"}}/>
+        </div>
+        <div style={{marginBottom:10}}>
+          <label style={lbl}>¿Dónde buscar?</label>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setForm({...form,scope:"city"})} style={{flex:1,padding:"9px",borderRadius:8,border:"1.5px solid",cursor:"pointer",fontSize:12,fontWeight:700,background:form.scope==="city"?"#eff6ff":"#fff",borderColor:form.scope==="city"?"#2563eb":"#e2e8f0",color:form.scope==="city"?"#2563eb":"#64748b"}}>En mi ciudad</button>
+            <button onClick={()=>setForm({...form,scope:"national"})} style={{flex:1,padding:"9px",borderRadius:8,border:"1.5px solid",cursor:"pointer",fontSize:12,fontWeight:700,background:form.scope==="national"?"#eff6ff":"#fff",borderColor:form.scope==="national"?"#2563eb":"#e2e8f0",color:form.scope==="national"?"#2563eb":"#64748b"}}>Toda Venezuela</button>
+          </div>
         </div>
         <div style={{marginBottom:10}}>
           <label style={lbl}>Foto del repuesto (recomendado)</label>
