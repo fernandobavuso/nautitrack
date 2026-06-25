@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
 import DayTripsCrew from "./DayTripsCrew";
+import CrewProposals from "./CrewProposals";
 import NotifPanel from "./NotifPanel";
 import { countUnread } from "./notifications";
 import { getReputation, Stars } from "./reputation.jsx";
@@ -139,6 +140,7 @@ export default function CrewProfile({ user, onLogout }) {
     {key:"perfil",   icon:"", label:"Mi Perfil"},
     {key:"pagos",    icon:"", label:"Pagos"},
     {key:"buscar",   icon:"", label:"Buscar Barco"},
+    {key:"propuestas",icon:"", label:"Propuestas"},
     {key:"daytrips", icon:"", label:"Day Trips"},
     {key:"solicitudes",icon:"", label:"Solicitudes"},
   ];
@@ -1250,6 +1252,10 @@ export default function CrewProfile({ user, onLogout }) {
               <DayTripsCrew user={user} profile={profile}/>
             </div>
           </div>
+        )}
+
+        {tab==="propuestas"&&(
+          <CrewProposals user={user} profile={profile}/>
         )}
 
         {/* ── SOLICITUDES ── */}

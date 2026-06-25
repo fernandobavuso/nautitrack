@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import ChatPanel from "./ChatPanel";
 import DayTripsOwner from "./DayTripsOwner";
+import CrewSearch from "./CrewSearch";
+import { notify } from "./notifications";
 import { getReputations, Stars } from "./reputation.jsx";
 
 // Panel del dueño para gestionar tripulantes
 // Props: vessel (barco actual), user (dueño), onClose
 export default function CrewMarketplace({ vessel, user, onClose }) {
-  const [tab, setTab] = useState("aplicaciones");
+  const [tab, setTab] = useState("miequipo");
+  const [possibles, setPossibles] = useState([]);
   const [applications, setApplications] = useState([]);
   const [crew, setCrew] = useState([]);
   const [reps, setReps] = useState({});
@@ -22,7 +25,29 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const [assignForm, setAssignForm] = useState({ email:"", full_name:"", role:"Capitán", phone:"" });
   const [assignMsg, setAssignMsg] = useState("");
 
-  useEffect(() => { loadApplications(); loadConnections(); loadAssigned(); }, []);
+  useEffect(() => { loadApplications(); loadConnections(); loadAssigned(); loadPossibles(); }, []);
+
+  const loadPossibles = async () => {
+    // Candidatos interesados de búsquedas + ofertas espontáneas, no descartados
+    const { data: props } = await supabase.from("crew_proposals")
+      .select("*, crew:crew_id(*), search:search_id(role,city)")
+      .eq("owner_id", user.id).eq("crew_status","interested").neq("owner_status","declined");
+    const { data: offers } = await supabase.from("crew_offers")
+      .select("*, crew:crew_id(*)")
+      .eq("owner_id", user.id).neq("status","declined");
+    const combined = [
+      ...(props||[]).map(p=>({...p, kind:"proposal"})),
+      ...(offers||[]).map(o=>({...o, kind:"offer"})),
+    ];
+    setPossibles(combined);
+  };
+
+  const updatePossible = async (item, newStatus) => {
+    const table = item.kind==="proposal" ? "crew_proposals" : "crew_offers";
+    const field = item.kind==="proposal" ? "owner_status" : "status";
+    await supabase.from(table).update({ [field]:newStatus }).eq("id", item.id);
+    loadPossibles();
+  };
 
   const loadAssigned = async () => {
     const { data } = await supabase.from("captain_profiles").select("*, user:user_id(email)").eq("vessel_id", vessel.id);
@@ -128,6 +153,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
 
   const pendingApps = applications.filter(a => a.status==="pending" && a.initiated_by==="crew_applied");
   const matches = applications.filter(a => a.status==="matched");
+  const possibleCount = possibles.length;
 
   const BADGE_ICONS = {verified:"✅",stcw:"📜","5years":"⭐","10years":"🏆","3boats":"🚢",captain:"⚓",bilingual:"🌐",passport:"🛂"};
 
@@ -147,11 +173,12 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:"1px solid #e2e8f0",padding:"0 12px"}}>
           {[
-            {key:"aplicaciones",label:`Aplicaciones${pendingApps.length>0?` (${pendingApps.length})`:""}`},
-            {key:"buscar",label:"Buscar Tripulantes"},
-            {key:"matches",label:`Matches${matches.length>0?` (${matches.length})`:""}`},
-            {key:"daytrips",label:"Day Trips"},
             {key:"miequipo",label:"Mi Tripulación"},
+            {key:"daytrips",label:"Day Trips"},
+            {key:"buscar",label:"Buscar Tripulación"},
+            {key:"posibles",label:`Posible Tripulación${possibleCount>0?` (${possibleCount})`:""}`},
+            {key:"aplicaciones",label:`Aplicaciones${pendingApps.length>0?` (${pendingApps.length})`:""}`},
+            {key:"matches",label:`Matches${matches.length>0?` (${matches.length})`:""}`},
           ].map(t=>(
             <button key={t.key} onClick={()=>{setTab(t.key); if(t.key==="buscar"&&crew.length===0)searchCrew();}} style={{
               padding:"12px 14px",background:"none",border:"none",borderBottom:tab===t.key?"2px solid #0ea5e9":"2px solid transparent",
@@ -188,38 +215,43 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
 
           {/* ── BUSCAR TRIPULANTES ── */}
           {tab==="buscar"&&(
-            <div>
-              <div style={{display:"flex",gap:8,marginBottom:10}}>
-                <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchCrew()}
-                  placeholder="Nombre, nacionalidad, experiencia..." style={{flex:1,padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,outline:"none"}}/>
-                <button onClick={searchCrew} style={{padding:"9px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13}}>Buscar</button>
-              </div>
-              <select value={roleFilter} onChange={e=>{setRoleFilter(e.target.value);}} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:14}}>
-                <option value="">Todos los roles</option>
-                {["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico","Carpintero","Soldador"].map(r=><option key={r}>{r}</option>)}
-              </select>
+            <CrewSearch vessel={vessel} user={user} onPublished={loadPossibles}/>
+          )}
 
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {loading&&<div style={{textAlign:"center",color:"#94a3b8",padding:20}}>Buscando...</div>}
-                {!loading&&crew.length===0&&(
-                  <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                    <div style={{fontSize:40,marginBottom:8}}>🔍</div>
-                    <div style={{fontWeight:600}}>Sin tripulantes disponibles</div>
-                    <div style={{fontSize:12,marginTop:4}}>Solo aparecen tripulantes verificados y disponibles</div>
-                  </div>
-                )}
-                {crew.map(c=>{
-                  const conn = myConnections.find(x=>x.crew_id===c.id && x.vessel_id===vessel.id);
+          {/* ── POSIBLE TRIPULACIÓN ── */}
+          {tab==="posibles"&&(
+            <div>
+              <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Capitanes y tripulantes interesados en trabajar contigo. Revisa su perfil, contáctalos o guárdalos para después.</div>
+              {possibles.length===0&&(
+                <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
+                  <div style={{fontWeight:600}}>Sin candidatos por ahora</div>
+                  <div style={{fontSize:12,marginTop:4}}>Cuando publiques una búsqueda y alguien se interese, aparecerá aquí</div>
+                </div>
+              )}
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {possibles.map(item=>{
+                  const c = item.crew||{};
+                  const name = c.full_name?.trim() || `${c.first_name||""} ${c.last_name||""}`.trim() || "Tripulante";
+                  const saved = (item.owner_status==="saved"||item.status==="saved");
                   return (
-                    <CrewCard key={c.id} crew={c} rep={reps[c.id]} badgeIcons={BADGE_ICONS}
-                      onView={()=>setSelectedCrew(c)}
-                      actions={
-                        <button onClick={()=>!conn&&inviteCrew(c)} disabled={!!conn} style={{
-                          width:"100%",padding:"8px",border:"none",borderRadius:8,cursor:conn?"default":"pointer",
-                          background:conn?"#f1f5f9":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",
-                          color:conn?"#94a3b8":"#fff",fontSize:12,fontWeight:700,
-                        }}>{conn?(conn.status==="matched"?"✓ Match":"✓ Invitado"):"Me interesa"}</button>
-                      }/>
+                    <div key={item.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
+                      <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+                        {c.photo_url
+                          ? <img src={c.photo_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover"}} alt=""/>
+                          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18}}>{name[0].toUpperCase()}</div>}
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>{name}</div>
+                          <div style={{fontSize:11,color:"#64748b"}}>{c.crew_role||""}{c.work_zone?` · ${c.work_zone}`:""}{item.search?.role?` · busca: ${item.search.role}`:""}</div>
+                          {reps[c.id]&&<Stars avg={reps[c.id].avg} count={reps[c.id].count} size={12}/>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>setSelectedCrew(c)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>Ver perfil</button>
+                        <button onClick={()=>{ updatePossible(item,"contacted"); inviteCrew(c); }} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Contactar</button>
+                        <button onClick={()=>updatePossible(item, saved?"new":"saved")} style={{flex:1,padding:"8px",background:saved?"#fef9c3":"#fff",border:"1px solid #e2e8f0",borderRadius:8,color:saved?"#a16207":"#64748b",fontSize:12,fontWeight:700,cursor:"pointer"}}>{saved?"Guardado":"Guardar"}</button>
+                        <button onClick={()=>updatePossible(item,"declined")} style={{flex:1,padding:"8px",background:"#fff",border:"1px solid #fecaca",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Declinar</button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
