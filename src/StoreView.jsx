@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { notify } from "./notifications";
+import { loadTiers, computeCommission } from "./commission.jsx";
 
 const STORE_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
 
@@ -140,9 +141,18 @@ export default function StoreView({ user, onLogout }) {
                     Tu respuesta: {r.response_type==="have"?`Disponible · ${r.currency==="USD"?"$":"Bs."} ${r.price}`:r.response_type==="have_questions"?"Disponible, con preguntas":"No disponible"}
                   </div>
                   {r.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:4,fontStyle:"italic"}}>"{r.message}"</div>}
-                  <div style={{marginTop:6,fontSize:11,fontWeight:700,color:r.request?.status==="resolved"?"#16a34a":"#d97706"}}>
-                    {r.request?.status==="resolved"?"Solicitud cerrada":"Esperando al cliente"}
-                  </div>
+                  {r.is_winner ? (
+                    <div style={{marginTop:8,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"10px 12px"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>¡Ganaste esta venta!</div>
+                      {r.sale_amount&&<div style={{fontSize:11,color:"#15803d",marginTop:3}}>
+                        Venta: ${r.sale_amount}{r.commission_amount!=null?` · Comisión plataforma (${r.commission_rate}%): $${r.commission_amount} · Recibes: $${(Number(r.sale_amount)-Number(r.commission_amount)).toFixed(2)}`:""}
+                      </div>}
+                    </div>
+                  ) : (
+                    <div style={{marginTop:6,fontSize:11,fontWeight:700,color:r.request?.status==="resolved"?"#94a3b8":"#d97706"}}>
+                      {r.request?.status==="resolved"?"El cliente eligió otra oferta":"Esperando al cliente"}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -210,6 +220,18 @@ function RespondModal({ request, store, user, onClose, onDone }) {
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [message, setMessage] = useState("");
+  const [competitors, setCompetitors] = useState(null);
+  const [tiers, setTiers] = useState(null);
+
+  useEffect(() => {
+    // Cuántas tiendas ya respondieron (a ciegas: solo el número, no sus precios)
+    supabase.from("part_responses").select("id",{count:"exact",head:true})
+      .eq("request_id", request.id).then(({count})=>setCompetitors(count||0));
+    loadTiers().then(setTiers);
+  }, []);
+
+  const region = (request.country==="US"||request.city?.toLowerCase().includes("miami")) ? "US" : "VE";
+  const est = (price && currency==="USD" && tiers) ? computeCommission(parseFloat(price)||0, tiers, region) : null;
 
   const submit = async () => {
     if (type==="have" && !price) return;
@@ -218,7 +240,6 @@ function RespondModal({ request, store, user, onClose, onDone }) {
       price: type==="have"?price:null, currency, message,
     });
     if (!error) {
-      // Notificar al dueño
       const label = type==="have"?`${store.store_name||"Una tienda"} tiene el repuesto`:type==="have_questions"?`${store.store_name||"Una tienda"} respondió con preguntas`:`${store.store_name||"Una tienda"} no tiene el repuesto`;
       notify(request.owner_id, { type:"part_response", title:"Respuesta a tu solicitud", body:`${label}: ${request.item_name}`, link:"costs" });
     }
@@ -227,9 +248,17 @@ function RespondModal({ request, store, user, onClose, onDone }) {
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={onClose}>
-      <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:400,width:"100%"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>Responder solicitud</div>
-        <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{request.item_name}</div>
+        <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{request.item_name}</div>
+
+        {/* Aviso de subasta a ciegas */}
+        {competitors!==null&&competitors>0&&(
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 12px",marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#b45309"}}>Compites con {competitors} {competitors===1?"tienda":"tiendas"} más</div>
+            <div style={{fontSize:11,color:"#92400e",marginTop:2}}>No ves sus precios. Da tu mejor precio: el dueño elige y la mejor oferta gana.</div>
+          </div>
+        )}
 
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
           {[{k:"have",l:"Sí, tengo el repuesto"},{k:"have_questions",l:"Tengo, pero necesito más info"},{k:"decline",l:"No tengo este repuesto"}].map(o=>(
@@ -239,12 +268,20 @@ function RespondModal({ request, store, user, onClose, onDone }) {
         </div>
 
         {type==="have"&&(
-          <div style={{display:"flex",gap:8,marginBottom:12}}>
-            <select value={currency} onChange={e=>setCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
-              <option value="USD">$ USD</option>
-              <option value="VES">Bs.</option>
-            </select>
-            <input value={price} onChange={e=>setPrice(e.target.value)} placeholder="Precio" style={{...inp,flex:1}}/>
+          <div style={{marginBottom:12}}>
+            <div style={{display:"flex",gap:8}}>
+              <select value={currency} onChange={e=>setCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
+                <option value="USD">$ USD</option>
+                <option value="VES">Bs.</option>
+              </select>
+              <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Tu mejor precio" style={{...inp,flex:1}}/>
+            </div>
+            {/* Comisión estimada que verá descontada */}
+            {est&&(
+              <div style={{marginTop:8,fontSize:11,color:"#64748b",background:"#f8fafc",borderRadius:8,padding:"8px 10px"}}>
+                Si ganas: comisión de plataforma {est.rate}% (${est.commission}). Recibes ${est.net}.
+              </div>
+            )}
           </div>
         )}
 
@@ -252,7 +289,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
 
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-          <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar respuesta</button>
+          <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar oferta</button>
         </div>
       </div>
     </div>

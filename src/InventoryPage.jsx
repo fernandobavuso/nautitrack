@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { hasFeature, PremiumLock } from "./plans.jsx";
 import { notify } from "./notifications";
+import { loadTiers, computeCommission } from "./commission.jsx";
 
 const CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Eléctrico","Seguridad","Limpieza","Ánodos","Impulsores","Otro"];
 const UNITS = ["unidad","litros","galones","metros","kit"];
@@ -15,6 +16,9 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
   const [filter, setFilter] = useState("all"); // all / low / requests
   const [requesting, setRequesting] = useState(null); // item para pedir o "new"
   const [myRequests, setMyRequests] = useState([]);
+  const [commTiers, setCommTiers] = useState(null);
+
+  useEffect(() => { loadTiers().then(setCommTiers); }, []);
   const blank = { name:"", category:"Filtros", brand:"", part_num:"", quantity:"", min_quantity:"", unit:"unidad", location_type:"A bordo", location:"", bought_at:"", notes:"" };
   const [form, setForm] = useState(blank);
 
@@ -42,6 +46,24 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
   };
   const reopenRequest = async (id) => {
     await supabase.from("part_requests").update({ status:"open" }).eq("id", id);
+    loadRequests();
+  };
+
+  // Elegir tienda ganadora de la subasta → registra venta + comisión
+  const chooseWinner = async (request, response) => {
+    const amount = parseFloat(response.price) || 0;
+    const region = (request.city||"").toLowerCase().includes("miami") ? "US" : "VE";
+    const { rate, commission } = computeCommission(amount, commTiers, region);
+    // Marcar la respuesta ganadora con la venta y comisión
+    await supabase.from("part_responses").update({
+      is_winner:true, sale_status:"selected", sale_amount:amount,
+      commission_amount: response.currency==="USD"?commission:null,
+      commission_rate: rate, confirmed_at:new Date().toISOString(),
+    }).eq("id", response.id);
+    // Cerrar la solicitud con su ganador
+    await supabase.from("part_requests").update({ status:"resolved", winner_response_id:response.id }).eq("id", request.id);
+    // Notificar a la tienda ganadora
+    notify(response.store_id, { type:"auction_won", title:"¡Ganaste la venta!", body:`El cliente te eligió para: ${request.item_name}. Coordina la entrega.`, link:"respuestas" });
     loadRequests();
   };
 
@@ -174,27 +196,45 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                       : <button onClick={()=>closeRequest(r.id)} style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"5px 10px",fontSize:11,color:"#16a34a",cursor:"pointer",fontWeight:700,height:"fit-content"}}>Cerrar</button>
                     )}
                   </div>
-                  {/* Respuestas de tiendas */}
-                  {resp.length>0&&(
+                  {/* Subasta: ofertas de tiendas ordenadas por precio */}
+                  {resp.length>0&&(() => {
+                    const withPrice = resp.filter(x=>x.response_type==="have"&&x.price).sort((a,b)=>parseFloat(a.price)-parseFloat(b.price));
+                    const others = resp.filter(x=>x.response_type!=="have"||!x.price);
+                    const bestId = withPrice[0]?.id;
+                    const ordered = [...withPrice, ...others];
+                    return (
                     <div style={{display:"flex",flexDirection:"column",gap:8,borderTop:"1px solid #f1f5f9",paddingTop:10}}>
-                      {resp.map(rp=>(
-                        <div key={rp.id} style={{background:"#f8fafc",borderRadius:8,padding:"10px 12px"}}>
+                      {withPrice.length>1&&!resolved&&<div style={{fontSize:11,color:"#2563eb",fontWeight:700,marginBottom:2}}>{withPrice.length} tiendas compiten por tu compra. La más barata está marcada.</div>}
+                      {ordered.map(rp=>{
+                        const isBest = rp.id===bestId;
+                        const isWinner = rp.is_winner;
+                        return (
+                        <div key={rp.id} style={{background:isWinner?"#f0fdf4":isBest&&!resolved?"#eff6ff":"#f8fafc",border:isWinner?"1px solid #bbf7d0":isBest&&!resolved?"1px solid #bfdbfe":"1px solid transparent",borderRadius:8,padding:"10px 12px"}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                             <div style={{flex:1}}>
-                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{rp.store?.store_name||"Tienda"}{rp.store?.store_city?` · ${rp.store.store_city}`:""}</div>
+                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>
+                                {rp.store?.store_name||"Tienda"}{rp.store?.store_city?` · ${rp.store.store_city}`:""}
+                                {isBest&&!resolved&&rp.response_type==="have"&&<span style={{marginLeft:6,fontSize:9,background:"#dbeafe",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700}}>Mejor precio</span>}
+                                {isWinner&&<span style={{marginLeft:6,fontSize:9,background:"#dcfce7",color:"#16a34a",padding:"2px 7px",borderRadius:10,fontWeight:700}}>Elegida</span>}
+                              </div>
                               <div style={{fontSize:12,marginTop:2,fontWeight:600,color:rp.response_type==="have"?"#16a34a":rp.response_type==="have_questions"?"#d97706":"#94a3b8"}}>
-                                {rp.response_type==="have"?`Disponible · ${rp.currency==="USD"?"$":"Bs."} ${rp.price}`:rp.response_type==="have_questions"?"Disponible, tiene preguntas":"No disponible"}
+                                {rp.response_type==="have"?`${rp.currency==="USD"?"$":"Bs."} ${rp.price}`:rp.response_type==="have_questions"?"Disponible, tiene preguntas":"No disponible"}
                               </div>
                               {rp.message&&<div style={{fontSize:12,color:"#475569",marginTop:3}}>{rp.message}</div>}
                             </div>
                             {rp.response_type!=="decline"&&rp.store?.store_phone&&(
-                              <a href={`https://wa.me/${rp.store.store_phone.replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola, soy dueño de embarcación en NautiTrack. Te escribo por mi solicitud de: ${r.item_name}`)}`} target="_blank" rel="noreferrer" style={{background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#fff",fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",height:"fit-content"}}>WhatsApp</a>
+                              <a href={`https://wa.me/${rp.store.store_phone.replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola, soy dueño de embarcación en NautiTrack. Te escribo por mi solicitud de: ${r.item_name}`)}`} target="_blank" rel="noreferrer" style={{background:"#fff",border:"1px solid #bbf7d0",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#16a34a",fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",height:"fit-content"}}>WhatsApp</a>
                             )}
                           </div>
+                          {/* Botón elegir ganador (solo si no resuelto y tiene precio) */}
+                          {!resolved&&rp.response_type==="have"&&rp.price&&(
+                            <button onClick={()=>chooseWinner(r,rp)} style={{width:"100%",marginTop:8,padding:"7px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Elegir esta tienda</button>
+                          )}
                         </div>
-                      ))}
+                      );})}
                     </div>
-                  )}
+                    );
+                  })()}
                   {resp.length===0&&!resolved&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>Esperando respuestas de las tiendas...</div>}
                 </div>
               );
