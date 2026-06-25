@@ -94,6 +94,9 @@ export default function CrewProfile({ user, onLogout }) {
   const [activeChat, setActiveChat] = useState(null);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [crewWeather, setCrewWeather] = useState(null);
+  const [myBoats, setMyBoats] = useState([]);
+  const [perfilSub, setPerfilSub] = useState("datos"); // datos / documentos / certs / historial
 
   useEffect(() => {
     if (!user?.id) return;
@@ -106,12 +109,34 @@ export default function CrewProfile({ user, onLogout }) {
   const photoRef  = useRef();
   const docRef    = useRef();
 
+  // Clima según la zona de trabajo del tripulante
+  useEffect(() => {
+    const zone = profile?.work_zone?.trim();
+    if (!zone) { setCrewWeather(null); return; }
+    const isLocal = window.location.hostname === "localhost";
+    const KEY = "756f12d0c20d29f76808839251369ef7";
+    const url = isLocal
+      ? `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(zone)}&appid=${KEY}&units=metric&lang=es`
+      : `/api/weather?city=${encodeURIComponent(zone)}`;
+    fetch(url).then(r=>r.json()).then(data=>{
+      if (data.main) {
+        const ICONS={"01":"☀️","02":"🌤","03":"⛅","04":"☁️","09":"🌧","10":"🌦","11":"⛈","13":"❄️","50":"🌫"};
+        const code=(data.weather?.[0]?.icon||"01").slice(0,2);
+        setCrewWeather({ temp:Math.round(data.main.temp), wind:Math.round((data.wind?.speed||0)*1.944), condition:data.weather?.[0]?.description||"", icon:ICONS[code]||"🌤", city:data.name||zone });
+      }
+    }).catch(()=>{});
+  }, [profile?.work_zone]);
+
+  // Barcos donde este tripulante es capitán/gestor asignado
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("captain_profiles").select("*, vessels(*)").eq("user_id", user.id).eq("active", true)
+      .then(({ data }) => setMyBoats((data||[]).filter(c=>c.vessels)));
+  }, [user?.id]);
+
   const TABS = [
     {key:"inicio",   icon:"", label:"Inicio"},
     {key:"perfil",   icon:"", label:"Mi Perfil"},
-    {key:"documentos",icon:"", label:"Documentos"},
-    {key:"certs",    icon:"", label:"Certificaciones"},
-    {key:"historial",icon:"", label:"Historial"},
     {key:"pagos",    icon:"", label:"Pagos"},
     {key:"buscar",   icon:"", label:"Buscar Barco"},
     {key:"daytrips", icon:"", label:"Day Trips"},
@@ -518,24 +543,40 @@ export default function CrewProfile({ user, onLogout }) {
         {/* ── INICIO (dashboard resumido) ── */}
         {tab==="inicio"&&(
           <div style={{maxWidth:760}}>
-            <div style={{fontSize:20,fontWeight:800,color:"#0f172a",marginBottom:4}}>Hola{profile.first_name?`, ${profile.first_name}`:""}</div>
-            <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>Este es tu resumen como tripulante</div>
+            {/* Saludo + clima */}
+            <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:18,padding:isMobile?"20px":"24px 28px",color:"#fff",marginBottom:20}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
+                <div>
+                  <div style={{fontSize:12,opacity:0.7,marginBottom:4,textTransform:"capitalize"}}>{new Date().toLocaleDateString("es-VE",{weekday:"long",day:"numeric",month:"long"})}</div>
+                  <div style={{fontSize:24,fontWeight:800}}>Hola{profile.first_name?`, ${profile.first_name}`:""}</div>
+                  <div style={{fontSize:13,opacity:0.85,marginTop:2}}>{(profile.badges||[]).includes("verified")?"Estás listo para navegar":"Completa tu verificación para empezar"}</div>
+                </div>
+                {crewWeather&&(
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:40,lineHeight:1}}>{crewWeather.icon}</div>
+                    <div style={{fontSize:26,fontWeight:800}}>{crewWeather.temp}°</div>
+                    <div style={{fontSize:11,opacity:0.8}}>{crewWeather.city}</div>
+                    <div style={{fontSize:10,opacity:0.7,textTransform:"capitalize"}}>{crewWeather.condition} · {crewWeather.wind} km/h</div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Tarjetas de resumen */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:24}}>
-              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
                 <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>MI REPUTACIÓN</div>
                 <Stars avg={myRep.avg} count={myRep.count} size={15}/>
               </div>
-              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
                 <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>VIAJES COMPLETADOS</div>
                 <div style={{fontSize:24,fontWeight:800,color:"#0f172a"}}>{completedCount}</div>
               </div>
-              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
                 <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>POSTULACIONES ACTIVAS</div>
                 <div style={{fontSize:24,fontWeight:800,color:"#0f172a"}}>{openApps}</div>
               </div>
-              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
                 <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>ESTADO</div>
                 <div style={{fontSize:14,fontWeight:700,color:(profile.badges||[]).includes("verified")?"#16a34a":"#d97706"}}>
                   {(profile.badges||[]).includes("verified")?"Verificado":"Sin verificar"}
@@ -545,7 +586,7 @@ export default function CrewProfile({ user, onLogout }) {
 
             {/* Aviso si no está verificado */}
             {!(profile.badges||[]).includes("verified")&&(
-              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16,marginBottom:16}}>
+              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:14,padding:16,marginBottom:20}}>
                 <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>Completa tu verificación</div>
                 <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Verifica tu identidad para poder aplicar a barcos y recibir solicitudes de viaje.</div>
                 <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Ir a Mi Perfil</button>
@@ -554,17 +595,53 @@ export default function CrewProfile({ user, onLogout }) {
 
             {/* Accesos rápidos */}
             <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Accesos rápidos</div>
-            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:24}}>
               <button onClick={()=>setTab("daytrips")} style={qaBtn}>Ver viajes disponibles (Day Trips)</button>
               <button onClick={()=>setTab("buscar")} style={qaBtn}>Buscar barcos para trabajar</button>
               <button onClick={()=>setTab("perfil")} style={qaBtn}>Editar mi perfil</button>
               <button onClick={()=>setTab("solicitudes")} style={qaBtn}>Ver mis solicitudes</button>
             </div>
+
+            {/* Mis barcos (donde es capitán/gestor fijo) */}
+            {myBoats.length>0&&(
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Mis barcos</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Embarcaciones que gestionas. Toca una para abrir su panel.</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {myBoats.map(b=>(
+                    <button key={b.id} onClick={()=>setTab("barco")} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,cursor:"pointer",textAlign:"left",width:"100%"}}>
+                      <div style={{width:44,height:44,borderRadius:10,background:"linear-gradient(135deg,#1e3a5f,#2563eb)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:18,flexShrink:0}}>{(b.vessels?.name||"?")[0].toUpperCase()}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{b.vessels?.name}</div>
+                        <div style={{fontSize:11,color:"#64748b"}}>{b.role} · {b.vessels?.type||""}{b.vessels?.marina?` · ${b.vessels.marina}`:""}</div>
+                      </div>
+                      <span style={{fontSize:18,color:"#cbd5e1"}}>›</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── MI PERFIL ── */}
         {tab==="perfil"&&(
+          <div style={{maxWidth:isMobile?"100%":980,margin:"0 auto"}}>
+            {/* Sub-pestañas */}
+            <div style={{display:"flex",gap:6,marginBottom:20,overflowX:"auto",borderBottom:"1px solid #e2e8f0",paddingBottom:0}}>
+              {[{k:"datos",l:"Mi Perfil"},{k:"documentos",l:"Documentos"},{k:"certs",l:"Certificaciones"},{k:"historial",l:"Historial"}].map(st=>(
+                <button key={st.k} onClick={()=>setPerfilSub(st.k)} style={{
+                  padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,whiteSpace:"nowrap",
+                  fontWeight:perfilSub===st.k?700:500, color:perfilSub===st.k?"#2563eb":"#64748b",
+                  borderBottom:perfilSub===st.k?"2px solid #2563eb":"2px solid transparent",marginBottom:-1,
+                }}>{st.l}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── MI PERFIL: DATOS ── */}
+        {tab==="perfil"&&perfilSub==="datos"&&(
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:20}}>
 
             {/* Columna izquierda — foto + badge */}
@@ -836,12 +913,13 @@ export default function CrewProfile({ user, onLogout }) {
         )}
 
         {/* ── CERTIFICACIONES ── */}
-        {tab==="certs"&&(
+        {tab==="perfil"&&perfilSub==="certs"&&(
           <div style={{maxWidth:700}}>
             {/* Lista de certificaciones guardadas */}
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>📜 Mis Certificaciones</div>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Tus certificaciones náuticas con documento de respaldo</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Mis Certificaciones</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>Tus certificaciones náuticas con documento de respaldo</div>
+              <div style={{fontSize:11,color:"#2563eb",marginBottom:16}}>Las certificaciones visibles (STCW, licencias, primeros auxilios) te hacen más atractivo y te abren mejores oportunidades de trabajo.</div>
 
               {(profile.certifications||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
@@ -914,7 +992,7 @@ export default function CrewProfile({ user, onLogout }) {
         )}
 
         {/* ── HISTORIAL ── */}
-        {tab==="historial"&&(
+        {tab==="perfil"&&perfilSub==="historial"&&(
           <div style={{maxWidth:700}}>
             {/* Lista de experiencias guardadas */}
             <div style={s.card}>
@@ -1034,13 +1112,14 @@ export default function CrewProfile({ user, onLogout }) {
         )}
 
         {/* ── DOCUMENTOS ── */}
-        {tab==="documentos"&&(
+        {tab==="perfil"&&perfilSub==="documentos"&&(
           <div style={{maxWidth:760}}>
             <div style={s.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                 <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>📁 Mis Documentos</div>
+                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>Mis Documentos</div>
                   <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Documento de identidad, pasaporte, licencias y certificados · Organiza en carpetas</div>
+                  <div style={{fontSize:11,color:"#2563eb",marginTop:4}}>Tener tus documentos al día y visibles le da confianza a los propietarios y acelera tu contratación.</div>
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>{setNewFolderName("");setShowFolderModal(true);}}
