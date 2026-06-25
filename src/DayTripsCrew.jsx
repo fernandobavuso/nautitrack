@@ -10,6 +10,7 @@ export default function DayTripsCrew({ user, profile }) {
   const [loading, setLoading] = useState(true);
   const [applyTrip, setApplyTrip] = useState(null);
   const [proposedPay, setProposedPay] = useState("");
+  const [proposedCurrency, setProposedCurrency] = useState("USD");
   const [message, setMessage] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -55,10 +56,19 @@ export default function DayTripsCrew({ user, profile }) {
     setMyApps(data||[]);
   };
 
+  const markCompleted = async (trip) => {
+    await supabase.from("day_trips").update({ status:"completed" }).eq("id", trip.id);
+    if (trip.owner_id) notify(trip.owner_id, { type:"trip_completed", title:"Viaje marcado como completado", body:`El tripulante marcó como completado el viaje de ${trip.crew_role}. Puedes dejar tu reseña.`, link:"tripulacion" });
+    setMsg("Viaje marcado como completado");
+    loadMyApps(); loadCompleted();
+    setTimeout(()=>setMsg(""),3000);
+  };
+
   const apply = async () => {
     const { error } = await supabase.from("day_trip_applications").insert({
       trip_id:applyTrip.id, crew_id:user.id,
       proposed_pay: applyTrip.pay_open?proposedPay:null,
+      proposed_currency: applyTrip.pay_open?proposedCurrency:null,
       message, status:"pending",
     });
     if (error?.code==="23505") setMsg("⚠️ Ya te postulaste a este viaje");
@@ -83,25 +93,31 @@ export default function DayTripsCrew({ user, profile }) {
 
   return (
     <div>
-      {/* Mis postulaciones con su estado */}
-      {myApps.length>0&&(
+      {/* Mis postulaciones ACTIVAS */}
+      {myApps.filter(a=>a.trip?.status!=="completed").length>0&&(
         <div style={{marginBottom:20}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Mis postulaciones</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>Activas</div>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Salidas que faltan por hacer</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {myApps.map(a=>{
+            {myApps.filter(a=>a.trip?.status!=="completed").map(a=>{
               const t=a.trip||{};
               const estado = a.status==="accepted"?"Aceptada":a.status==="rejected"?"No seleccionada":"Pendiente";
               const color = a.status==="accepted"?"#16a34a":a.status==="rejected"?"#dc2626":"#d97706";
               const bg = a.status==="accepted"?"#f0fdf4":a.status==="rejected"?"#fff5f5":"#fffbeb";
               const border = a.status==="accepted"?"#bbf7d0":a.status==="rejected"?"#fecaca":"#fde68a";
               return (
-                <div key={a.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.crew_role||"Viaje"} · {t.vessel_type||""}</div>
-                    <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("es-VE"):""}{t.city?` · ${t.city}`:""}</div>
-                    {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>El propietario te contactará. Revisa tus notificaciones.</div>}
+                <div key={a.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.crew_role||"Viaje"} · {t.vessel_type||""}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("es-VE"):""}{t.city?` · ${t.city}`:""}</div>
+                      {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>El propietario te contactará. Revisa tus notificaciones.</div>}
+                    </div>
+                    <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",background:bg,color,border:`1px solid ${border}`}}>{estado}</span>
                   </div>
-                  <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",background:bg,color,border:`1px solid ${border}`}}>{estado}</span>
+                  {a.status==="accepted"&&t.status!=="completed"&&(
+                    <button onClick={()=>markCompleted(t)} style={{width:"100%",marginTop:10,padding:"8px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,color:"#16a34a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Marcar viaje como completado</button>
+                  )}
                 </div>
               );
             })}
@@ -154,7 +170,8 @@ export default function DayTripsCrew({ user, profile }) {
       {/* Mis viajes completados — reseñar al dueño */}
       {completedTrips.length>0&&(
         <div style={{marginTop:20}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Mis viajes completados</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>Viajes completados</div>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Salidas ya realizadas. Deja tu reseña al propietario.</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {completedTrips.map(trip=>(
               <div key={trip.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
@@ -176,7 +193,14 @@ export default function DayTripsCrew({ user, profile }) {
             {applyTrip.pay_open&&(
               <div style={{marginBottom:12}}>
                 <label style={lbl}>¿Cuánto cobras? *</label>
-                <input value={proposedPay} onChange={e=>setProposedPay(e.target.value)} placeholder="Ej: $60 por el día" style={inp}/>
+                <div style={{display:"flex",gap:8}}>
+                  <select value={proposedCurrency} onChange={e=>setProposedCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
+                    <option value="USD">$ USD</option>
+                    <option value="VES">Bs.</option>
+                  </select>
+                  <input type="number" value={proposedPay} onChange={e=>setProposedPay(e.target.value)} placeholder="Ej: 60" style={{...inp,flex:1}}/>
+                </div>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>Indica el monto por el viaje completo</div>
               </div>
             )}
             <label style={lbl}>Mensaje al propietario (opcional)</label>

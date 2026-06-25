@@ -438,7 +438,7 @@ export default function DayTripsOwner({ vessel, user }) {
                     </div>
                   )}
 
-                  {app.proposed_pay&&<div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginBottom:4}}>Propone cobrar: {app.proposed_pay}</div>}
+                  {app.proposed_pay&&<div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginBottom:4}}>Propone cobrar: {app.proposed_currency==="VES"?"Bs.":"$"} {app.proposed_pay}</div>}
                   {app.message&&<div style={{fontSize:12,color:"#475569",marginBottom:10,fontStyle:"italic",background:"#fff",padding:"8px 10px",borderRadius:8,border:"1px solid #e2e8f0"}}>"{app.message}"</div>}
                   <button onClick={()=>acceptApplication(selectedTrip,app)} style={{width:"100%",padding:"9px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Seleccionar este tripulante</button>
                 </div>
