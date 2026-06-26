@@ -34,10 +34,31 @@ export const PLANS = {
   },
 };
 
-// Lee el plan del dueño desde la embarcación (donde guardamos la suscripción)
+// Lee el plan vigente de la embarcación, respetando la fecha de vencimiento.
+// Si la suscripción expiró, vuelve a "gratis" automáticamente.
 export function getPlan(vessel) {
-  const plan = vessel?.details?._subscription?.plan || "free";
+  const sub = vessel?.details?._subscription;
+  const plan = sub?.plan || "free";
+  if (plan !== "free" && sub?.expires_at) {
+    const expired = new Date(sub.expires_at).getTime() < Date.now();
+    if (expired) return PLANS.free;
+  }
   return PLANS[plan] || PLANS.free;
+}
+
+// ¿La suscripción está por vencer? (dentro de 7 días)
+export function isExpiringSoon(vessel) {
+  const sub = vessel?.details?._subscription;
+  if (!sub || sub.plan==="free" || !sub.expires_at) return false;
+  const days = (new Date(sub.expires_at).getTime() - Date.now()) / (1000*60*60*24);
+  return days > 0 && days <= 7;
+}
+
+// Días restantes de la suscripción (null si no aplica)
+export function daysLeft(vessel) {
+  const sub = vessel?.details?._subscription;
+  if (!sub || sub.plan==="free" || !sub.expires_at) return null;
+  return Math.ceil((new Date(sub.expires_at).getTime() - Date.now()) / (1000*60*60*24));
 }
 
 // ¿El dueño tiene acceso a esta feature?

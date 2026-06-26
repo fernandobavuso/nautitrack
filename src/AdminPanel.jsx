@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { activateSubscription } from "./subscriptions.jsx";
 
 // Panel de administrador (solo visible para los correos en ADMIN_EMAILS)
 // Tablero de ingresos: comisiones por venta + activación de planes
@@ -37,12 +38,10 @@ export default function AdminPanel({ user, onClose }) {
     setLoading(false);
   };
 
-  // Activar plan a una embarcación
-  const setPlan = async (vessel, plan) => {
-    const details = { ...(vessel.details||{}) };
-    details._subscription = { ...(details._subscription||{}), plan };
-    await supabase.from("vessels").update({ details }).eq("id", vessel.id);
-    setMsg(`Plan de ${vessel.name} actualizado a ${plan}`);
+  // Activar plan a una embarcación (con periodo y vencimiento)
+  const setPlan = async (vessel, plan, period="monthly") => {
+    await activateSubscription(vessel, plan, period, { method:"manual" });
+    setMsg(plan==="free" ? `${vessel.name}: plan cancelado` : `${vessel.name}: ${plan} activado (${period==="yearly"?"1 año":"1 mes"})`);
     setTimeout(()=>setMsg(""),3000);
     loadAll();
   };
@@ -134,19 +133,30 @@ export default function AdminPanel({ user, onClose }) {
             <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Activa o cambia el plan de cada embarcación cuando un cliente te pague.</div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {vessels.map(v=>{
-                const plan = v.details?._subscription?.plan || "free";
+                const sub = v.details?._subscription || {};
+                const plan = sub.plan || "free";
+                const exp = sub.expires_at ? new Date(sub.expires_at) : null;
+                const expired = exp && exp.getTime() < Date.now();
+                const effectivePlan = expired ? "free" : plan;
                 return (
                   <div key={v.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"12px 14px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                       <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{v.name}</div>
-                      <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:plan==="free"?"#f1f5f9":"#dcfce7",color:plan==="free"?"#64748b":"#16a34a"}}>{plan==="free"?"Gratis":plan==="pro"?"Pro":"Flota"}</span>
+                      <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,background:effectivePlan==="free"?"#f1f5f9":"#dcfce7",color:effectivePlan==="free"?"#64748b":"#16a34a"}}>{effectivePlan==="free"?"Gratis":effectivePlan==="pro"?"Pro":"Flota"}</span>
                     </div>
-                    <div style={{display:"flex",gap:6}}>
-                      {["free","pro","fleet"].map(p=>(
-                        <button key={p} onClick={()=>setPlan(v,p)} disabled={plan===p} style={{flex:1,padding:"7px",borderRadius:7,border:"1px solid",cursor:plan===p?"default":"pointer",fontSize:12,fontWeight:700,
-                          borderColor:plan===p?"#2563eb":"#e2e8f0", background:plan===p?"#eff6ff":"#fff", color:plan===p?"#2563eb":"#64748b"}}>{p==="free"?"Gratis":p==="pro"?"Pro":"Flota"}</button>
-                      ))}
+                    {exp&&plan!=="free"&&(
+                      <div style={{fontSize:11,color:expired?"#dc2626":"#64748b",marginBottom:10}}>
+                        {expired?`Venció el ${exp.toLocaleDateString("es-VE")}`:`Vence el ${exp.toLocaleDateString("es-VE")}`}
+                      </div>
+                    )}
+                    <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,marginBottom:6}}>ACTIVAR / RENOVAR</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                      <button onClick={()=>setPlan(v,"pro","monthly")} style={planBtn}>Pro · 1 mes</button>
+                      <button onClick={()=>setPlan(v,"pro","yearly")} style={planBtn}>Pro · 1 año</button>
+                      <button onClick={()=>setPlan(v,"fleet","monthly")} style={planBtn}>Flota · 1 mes</button>
+                      <button onClick={()=>setPlan(v,"fleet","yearly")} style={planBtn}>Flota · 1 año</button>
                     </div>
+                    <button onClick={()=>setPlan(v,"free")} style={{width:"100%",padding:"6px",borderRadius:7,border:"1px solid #fecaca",background:"#fff",color:"#dc2626",fontSize:11,fontWeight:700,cursor:"pointer"}}>Cancelar a Gratis</button>
                   </div>
                 );
               })}
@@ -170,11 +180,12 @@ function Overlay({ children, onClose }) {
   );
 }
 
-function Stat({ label, value, accent }) {
-  return (
+function Stat({ label, value, accent }) {  return (
     <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
       <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{label}</div>
       <div style={{fontSize:22,fontWeight:800,color:accent||"#0f172a"}}>{value}</div>
     </div>
   );
 }
+
+const planBtn = { padding:"7px", borderRadius:7, border:"1px solid #e2e8f0", background:"#fff", color:"#2563eb", fontSize:11, fontWeight:700, cursor:"pointer" };

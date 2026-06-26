@@ -16,7 +16,7 @@ import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
 import AdminPanel, { isAdmin } from "./AdminPanel";
 import { countUnread } from "./notifications";
-import { getPlan } from "./plans.jsx";
+import { getPlan, isExpiringSoon, daysLeft } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
 
 
@@ -562,6 +562,14 @@ export default function App() {
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
       />
       <div style={{...s.body, padding:isMobile?"14px 12px":"20px 24px"}}>
+        {isExpiringSoon(vessel) && (
+          <div onClick={()=>setShowPlans(true)} style={{maxWidth:1100,margin:"0 auto 14px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",gap:12,flexWrap:"wrap"}}>
+            <div style={{fontSize:13,color:"#92400e"}}>
+              <strong>Tu plan {getPlan(vessel).name} vence en {daysLeft(vessel)} día{daysLeft(vessel)!==1?"s":""}.</strong> Renueva para no perder tus funciones premium.
+            </div>
+            <span style={{fontSize:12,fontWeight:700,color:"#fff",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",padding:"7px 14px",borderRadius:8,whiteSpace:"nowrap"}}>Renovar</span>
+          </div>
+        )}
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
