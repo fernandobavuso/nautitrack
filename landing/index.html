@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carive — Tu flota. Tu mar.</title>
+<meta name="description" content="Carive — La plataforma para gestionar tu embarcación: mantenimiento, bitácora, costos, tripulación y repuestos. Próximamente.">
+<meta property="og:title" content="Carive — Tu flota. Tu mar.">
+<meta property="og:description" content="La plataforma para gestionar tu embarcación. Próximamente.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0a2540;
+    --navy-deep:#061a30;
+    --blue:#2563eb;
+    --cyan:#0ea5e9;
+    --sand:#e8eef5;
+    --ink:#0f172a;
+    --muted:#94a3b8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--navy-deep);
+    color:#fff;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* Fondo: degradado profundo + horizonte */
+  .bg{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #143a5e 0%, transparent 60%),
+      linear-gradient(180deg, #0a2540 0%, #061a30 55%, #04111f 100%);
+  }
+  .horizon{
+    position:fixed;left:0;right:0;bottom:0;height:38vh;z-index:0;
+    background:linear-gradient(180deg, transparent 0%, rgba(14,165,233,0.08) 60%, rgba(14,165,233,0.16) 100%);
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 40%);
+            mask-image:linear-gradient(180deg,transparent,#000 40%);
+  }
+  /* Olas SVG suaves */
+  .waves{position:fixed;left:0;right:0;bottom:0;z-index:0;opacity:.5}
+  .waves path{animation:drift 14s ease-in-out infinite alternate}
+  .waves path:nth-child(2){animation-duration:18s;opacity:.6}
+  .waves path:nth-child(3){animation-duration:22s;opacity:.4}
+  @keyframes drift{from{transform:translateX(-30px)}to{transform:translateX(30px)}}
+
+  .wrap{
+    position:relative;z-index:2;
+    min-height:100vh;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    text-align:center;
+    padding:32px 22px 48px;
+  }
+
+  /* Barra superior: logo + idioma */
+  .top{
+    position:absolute;top:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 24px;
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand svg{display:block}
+  .brand b{font-family:'Sora';font-weight:800;font-size:19px;letter-spacing:-.5px}
+  .langtoggle{display:flex;gap:2px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:3px}
+  .langtoggle button{
+    background:none;border:none;color:#cbd5e1;cursor:pointer;
+    font-family:'Inter';font-size:12px;font-weight:600;
+    padding:5px 12px;border-radius:999px;transition:.15s;
+  }
+  .langtoggle button.on{background:#fff;color:var(--navy)}
+
+  /* Núcleo */
+  .badge{
+    display:inline-block;
+    font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    color:#7dd3fc;
+    border:1px solid rgba(125,211,252,.3);
+    background:rgba(125,211,252,.08);
+    padding:7px 16px;border-radius:999px;margin-bottom:28px;
+  }
+  h1{
+    font-family:'Sora';font-weight:800;
+    font-size:clamp(42px,9vw,86px);
+    line-height:.98;letter-spacing:-2px;
+    margin-bottom:18px;
+  }
+  h1 .grad{
+    background:linear-gradient(120deg,#7dd3fc,#38bdf8 40%,#2563eb);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .tag{
+    font-family:'Sora';font-weight:600;
+    font-size:clamp(18px,3.4vw,26px);
+    color:#cfe3f5;margin-bottom:20px;letter-spacing:-.3px;
+  }
+  .lede{
+    max-width:520px;
+    font-size:clamp(14px,2.2vw,16px);
+    line-height:1.6;color:#9fb4cc;
+    margin:0 auto 34px;
+  }
+
+  /* Captura de email */
+  form{
+    display:flex;gap:10px;width:100%;max-width:440px;margin:0 auto;
+  }
+  input[type=email]{
+    flex:1;min-width:0;
+    background:rgba(255,255,255,.07);
+    border:1.5px solid rgba(255,255,255,.16);
+    border-radius:12px;
+    padding:14px 16px;
+    color:#fff;font-size:15px;font-family:'Inter';
+    outline:none;transition:.15s;
+  }
+  input[type=email]::placeholder{color:#7f97b3}
+  input[type=email]:focus{border-color:#38bdf8;background:rgba(255,255,255,.1)}
+  button.cta{
+    background:linear-gradient(120deg,#2563eb,#0ea5e9);
+    border:none;border-radius:12px;
+    padding:14px 22px;
+    color:#fff;font-size:15px;font-weight:700;font-family:'Sora';
+    cursor:pointer;white-space:nowrap;transition:.15s;
+  }
+  button.cta:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  button.cta:disabled{opacity:.6;cursor:default;transform:none}
+
+  .note{font-size:12px;color:#7f97b3;margin-top:14px}
+  .ok{
+    margin:0 auto;max-width:440px;
+    background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);
+    border-radius:12px;padding:16px 18px;color:#bbf7d0;font-size:14px;font-weight:500;
+    display:none;
+  }
+
+  /* Mini features */
+  .feats{
+    display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+    margin-top:40px;max-width:560px;
+  }
+  .feats span{
+    font-size:12.5px;color:#9fb4cc;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    padding:7px 14px;border-radius:999px;
+  }
+
+  footer{
+    position:relative;z-index:2;
+    text-align:center;padding:24px;
+    font-size:12px;color:#5f7793;
+  }
+  @media (max-width:520px){
+    form{flex-direction:column}
+    button.cta{width:100%}
+    .top{padding:16px}
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="horizon"></div>
+  <svg class="waves" viewBox="0 0 1440 200" preserveAspectRatio="none" width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#0ea5e9" d="M0,120 C240,170 480,70 720,110 C960,150 1200,90 1440,120 L1440,200 L0,200 Z"/>
+    <path fill="#2563eb" d="M0,140 C240,100 480,180 720,140 C960,100 1200,170 1440,140 L1440,200 L0,200 Z"/>
+    <path fill="#1e3a8a" d="M0,160 C240,190 480,130 720,160 C960,190 1200,140 1440,165 L1440,200 L0,200 Z"/>
+  </svg>
+
+  <div class="top">
+    <div class="brand">
+      <!-- Logo: triángulo/vela estilizada -->
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3 L28 27 H4 Z" stroke="#38bdf8" stroke-width="2.2" fill="rgba(56,189,248,0.12)" stroke-linejoin="round"/>
+        <line x1="16" y1="3" x2="16" y2="27" stroke="#7dd3fc" stroke-width="1.6"/>
+      </svg>
+      <b>Carive</b>
+    </div>
+    <div class="langtoggle">
+      <button id="btn-es" class="on" onclick="setLang('es')">ES</button>
+      <button id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <span class="badge" data-es="Próximamente" data-en="Coming Soon">Próximamente</span>
+    <h1><span class="grad">Carive</span></h1>
+    <div class="tag" data-es="Tu flota. Tu mar." data-en="Your fleet. Your sea.">Tu flota. Tu mar.</div>
+    <p class="lede"
+       data-es="La plataforma para gestionar tu embarcación de principio a fin: mantenimiento, bitácora, costos, tripulación y repuestos. Tranquilidad y control, estés donde estés."
+       data-en="The platform to manage your vessel end to end: maintenance, logbook, costs, crew and parts. Peace of mind and control, wherever you are.">
+       La plataforma para gestionar tu embarcación de principio a fin: mantenimiento, bitácora, costos, tripulación y repuestos. Tranquilidad y control, estés donde estés.
+    </p>
+
+    <form id="waitform" onsubmit="return submitEmail(event)">
+      <input type="email" id="email" required
+             data-es-ph="Tu correo electrónico" data-en-ph="Your email address"
+             placeholder="Tu correo electrónico">
+      <button class="cta" id="cta" type="submit"
+              data-es="Avísame" data-en="Notify me">Avísame</button>
+    </form>
+    <div class="note" id="note"
+         data-es="Sé el primero en saber cuándo lanzamos. Sin spam."
+         data-en="Be the first to know when we launch. No spam.">
+      Sé el primero en saber cuándo lanzamos. Sin spam.
+    </div>
+    <div class="ok" id="ok"
+         data-es="¡Listo! Te avisaremos apenas Carive esté disponible."
+         data-en="Done! We'll let you know as soon as Carive is live.">
+      ¡Listo! Te avisaremos apenas Carive esté disponible.
+    </div>
+
+    <div class="feats">
+      <span data-es="Mantenimiento por horas de motor" data-en="Engine-hour maintenance">Mantenimiento por horas de motor</span>
+      <span data-es="Bitácora con fotos" data-en="Logbook with photos">Bitácora con fotos</span>
+      <span data-es="Control de costos" data-en="Cost tracking">Control de costos</span>
+      <span data-es="Marketplace de repuestos" data-en="Parts marketplace">Marketplace de repuestos</span>
+      <span data-es="Tripulación y capitanes" data-en="Crew & captains">Tripulación y capitanes</span>
+    </div>
+  </div>
+
+  <footer>
+    <span data-es="Hecho para el Caribe y más allá." data-en="Built for the Caribbean and beyond.">Hecho para el Caribe y más allá.</span>
+    &nbsp;·&nbsp; carive.co
+  </footer>
+
+<script>
+  // ── Supabase (claves públicas, seguras para el frontend) ──
+  const SUPABASE_URL = 'https://shwdahlvrjgcnzmlygaa.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNod2RhaGx2cmpnY256bWx5Z2FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1Mjk5NTMsImV4cCI6MjA5NzEwNTk1M30.Ce02yM5fwSvZH-GW5HX3l8Zap2O8QlVg2Gow8jJyXYA';
+
+  let lang = (navigator.language||'es').toLowerCase().startsWith('en') ? 'en' : 'es';
+
+  function applyLang(){
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-es]').forEach(function(el){
+      var val = el.getAttribute('data-'+lang);
+      if(val !== null && val !== undefined){ el.textContent = val; }
+    });
+    var em = document.getElementById('email');
+    if(em){ em.placeholder = em.getAttribute('data-'+lang+'-ph') || em.placeholder; }
+    var be = document.getElementById('btn-es');
+    var bn = document.getElementById('btn-en');
+    if(be) be.classList.toggle('on', lang==='es');
+    if(bn) bn.classList.toggle('on', lang==='en');
+  }
+  function setLang(l){ lang = l; applyLang(); }
+  window.setLang = setLang;
+
+  async function submitEmail(e){
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    if(!email) return false;
+    const cta = document.getElementById('cta');
+    cta.disabled = true;
+    try{
+      const res = await fetch(SUPABASE_URL + '/rest/v1/waitlist', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'apikey':SUPABASE_ANON,
+          'Authorization':'Bearer '+SUPABASE_ANON,
+          'Prefer':'return-minimal'
+        },
+        body: JSON.stringify({ email, lang, source:'landing' })
+      });
+      if(res.ok){
+        document.getElementById('waitform').style.display='none';
+        document.getElementById('note').style.display='none';
+        document.getElementById('ok').style.display='block';
+      } else {
+        cta.disabled=false;
+        alert(lang==='es'?'Hubo un problema. Intenta de nuevo.':'Something went wrong. Try again.');
+      }
+    }catch(err){
+      cta.disabled=false;
+      alert(lang==='es'?'Sin conexión. Intenta de nuevo.':'No connection. Try again.');
+    }
+    return false;
+  }
+
+  applyLang();
+</script>
+</body>
+</html>
