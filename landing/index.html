@@ -64,7 +64,9 @@
     position:absolute;top:0;left:0;right:0;
     display:flex;align-items:center;justify-content:space-between;
     padding:20px 24px;
+    z-index:10;
   }
+  .langtoggle{position:relative;z-index:11}
   .brand{display:flex;align-items:center;gap:10px}
   .brand svg{display:block}
   .brand b{font-family:'Sora';font-weight:800;font-size:19px;letter-spacing:-.5px}
@@ -183,8 +185,8 @@
       <b>Carive</b>
     </div>
     <div class="langtoggle">
-      <button id="btn-es" class="on" onclick="setLang('es')">ES</button>
-      <button id="btn-en" onclick="setLang('en')">EN</button>
+      <button id="btn-es" class="on" type="button">ES</button>
+      <button id="btn-en" type="button">EN</button>
     </div>
   </div>
 
@@ -285,8 +287,11 @@
     return false;
   }
 
+  // Conectar los botones de idioma de forma robusta
+  document.getElementById('btn-es').addEventListener('click', function(){ setLang('es'); });
+  document.getElementById('btn-en').addEventListener('click', function(){ setLang('en'); });
+
   applyLang();
 </script>
 </body>
 </html>
-<!-- deploy trigger -->
