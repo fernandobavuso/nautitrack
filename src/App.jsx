@@ -3,6 +3,7 @@ import React from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
+import Onboarding, { OnboardingChecklist } from "./Onboarding";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
@@ -205,6 +206,8 @@ export default function App() {
   const [addingVessel, setAddingVessel] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
+  const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
@@ -530,6 +533,10 @@ export default function App() {
     <CrewProfile user={user} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVesselsLoading(false); setCheckingRole(true); setCrewProfile(null); setCaptainProfile(null); setCaptainVessel(null); }}/>
   );
 
+  if (!vesselsLoading && vessels.length === 0 && showWelcome) return (
+    <Onboarding onStart={() => { localStorage.setItem("nt_welcomed","1"); setShowWelcome(false); }} />
+  );
+
   if (!vesselsLoading && vessels.length === 0) return (
     <AddVessel onAdd={handleAddVessel} onSkip={() => {
       const demo = INIT_VESSELS.map(v => ({...v, owner_id: user.id}));
@@ -562,6 +569,15 @@ export default function App() {
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
       />
       <div style={{...s.body, padding:isMobile?"14px 12px":"20px 24px"}}>
+        {page==="home" && !hideChecklist && (
+          <OnboardingChecklist
+            vessel={vessel}
+            onAddTask={()=>setPage("tasks")}
+            onAddLog={()=>setPage("log")}
+            onInviteCrew={()=>setShowCrewMarket(true)}
+            onDismiss={()=>{ localStorage.setItem("nt_hide_checklist","1"); setHideChecklist(true); }}
+          />
+        )}
         {isExpiringSoon(vessel) && (
           <div onClick={()=>setShowPlans(true)} style={{maxWidth:1100,margin:"0 auto 14px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",gap:12,flexWrap:"wrap"}}>
             <div style={{fontSize:13,color:"#92400e"}}>
