@@ -177,7 +177,7 @@ export default function DayTripsOwner({ vessel, user }) {
   return (
     <div>
       {!creating ? (
-        <button onClick={()=>setCreating(true)} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:16}}>
+        <button onClick={()=>setCreating(true)} style={{width:"100%",padding:"12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:16}}>
           ＋ Solicitar Tripulante para un Viaje
         </button>
       ) : (
@@ -323,7 +323,7 @@ export default function DayTripsOwner({ vessel, user }) {
 
           <div style={{display:"flex",gap:8,marginTop:14}}>
             <button onClick={()=>setCreating(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-            <button onClick={publishTrip} style={{flex:2,padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Publicar solicitud</button>
+            <button onClick={publishTrip} style={{flex:2,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Publicar solicitud</button>
           </div>
         </div>
       )}
@@ -399,7 +399,7 @@ export default function DayTripsOwner({ vessel, user }) {
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                     {c.photo_url
                       ? <img src={c.photo_url} style={{width:48,height:48,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                      : <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18}}>{name[0].toUpperCase()}</div>
+                      : <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18}}>{name[0].toUpperCase()}</div>
                     }
                     <div style={{flex:1}}>
                       <div style={{fontSize:14,fontWeight:700,color:"#0f172a",display:"flex",alignItems:"center",gap:6}}>
@@ -499,7 +499,7 @@ function ReviewButton({ trip, user, onDone }) {
               ))}
             </div>
             <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3} placeholder="¿Cómo fue tu experiencia? (opcional)" style={{...inp,resize:"vertical",marginBottom:14}}/>
-            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(135deg,#1d4ed8,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
+            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
           </div>
         </div>
       )}

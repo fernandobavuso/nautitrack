@@ -248,7 +248,7 @@ const s = {
   form:     { display:"flex", flexDirection:"column", gap:14 },
   label:    { display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:5 },
   input:    { width:"100%", padding:"11px 13px", border:"1.5px solid #e2e8f0", borderRadius:9, fontSize:14, color:"#1e293b", background:"#fff", boxSizing:"border-box", outline:"none" },
-  btn:      { padding:"13px", background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", border:"none", borderRadius:9, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", marginTop:4 },
+  btn:      { padding:"13px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:9, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", marginTop:4 },
   forgotBtn:{ background:"none", border:"none", color:"#94a3b8", fontSize:12, cursor:"pointer", textAlign:"center", marginTop:-6 },
   errorBox: { background:"#fff5f5", border:"1px solid #fecaca", borderRadius:8, padding:"9px 12px", fontSize:12, color:"#dc2626" },
   successBox:{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:8, padding:"9px 12px", fontSize:12, color:"#16a34a" },

@@ -87,7 +87,7 @@ export default function StoreView({ user, onLogout }) {
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16,marginBottom:16}}>
             <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>Completa tu perfil de tienda</div>
             <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Indica tu nombre, ciudad y categorías para empezar a recibir solicitudes de repuestos.</div>
-            <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Completar perfil</button>
+            <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Completar perfil</button>
           </div>
         )}
 
@@ -118,7 +118,7 @@ export default function StoreView({ user, onLogout }) {
                     </div>
                     {responded
                       ? <div style={{marginTop:10,fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center"}}>Ya respondiste a esta solicitud</div>
-                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",marginTop:10,padding:"9px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Responder</button>
+                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",marginTop:10,padding:"9px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Responder</button>
                     }
                   </div>
                 );
@@ -199,7 +199,7 @@ export default function StoreView({ user, onLogout }) {
                   ))}
                 </div>
               </div>
-              <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Guardar tienda</button>
+              <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Guardar tienda</button>
             </div>
           </div>
         )}
@@ -289,7 +289,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
 
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-          <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar oferta</button>
+          <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar oferta</button>
         </div>
       </div>
     </div>

@@ -588,7 +588,7 @@ export default function App() {
             <div style={{fontSize:13,color:"#92400e"}}>
               <strong>Tu plan {getPlan(vessel).name} vence en {daysLeft(vessel)} día{daysLeft(vessel)!==1?"s":""}.</strong> Renueva para no perder tus funciones premium.
             </div>
-            <span style={{fontSize:12,fontWeight:700,color:"#fff",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",padding:"7px 14px",borderRadius:8,whiteSpace:"nowrap"}}>Renovar</span>
+            <span style={{fontSize:12,fontWeight:700,color:"#fff",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",padding:"7px 14px",borderRadius:8,whiteSpace:"nowrap"}}>Renovar</span>
           </div>
         )}
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
@@ -2234,7 +2234,7 @@ function ReportModal({ vessel, onClose }) {
 
   <!-- PRINT BUTTON -->
   <div class="no-print" style="position:fixed;bottom:28px;right:28px;display:flex;gap:10px;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.2));">
-    <button onclick="window.print()" style="padding:13px 22px;background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+    <button onclick="window.print()" style="padding:13px 22px;background:linear-gradient(120deg,#2563eb,#0ea5e9);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
       🖨️ Imprimir / Guardar PDF
     </button>
     <button onclick="window.close()" style="padding:13px 18px;background:#fff;color:#475569;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;cursor:pointer;">
@@ -2637,7 +2637,7 @@ function DocsPage({ vessel, user }) {
             <input value={aiQuery} onChange={e=>setAiQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&askAI()}
               placeholder={selectedManual?"Pregunta sobre este manual...":"¿Qué repuestos necesito para el servicio de 500 horas?"}
               style={{...s.input,flex:1,padding:"10px 14px"}}/>
-            <button onClick={askAI} disabled={aiLoading||pdfLoading} style={{...s.btnPrimary,padding:"10px 20px",opacity:(aiLoading||pdfLoading)?0.6:1,minWidth:110,background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)"}}>
+            <button onClick={askAI} disabled={aiLoading||pdfLoading} style={{...s.btnPrimary,padding:"10px 20px",opacity:(aiLoading||pdfLoading)?0.6:1,minWidth:110,background:"linear-gradient(120deg,#2563eb,#0ea5e9)"}}>
               {aiLoading?"⏳ Pensando...":"🔍 Preguntar"}
             </button>
           </div>
@@ -3019,7 +3019,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
           {!loading && tab==="profile"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div style={{display:"flex",alignItems:"center",gap:16,padding:16,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
-                <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{form.firstName?.[0]||"?"}{form.lastName?.[0]||""}</div>
+                <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",fontSize:22,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{form.firstName?.[0]||"?"}{form.lastName?.[0]||""}</div>
                 <div><div style={{fontWeight:700,fontSize:15,color:"#0f172a"}}>{form.firstName||"Tu nombre"} {form.lastName||""}</div><div style={{fontSize:12,color:"#64748b"}}>{form.email||"Sin email"}</div><button style={{...s.btnOutline,padding:"3px 10px",fontSize:11,marginTop:6}}>Cambiar foto</button></div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
@@ -3057,7 +3057,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
           )}
           {tab==="subscription"&&(
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <div style={{background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",borderRadius:12,padding:20,color:"#fff"}}>
+              <div style={{background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:12,padding:20,color:"#fff"}}>
                 <div style={{fontSize:11,opacity:.8,letterSpacing:"0.1em",marginBottom:4}}>PLAN ACTUAL</div>
                 <div style={{fontSize:24,fontWeight:800,marginBottom:4}}>{sub.plan||"Pro"}</div>
                 <div style={{fontSize:20,fontWeight:700}}>${sub.price||79}<span style={{fontSize:13,opacity:.8}}>/{sub.cycle==="Mensual"?"mes":"año"}</span></div>
@@ -3558,15 +3558,15 @@ const s = {
   userBtn:    { display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:"4px 6px", borderRadius:8, flexShrink:0 },
   bellWrap:   { position:"relative" },
   bellBadge:  { position:"absolute", top:-4, right:-4, background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, width:16, height:16, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
-  navAvatar:  { width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", color:"#fff", fontWeight:700, fontSize:11, display:"flex", alignItems:"center", justifyContent:"center" },
+  navAvatar:  { width:32, height:32, borderRadius:"50%", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", color:"#fff", fontWeight:700, fontSize:11, display:"flex", alignItems:"center", justifyContent:"center" },
   navName:    { fontSize:12, fontWeight:600, color:"#0f172a", maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   navRole:    { fontSize:10, color:"#94a3b8" },
   body:       { padding:"20px 24px", maxWidth:1440, margin:"0 auto" },
   home:       { display:"flex", flexDirection:"column", gap:16 },
   row:        { display:"flex", gap:16, alignItems:"stretch" },
-  card:       { background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, padding:"16px 20px", boxShadow:"0 1px 4px rgba(0,0,0,0.05)", flex:1 },
+  card:       { background:"#fff", border:"1px solid #eaf1f8", borderRadius:16, padding:"18px 22px", boxShadow:"0 4px 20px rgba(10,37,64,0.06)", flex:1 },
   cardHdr:    { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 },
-  cardTitle:  { fontSize:13, fontWeight:700, color:"#0f172a" },
+  cardTitle:  { fontSize:14, fontWeight:700, color:"#0a2540", fontFamily:"'Sora',system-ui,sans-serif" },
   cardSub:    { fontSize:11, color:"#94a3b8" },
   linkBtn:    { background:"none", border:"none", color:"#2563eb", fontSize:11, cursor:"pointer", fontWeight:600 },
   fleetRow:   { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"9px 12px", borderRadius:8, border:"1.5px solid", marginBottom:8 },
@@ -3584,7 +3584,7 @@ const s = {
   toolbar:    { display:"flex", alignItems:"center", gap:12, marginBottom:16, flexWrap:"wrap" },
   toolbarTitle: { fontSize:16, fontWeight:700, color:"#0f172a", margin:0, marginRight:8 },
   filterBtn:  { display:"flex", alignItems:"center", gap:5, padding:"6px 12px", border:"1.5px solid", borderRadius:6, fontSize:12, fontWeight:500, cursor:"pointer", transition:"all 0.15s" },
-  btnPrimary: { padding:"7px 14px", background:"#1d4ed8", border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" },
+  btnPrimary: { padding:"8px 16px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:8, color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", boxShadow:"0 2px 8px rgba(37,99,235,0.25)", fontFamily:"'Sora',system-ui,sans-serif" },
   btnOutline: { padding:"7px 14px", border:"1.5px solid #e2e8f0", borderRadius:6, background:"#fff", color:"#475569", fontSize:12, fontWeight:500, cursor:"pointer" },
   table:      { width:"100%", borderCollapse:"collapse", background:"#fff", borderRadius:10, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" },
   th:         { padding:"10px 14px", textAlign:"left", color:"#93c5fd", fontSize:11, fontWeight:600, letterSpacing:"0.04em", whiteSpace:"nowrap" },
@@ -3704,7 +3704,7 @@ function CaptainManagerModal({ vessel, user, onClose }) {
           <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
             {captains.map(cap=>(
               <div key={cap.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:cap.active?"#f0fdf4":"#f8fafc",border:`1px solid ${cap.active?"#bbf7d0":"#e2e8f0"}`,borderRadius:10}}>
-                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>
                   {cap.full_name?.[0]||"?"}
                 </div>
                 <div style={{flex:1}}>
@@ -3754,13 +3754,13 @@ function CaptainManagerModal({ vessel, user, onClose }) {
               {msg && <div style={{marginTop:10,padding:"8px 12px",background:msg.startsWith("✅")?"#f0fdf4":"#fff7ed",border:`1px solid ${msg.startsWith("✅")?"#bbf7d0":"#fed7aa"}`,borderRadius:7,fontSize:12,color:msg.startsWith("✅")?"#16a34a":"#c2410c"}}>{msg}</div>}
               <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
                 <button onClick={()=>{setAdding(false);setMsg("");}} style={{padding:"8px 16px",border:"1.5px solid #e2e8f0",borderRadius:7,background:"#fff",cursor:"pointer",fontSize:13}}>Cancelar</button>
-                <button onClick={handleInvite} disabled={saving} style={{padding:"8px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13,opacity:saving?0.6:1}}>
+                <button onClick={handleInvite} disabled={saving} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13,opacity:saving?0.6:1}}>
                   {saving?"⏳ Guardando...":"✓ Agregar"}
                 </button>
               </div>
             </div>
           ) : (
-            <button onClick={()=>setAdding(true)} style={{width:"100%",padding:"11px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            <button onClick={()=>setAdding(true)} style={{width:"100%",padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
               ＋ Agregar Capitán / Tripulante
             </button>
           )}

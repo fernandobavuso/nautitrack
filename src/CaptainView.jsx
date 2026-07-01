@@ -342,7 +342,7 @@ function CaptainLogTab({ vessel, user }) {
           <div style={{fontSize:16, fontWeight:700, color:"#0f172a"}}>📓 Bitácora</div>
           <div style={{fontSize:12, color:"#64748b"}}>Registra eventos y actividades</div>
         </div>
-        <button onClick={()=>setShowForm(!showForm)} style={{padding:"8px 14px", background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer"}}>
+        <button onClick={()=>setShowForm(!showForm)} style={{padding:"8px 14px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer"}}>
           {showForm?"✕ Cancelar":"＋ Nueva entrada"}
         </button>
       </div>
@@ -374,7 +374,7 @@ function CaptainLogTab({ vessel, user }) {
           </div>
           <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
             <button onClick={handleSave} disabled={!form.desc.trim()||saving}
-              style={{padding:"9px 20px", background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", opacity:(!form.desc.trim()||saving)?0.5:1}}>
+              style={{padding:"9px 20px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", opacity:(!form.desc.trim()||saving)?0.5:1}}>
               {saving?"⏳ Guardando...":"✓ Guardar"}
             </button>
           </div>

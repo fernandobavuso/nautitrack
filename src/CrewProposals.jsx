@@ -70,7 +70,7 @@ export default function CrewProposals({ user, profile }) {
                   {s.notes&&<div style={{fontSize:12,color:"#475569",marginBottom:12,background:"#f8fafc",padding:"10px 12px",borderRadius:8}}>{s.notes}</div>}
                   <div style={{display:"flex",gap:8}}>
                     <button onClick={()=>respond(p,"not_interested")} style={{flex:1,padding:"10px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:8,color:"#64748b",fontSize:13,fontWeight:600,cursor:"pointer"}}>No me interesa</button>
-                    <button onClick={()=>respond(p,"interested")} style={{flex:2,padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Me interesa</button>
+                    <button onClick={()=>respond(p,"interested")} style={{flex:2,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Me interesa</button>
                   </div>
                 </div>
               );

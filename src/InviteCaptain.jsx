@@ -121,7 +121,7 @@ export default function InviteCaptain({ vessel, onClose }) {
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {captains.map(c=>(
               <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#fff",border:`1px solid ${c.active?"#bbf7d0":"#e2e8f0"}`,borderRadius:10}}>
-                <div style={{width:36,height:36,borderRadius:"50%",background:c.active?"linear-gradient(135deg,#1d4ed8,#0ea5e9)":"#e2e8f0",color:c.active?"#fff":"#94a3b8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:c.active?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#e2e8f0",color:c.active?"#fff":"#94a3b8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0}}>
                   {c.full_name?.[0]||"?"}
                 </div>
                 <div style={{flex:1}}>
@@ -149,5 +149,5 @@ const s = {
   header:  {background:"linear-gradient(135deg,#1e3a5f,#2563eb)",padding:"18px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"},
   label:   {display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:5},
   input:   {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"},
-  btn:     {width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"},
+  btn:     {width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"},
 };

@@ -591,7 +591,7 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:14,padding:16,marginBottom:20}}>
                 <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>Completa tu verificación</div>
                 <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Verifica tu identidad para poder aplicar a barcos y recibir solicitudes de viaje.</div>
-                <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Ir a Mi Perfil</button>
+                <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Ir a Mi Perfil</button>
               </div>
             )}
 
@@ -655,7 +655,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <div style={{position:"relative",display:"inline-block",marginBottom:12}}>
                     {profile.photo_url
                       ? <img src={profile.photo_url} style={{width:100,height:100,borderRadius:"50%",objectFit:"cover",border:"3px solid #0ea5e9"}} alt="foto"/>
-                      : <div style={{width:100,height:100,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",fontSize:32,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}>
+                      : <div style={{width:100,height:100,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",fontSize:32,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}>
                           {(full_name||user.email||"?")[0].toUpperCase()}
                         </div>
                     }
@@ -748,7 +748,7 @@ export default function CrewProfile({ user, onLogout }) {
                       </div>
                       {(profile.badges||[]).includes("verified")
                         ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ Identidad verificada por IA</div>
-                        : <button onClick={verifyIdentity} disabled={verifying||!profile.legal_name} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:(verifying||!profile.legal_name)?0.5:1}}>
+                        : <button onClick={verifyIdentity} disabled={verifying||!profile.legal_name} style={{width:"100%",padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:(verifying||!profile.legal_name)?0.5:1}}>
                             {verifying?"Verificando...":"Verificar identidad con IA"}
                           </button>
                       }
@@ -986,7 +986,7 @@ export default function CrewProfile({ user, onLogout }) {
                     </label>
                 }
               </div>
-              <button onClick={addCertification} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              <button onClick={addCertification} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                 Agregar a mi perfil
               </button>
             </div>
@@ -1060,7 +1060,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <label style={s.label}>Notas</label>
                 <input value={newExp.notes} onChange={e=>setNewExp({...newExp,notes:e.target.value})} placeholder="Rutas frecuentes, tipo de operación, etc." style={s.input}/>
               </div>
-              <button onClick={addExperience} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              <button onClick={addExperience} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                 Agregar a mi perfil
               </button>
             </div>
@@ -1128,7 +1128,7 @@ export default function CrewProfile({ user, onLogout }) {
                     style={{padding:"7px 12px",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#475569",fontWeight:600}}>
                     ＋ Carpeta
                   </button>
-                  <label style={{padding:"7px 14px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700}}>
+                  <label style={{padding:"7px 14px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700}}>
                     ⬆ Subir
                     <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
                       const f=e.target.files[0];
@@ -1209,7 +1209,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchVessels()}
                   placeholder="Ciudad o tipo (ej: Margarita, Yate Motor)..." style={{...s.input,flex:1}}/>
                 <button onClick={searchVessels} disabled={searching}
-                  style={{padding:"10px 16px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13}}>
+                  style={{padding:"10px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13}}>
                   {searching?"...":"Buscar"}
                 </button>
               </div>
@@ -1228,7 +1228,7 @@ export default function CrewProfile({ user, onLogout }) {
                       </div>
                       <button onClick={()=>!sent&&sendRequest(v)} disabled={sent} style={{
                         padding:"8px 14px",border:"none",borderRadius:8,cursor:sent?"default":"pointer",
-                        background:sent?"#f1f5f9":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",
+                        background:sent?"#f1f5f9":"linear-gradient(120deg,#2563eb,#0ea5e9)",
                         color:sent?"#94a3b8":"#fff",fontSize:12,fontWeight:700,whiteSpace:"nowrap",
                       }}>{sent?(conn.status==="matched"?"✓ Match":"✓ Aplicado"):"Aplicar"}</button>
                     </div>
@@ -1316,7 +1316,7 @@ export default function CrewProfile({ user, onLogout }) {
               <input value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Ej: Licencias de navegación" autoFocus style={{...s.input,marginBottom:16}}/>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>setShowFolderModal(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>Cancelar</button>
-                <button onClick={async()=>{ if(newFolderName.trim()){ await addFolder(newFolderName.trim()); setMsg("✅ Carpeta '"+newFolderName.trim()+"' creada"); setTimeout(()=>setMsg(""),3000);} setShowFolderModal(false);}} style={{flex:1,padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#fff",fontWeight:700}}>Crear</button>
+                <button onClick={async()=>{ if(newFolderName.trim()){ await addFolder(newFolderName.trim()); setMsg("✅ Carpeta '"+newFolderName.trim()+"' creada"); setTimeout(()=>setMsg(""),3000);} setShowFolderModal(false);}} style={{flex:1,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#fff",fontWeight:700}}>Crear</button>
               </div>
             </div>
           </div>
@@ -1369,7 +1369,7 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:20,padding:"6px 14px",margin:"8px 0 16px"}}>
                 <span>✅</span><span style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>Usuario Certificado</span>
               </div>
-              <button onClick={()=>setShowVerifyPopup(false)} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              <button onClick={()=>setShowVerifyPopup(false)} style={{width:"100%",padding:"12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
                 Entendido
               </button>
             </div>
@@ -1386,7 +1386,7 @@ export default function CrewProfile({ user, onLogout }) {
       {/* Guardar flotante */}
       {(tab==="perfil"||tab==="pagos")&&(
         <div style={{position:"fixed",bottom:24,right:24,zIndex:100}}>
-          <button onClick={saveProfile} disabled={saving} style={{padding:"12px 24px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(29,78,216,0.4)",opacity:saving?0.7:1}}>
+          <button onClick={saveProfile} disabled={saving} style={{padding:"12px 24px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(29,78,216,0.4)",opacity:saving?0.7:1}}>
             {saving?"⏳ Guardando...":"💾 Guardar"}
           </button>
         </div>

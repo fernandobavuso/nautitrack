@@ -49,7 +49,7 @@ export default function ChatPanel({ connection, currentUserId, otherName, onClos
         {/* Header */}
         <div style={{padding:"14px 18px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{(otherName||"?")[0].toUpperCase()}</div>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{(otherName||"?")[0].toUpperCase()}</div>
             <div>
               <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{otherName||"Chat"}</div>
               <div style={{fontSize:11,color:"#16a34a"}}>● Conectado</div>
@@ -73,7 +73,7 @@ export default function ChatPanel({ connection, currentUserId, otherName, onClos
               <div key={m.id} style={{alignSelf:mine?"flex-end":"flex-start",maxWidth:"75%"}}>
                 <div style={{
                   padding:"9px 13px",borderRadius:mine?"14px 14px 4px 14px":"14px 14px 14px 4px",
-                  background:mine?"linear-gradient(135deg,#1d4ed8,#0ea5e9)":"#fff",
+                  background:mine?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#fff",
                   color:mine?"#fff":"#1e293b",fontSize:13,lineHeight:1.4,
                   border:mine?"none":"1px solid #e2e8f0",
                 }}>{m.body}</div>
@@ -90,7 +90,7 @@ export default function ChatPanel({ connection, currentUserId, otherName, onClos
         <div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",gap:8}}>
           <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
             placeholder="Escribe un mensaje..." style={{flex:1,padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:20,fontSize:13,outline:"none"}}/>
-          <button onClick={send} style={{background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:"50%",width:40,height:40,cursor:"pointer",color:"#fff",fontSize:16}}>➤</button>
+          <button onClick={send} style={{background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:"50%",width:40,height:40,cursor:"pointer",color:"#fff",fontSize:16}}>➤</button>
         </div>
       </div>
     </div>

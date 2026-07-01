@@ -242,11 +242,11 @@ export default function CheckinPage() {
 const s = {
   root: { minHeight:"100vh", background:"linear-gradient(135deg,#0f172a,#1e3a5f)", display:"flex", alignItems:"center", justifyContent:"center", padding:16, fontFamily:"'Segoe UI',system-ui,sans-serif" },
   card: { background:"#fff", borderRadius:20, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 30px 80px rgba(0,0,0,0.4)" },
-  vesselHeader: { background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", padding:"20px 24px", display:"flex", alignItems:"center", gap:14 },
+  vesselHeader: { background:"linear-gradient(120deg,#2563eb,#0ea5e9)", padding:"20px 24px", display:"flex", alignItems:"center", gap:14 },
   label: { display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 },
   input: { width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:9, fontSize:14, color:"#1e293b", background:"#fff", boxSizing:"border-box", outline:"none" },
   btnCheckin:  { padding:"20px 12px", background:"linear-gradient(135deg,#16a34a,#22c55e)", border:"none", borderRadius:12, color:"#fff", cursor:"pointer", transition:"all 0.2s", textAlign:"center" },
   btnCheckout: { padding:"20px 12px", background:"linear-gradient(135deg,#dc2626,#ef4444)", border:"none", borderRadius:12, color:"#fff", cursor:"pointer", transition:"all 0.2s", textAlign:"center" },
-  btnConfirm:  { width:"100%", padding:"14px", background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)", border:"none", borderRadius:10, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer" },
+  btnConfirm:  { width:"100%", padding:"14px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:10, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer" },
   btnOutline:  { padding:"11px 16px", border:"1.5px solid #e2e8f0", borderRadius:9, background:"#fff", color:"#475569", fontSize:13, fontWeight:500, cursor:"pointer" },
 };

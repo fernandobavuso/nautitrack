@@ -139,7 +139,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
           <button onClick={()=>setRequesting("new")} style={{padding:"10px 16px",background:"#fff",border:"1.5px solid #1d4ed8",borderRadius:10,color:"#1d4ed8",fontSize:13,fontWeight:700,cursor:"pointer"}}>
             Pedir repuesto
           </button>
-          <button onClick={openNew} style={{padding:"10px 18px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+          <button onClick={openNew} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
             Agregar repuesto
           </button>
         </div>
@@ -228,7 +228,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                           </div>
                           {/* Botón elegir ganador (solo si no resuelto y tiene precio) */}
                           {!resolved&&rp.response_type==="have"&&rp.price&&(
-                            <button onClick={()=>chooseWinner(r,rp)} style={{width:"100%",marginTop:8,padding:"7px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Elegir esta tienda</button>
+                            <button onClick={()=>chooseWinner(r,rp)} style={{width:"100%",marginTop:8,padding:"7px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Elegir esta tienda</button>
                           )}
                         </div>
                       );})}
@@ -344,7 +344,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setEditing(null)} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar</button>
+              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar</button>
             </div>
           </div>
         </div>
@@ -493,7 +493,7 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
         </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-          <button onClick={submit} disabled={saving||!form.item_name.trim()} style={{flex:2,padding:"11px",background:(saving||!form.item_name.trim())?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{saving?"Publicando...":needsApproval?"Enviar para aprobación":"Publicar solicitud"}</button>
+          <button onClick={submit} disabled={saving||!form.item_name.trim()} style={{flex:2,padding:"11px",background:(saving||!form.item_name.trim())?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{saving?"Publicando...":needsApproval?"Enviar para aprobación":"Publicar solicitud"}</button>
         </div>
       </div>
     </div>

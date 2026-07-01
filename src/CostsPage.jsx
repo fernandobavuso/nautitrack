@@ -84,7 +84,7 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
           <div style={{fontSize:20,fontWeight:800,color:"#0f172a"}}>Costos de {vessel.name}</div>
           <div style={{fontSize:13,color:"#64748b"}}>Cuánto te cuesta tu embarcación. Los gastos que registras en la bitácora aparecen aquí automáticamente.</div>
         </div>
-        <button onClick={()=>setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+        <button onClick={()=>setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           Registrar gasto
         </button>
       </div>
@@ -195,7 +195,7 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setCreating(false)} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar gasto</button>
+              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar gasto</button>
             </div>
           </div>
         </div>

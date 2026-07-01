@@ -195,7 +195,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
             <textarea value={f.notes} onChange={e=>setF({...f,notes:e.target.value})} rows={3} placeholder="Describe el trabajo, horario, expectativas..." style={{...inp,resize:"vertical"}}/>
           </div>
 
-          <button onClick={publish} disabled={publishing} style={{width:"100%",padding:"13px",background:publishing?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+          <button onClick={publish} disabled={publishing} style={{width:"100%",padding:"13px",background:publishing?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
             {publishing?"Publicando...":"Publicar búsqueda"}
           </button>
         </div>
@@ -217,7 +217,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
                 <div key={item.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14,display:"flex",gap:12,alignItems:"center"}}>
                   {c.photo_url
                     ? <img src={c.photo_url} style={{width:48,height:48,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                    : <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{name[0].toUpperCase()}</div>}
+                    : <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{name[0].toUpperCase()}</div>}
                   <div style={{flex:1}}>
                     <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{name}</div>
                     <div style={{fontSize:11,color:"#64748b"}}>{c.crew_role||""}{c.work_zone?` · ${c.work_zone}`:""}</div>

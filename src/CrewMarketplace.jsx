@@ -238,7 +238,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                       <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
                         {c.photo_url
                           ? <img src={c.photo_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover"}} alt=""/>
-                          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18}}>{name[0].toUpperCase()}</div>}
+                          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18}}>{name[0].toUpperCase()}</div>}
                         <div style={{flex:1}}>
                           <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>{name}</div>
                           <div style={{fontSize:11,color:"#64748b"}}>{c.crew_role||""}{c.work_zone?` · ${c.work_zone}`:""}{item.search?.role?` · busca: ${item.search.role}`:""}</div>
@@ -247,7 +247,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                       </div>
                       <div style={{display:"flex",gap:8}}>
                         <button onClick={()=>setSelectedCrew(c)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>Ver perfil</button>
-                        <button onClick={()=>{ updatePossible(item,"contacted"); inviteCrew(c); }} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Contactar</button>
+                        <button onClick={()=>{ updatePossible(item,"contacted"); inviteCrew(c); }} style={{flex:1,padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Contactar</button>
                         <button onClick={()=>updatePossible(item, saved?"new":"saved")} style={{flex:1,padding:"8px",background:saved?"#fef9c3":"#fff",border:"1px solid #e2e8f0",borderRadius:8,color:saved?"#a16207":"#64748b",fontSize:12,fontWeight:700,cursor:"pointer"}}>{saved?"Guardado":"Guardar"}</button>
                         <button onClick={()=>updatePossible(item,"declined")} style={{flex:1,padding:"8px",background:"#fff",border:"1px solid #fecaca",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Declinar</button>
                       </div>
@@ -338,7 +338,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                 </div>
                 <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (debe tener cuenta en Carive)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
                 <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder="Teléfono (opcional)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
-                <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
+                <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
                 {assignMsg&&<div style={{fontSize:11,color:assignMsg.startsWith("✅")?"#16a34a":"#dc2626",marginTop:8,textAlign:"center"}}>{assignMsg}</div>}
               </div>
             </div>
@@ -373,7 +373,7 @@ function CrewCard({ crew, rep, badgeIcons, onView, actions }) {
       <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
         {crew.photo_url
           ? <img src={crew.photo_url} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
-          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18,flexShrink:0}}>{name[0].toUpperCase()}</div>
+          : <div style={{width:52,height:52,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:18,flexShrink:0}}>{name[0].toUpperCase()}</div>
         }
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{name}</div>
@@ -403,7 +403,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           <button onClick={onClose} style={{position:"absolute",top:16,right:16,background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
           {crew.photo_url
             ? <img src={crew.photo_url} style={{width:90,height:90,borderRadius:"50%",objectFit:"cover",border:"3px solid #0ea5e9",margin:"0 auto"}} alt=""/>
-            : <div style={{width:90,height:90,borderRadius:"50%",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",color:"#fff",fontSize:30,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}>{(crew.full_name||"?")[0].toUpperCase()}</div>
+            : <div style={{width:90,height:90,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",fontSize:30,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}>{(crew.full_name||"?")[0].toUpperCase()}</div>
           }
           <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginTop:12}}>{crew.full_name}</div>
           <div style={{fontSize:13,color:"#0ea5e9",fontWeight:600}}>{crew.crew_role}{crew.secondary_role?` · ${crew.secondary_role}`:""}</div>

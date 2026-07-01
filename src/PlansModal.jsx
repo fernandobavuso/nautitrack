@@ -104,7 +104,7 @@ export default function PlansModal({ vessel, user, onClose }) {
                     ? <div style={{padding:"10px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,color:"#16a34a",fontSize:13,fontWeight:700,textAlign:"center"}}>Tu plan actual</div>
                     : key==="free"
                       ? <div style={{padding:"10px",background:"#f8fafc",borderRadius:8,color:"#94a3b8",fontSize:13,fontWeight:600,textAlign:"center"}}>Gratis siempre</div>
-                      : <button onClick={()=>setSelected(key)} style={{width:"100%",padding:"10px",background:highlight?"linear-gradient(135deg,#1d4ed8,#0ea5e9)":"#0f172a",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Elegir {plan.name}</button>
+                      : <button onClick={()=>setSelected(key)} style={{width:"100%",padding:"10px",background:highlight?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#0f172a",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Elegir {plan.name}</button>
                   }
                 </div>
               );

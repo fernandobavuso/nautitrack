@@ -211,7 +211,7 @@ const s = {
   input:     {width:"100%",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:14,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"},
   chipGrid:  {display:"flex",flexWrap:"wrap",gap:7,marginTop:4},
   chip:      {padding:"6px 12px",border:"1.5px solid",borderRadius:20,fontSize:12,cursor:"pointer",transition:"all 0.15s"},
-  btn:       {padding:"12px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"},
+  btn:       {padding:"12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"},
   btnOutline:{padding:"12px 16px",border:"1.5px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#475569",fontSize:14,fontWeight:500,cursor:"pointer"},
   skipBtn:   {display:"block",width:"100%",marginTop:16,background:"none",border:"none",color:"#94a3b8",fontSize:12,cursor:"pointer",textAlign:"center"},
 };

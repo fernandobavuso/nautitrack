@@ -159,7 +159,7 @@ export default function DayTripsCrew({ user, profile }) {
               {trip.notes&&<div style={{fontSize:12,color:"#475569",margin:"6px 0",fontStyle:"italic"}}>"{trip.notes}"</div>}
               <button onClick={()=>!applied&&setApplyTrip(trip)} disabled={applied} style={{
                 width:"100%",marginTop:8,padding:"9px",border:"none",borderRadius:8,cursor:applied?"default":"pointer",
-                background:applied?"#f1f5f9":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",
+                background:applied?"#f1f5f9":"linear-gradient(120deg,#2563eb,#0ea5e9)",
                 color:applied?"#94a3b8":"#fff",fontSize:13,fontWeight:700,
               }}>{applied?"✓ Ya te postulaste":"Postularme"}</button>
             </div>
@@ -207,7 +207,7 @@ export default function DayTripsCrew({ user, profile }) {
             <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder="Preséntate brevemente..." style={{...inp,resize:"vertical",marginBottom:14}}/>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setApplyTrip(null)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-              <button onClick={apply} disabled={applyTrip.pay_open&&!proposedPay} style={{flex:2,padding:"10px",background:(applyTrip.pay_open&&!proposedPay)?"#cbd5e1":"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar postulación</button>
+              <button onClick={apply} disabled={applyTrip.pay_open&&!proposedPay} style={{flex:2,padding:"10px",background:(applyTrip.pay_open&&!proposedPay)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar postulación</button>
             </div>
           </div>
         </div>
@@ -263,7 +263,7 @@ function CrewReviewButton({ trip, user, onDone }) {
               ))}
             </div>
             <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3} placeholder="¿Cómo te trataron? ¿Pagaron lo acordado? (opcional)" style={{...inp,resize:"vertical",marginBottom:14}}/>
-            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(135deg,#1d4ed8,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
+            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
           </div>
         </div>
       )}
