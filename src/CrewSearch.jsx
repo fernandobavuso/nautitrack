@@ -14,6 +14,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
   const [sub, setSub] = useState("buscar"); // buscar / guardados
   const [saved, setSaved] = useState([]);
   const [msg, setMsg] = useState("");
+  const [resultInfo, setResultInfo] = useState(null); // resultado tras publicar
   const [publishing, setPublishing] = useState(false);
 
   const cityFromVessel = vessel?.details?.city || vessel?.marina || "";
@@ -96,8 +97,11 @@ export default function CrewSearch({ vessel, user, onPublished }) {
     }
 
     setPublishing(false);
-    setMsg(`Búsqueda publicada. Llegó a ${matched} ${matched===1?"candidato":"candidatos"} que califican en ${f.city}.`);
-    setTimeout(()=>setMsg(""),5000);
+    if (matched === 0) {
+      setResultInfo({ count: 0 });
+    } else {
+      setResultInfo({ count: matched, city: f.city });
+    }
     onPublished && onPublished();
   };
 
@@ -112,7 +116,30 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
       {sub==="buscar"&&(
         <div style={{maxWidth:680}}>
-          <div style={{fontSize:13,color:"#64748b",marginBottom:18}}>Define el perfil que buscas. Tu oferta llegará a los tripulantes que califican y están en la misma ciudad de tu barco.</div>
+          {/* Panel de resultado tras publicar */}
+          {resultInfo && (
+            <div style={{marginBottom:18,borderRadius:12,padding:"16px 18px",background:resultInfo.count>0?"#eff6ff":"#fffbeb",border:`1px solid ${resultInfo.count>0?"#bfdbfe":"#fde68a"}`}}>
+              {resultInfo.count>0 ? (
+                <>
+                  <div style={{fontSize:14,fontWeight:700,color:"#1e40af",marginBottom:6}}>Búsqueda publicada — enviada a {resultInfo.count} {resultInfo.count===1?"candidato":"candidatos"} en {resultInfo.city}</div>
+                  <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>
+                    Ahora esos tripulantes recibirán tu oferta y decidirán si les interesa. <strong>Los que digan "Me interesa" aparecerán en la pestaña "Posible Tripulación"</strong>, donde podrás ver su perfil y contactarlos.
+                  </div>
+                  <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>No verás a nadie aquí todavía hasta que respondan.</div>
+                </>
+              ) : (
+                <>
+                  <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:6}}>Búsqueda publicada, pero no hay candidatos que califiquen aún</div>
+                  <div style={{fontSize:12,color:"#78350f",lineHeight:1.5}}>
+                    No encontramos tripulantes que cumplan todos tus requisitos en esa ciudad. Prueba a ampliar los criterios (menos certificaciones obligatorias, rango de edad más amplio, o revisa que la ciudad esté bien escrita).
+                  </div>
+                </>
+              )}
+              <button onClick={()=>setResultInfo(null)} style={{marginTop:10,fontSize:12,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0}}>Publicar otra búsqueda</button>
+            </div>
+          )}
+
+          {!resultInfo && <div style={{fontSize:13,color:"#64748b",marginBottom:18}}>Define el perfil que buscas. Tu oferta llegará a los tripulantes que califican y están en la misma ciudad de tu barco.</div>}
 
           {/* Rol */}
           <div style={{marginBottom:16}}>
