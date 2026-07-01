@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
-import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook } from "./icons.jsx";
+import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor } from "./icons.jsx";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
@@ -1835,7 +1835,7 @@ function RecordsPage({ vessel }) {
     <div style={{padding:"24px 28px"}}>
       <div style={s.toolbar}>
         <h2 style={s.toolbarTitle}>Records — {vessel.name}</h2>
-        <button style={{...s.btnPrimary,background:"#7c3aed"}} onClick={()=>setShowReport(true)}>📊 Generar Reporte</button>
+        <button style={{...s.btnPrimary,background:"linear-gradient(120deg,#7c3aed,#a855f7)"}} onClick={()=>setShowReport(true)}>Generar Reporte</button>
       </div>
       <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
         {[{label:"Servicios",val:serviceLog.length,color:"#2563eb",key:"Servicio"},{label:"Inspecciones",val:inspLog.length,color:"#16a34a",key:"Inspecciones"},{label:"Combustible",val:fuelLog.length,color:"#d97706",key:"Combustible"},{label:"Compras",val:purchaseLog.length,color:"#0891b2",sub:`$${totalPurch.toFixed(2)}`,key:"Compras"},{label:"Histórico",val:(vessel.records||[]).length,color:"#7c3aed",sub:`$${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}`,key:"Historico"}].map(item=>(
@@ -1898,15 +1898,15 @@ function ReportModal({ vessel, onClose }) {
   const [gen,setGen]   = useState(false);
 
   const REPORT_TYPES = [
-    {key:"service", icon:"🔧", label:"Servicios",        desc:"Preventivo, reactivo, reparaciones"},
-    {key:"inspect", icon:"🔍", label:"Inspecciones",     desc:"Todas las inspecciones registradas"},
-    {key:"fuel",    icon:"⛽", label:"Combustible",      desc:"Historial de repostajes"},
-    {key:"salidas", icon:"🚢", label:"Salidas al Mar",   desc:"Destinos, tripulación, horas"},
-    {key:"costs",   icon:"💰", label:"Costos y Compras", desc:"Gastos y repuestos comprados"},
-    {key:"tasks",   icon:"☑", label:"Estado de Tareas", desc:"Pendientes, vencidas, completadas"},
-    {key:"log",     icon:"📓", label:"Bitácora Completa",desc:"Todas las entradas del período"},
-    {key:"sale",    icon:"⚓", label:"Para Venta",       desc:"Historial completo para compradores"},
-    {key:"insurance",icon:"🛡",label:"Para Seguro",      desc:"Mantenimientos y estado del barco"},
+    {key:"service", Icon:IconWrench,    label:"Servicios",        desc:"Preventivo, reactivo, reparaciones"},
+    {key:"inspect", Icon:IconSearch,    label:"Inspecciones",     desc:"Todas las inspecciones registradas"},
+    {key:"fuel",    Icon:IconFuel,      label:"Combustible",      desc:"Historial de repostajes"},
+    {key:"salidas", Icon:IconBoat,      label:"Salidas al Mar",   desc:"Destinos, tripulación, horas"},
+    {key:"costs",   Icon:IconMoney,     label:"Costos y Compras", desc:"Gastos y repuestos comprados"},
+    {key:"tasks",   Icon:IconCheck,     label:"Estado de Tareas", desc:"Pendientes, vencidas, completadas"},
+    {key:"log",     Icon:IconBook,      label:"Bitácora Completa",desc:"Todas las entradas del período"},
+    {key:"sale",    Icon:IconAnchor,    label:"Para Venta",       desc:"Historial completo para compradores"},
+    {key:"insurance",Icon:IconShield,   label:"Para Seguro",      desc:"Mantenimientos y estado del barco"},
   ];
   const toggle = k => setSel(s => s.includes(k) ? s.filter(x=>x!==k) : [...s,k]);
 
@@ -2282,12 +2282,12 @@ function ReportModal({ vessel, onClose }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             {REPORT_TYPES.map(r=>(
               <button key={r.key} onClick={()=>toggle(r.key)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",border:"1.5px solid",borderRadius:8,cursor:"pointer",textAlign:"left",background:sel.includes(r.key)?"#eff6ff":"#f8fafc",borderColor:sel.includes(r.key)?"#2563eb":"#e2e8f0"}}>
-                <span style={{fontSize:18,flexShrink:0}}>{r.icon}</span>
+                <span style={{flexShrink:0,marginTop:1}}><r.Icon size={18} color={sel.includes(r.key)?"#2563eb":"#64748b"}/></span>
                 <div style={{flex:1}}>
                   <div style={{fontSize:12,fontWeight:600,color:sel.includes(r.key)?"#2563eb":"#1e293b"}}>{r.label}</div>
                   <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{r.desc}</div>
                 </div>
-                {sel.includes(r.key)&&<span style={{color:"#2563eb",flexShrink:0,fontSize:14}}>✓</span>}
+                {sel.includes(r.key)&&<span style={{color:"#2563eb",flexShrink:0,display:"flex"}}><IconCheck size={14} color="#2563eb"/></span>}
               </button>
             ))}
           </div>

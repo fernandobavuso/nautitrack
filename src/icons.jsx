@@ -71,3 +71,19 @@ export const IconPlus = ({ size, color }) => (
 export const IconClock = ({ size, color }) => (
   <svg {...base(size, color)}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
 );
+
+export const IconSearch = ({ size, color }) => (
+  <svg {...base(size, color)}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+);
+
+export const IconMoney = ({ size, color }) => (
+  <svg {...base(size, color)}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+);
+
+export const IconShield = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+);
+
+export const IconClipboard = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+);
