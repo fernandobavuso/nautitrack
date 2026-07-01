@@ -1138,14 +1138,14 @@ function TasksPage({ vessel, updateVessel, addTask }) {
                           <button onClick={()=>{
                             const updated={...vessel,tasks:(vessel.tasks||[]).map(t=>t.id===task.id?{...t,status:"done"}:t)};
                             updateVessel(updated);setExpanded(null);
-                          }} style={{padding:"6px 14px",border:"1.5px solid #1d4ed8",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:"#1d4ed8",color:"#fff"}}>✓ Completar</button>
+                          }} style={{padding:"7px 16px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff"}}>Completar</button>
                           <button onClick={()=>{
                             const nd=prompt("Nueva fecha (AAAA-MM-DD):",task.nextDue);
                             if(nd){const updated={...vessel,tasks:(vessel.tasks||[]).map(t=>t.id===task.id?{...t,nextDue:nd,status:"ok"}:t)};updateVessel(updated);}
-                          }} style={{padding:"6px 14px",border:"1.5px solid #e2e8f0",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>📅 Reprogramar</button>
+                          }} style={{padding:"7px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>Reprogramar</button>
                           <button onClick={()=>{
                             if(confirm("¿Eliminar esta tarea?")){const updated={...vessel,tasks:(vessel.tasks||[]).filter(t=>t.id!==task.id)};updateVessel(updated);setExpanded(null);}
-                          }} style={{padding:"6px 14px",border:"1.5px solid #fecaca",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>🗑 Eliminar</button>
+                          }} style={{padding:"7px 14px",border:"1.5px solid #fecaca",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>Eliminar</button>
                         </div>
                       </td>
                     </tr>
@@ -1248,7 +1248,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:580}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>☑ Nueva Tarea</div>
+          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>Nueva Tarea</div>
           <button onClick={onClose} style={s.modalClose}>✕</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:14}}>
