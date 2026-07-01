@@ -2320,7 +2320,7 @@ function ReportModal({ vessel, onClose }) {
               style={{...s.btnPrimary,opacity:sel.length===0?0.4:1,background:"linear-gradient(135deg,#7c3aed,#2563eb)"}}
               onClick={()=>{ if(sel.length>0) openReport(); }}
             >
-              📄 Generar ({sel.length})
+              Generar ({sel.length})
             </button>
           </div>
         </div>
@@ -2488,16 +2488,16 @@ function DocsPage({ vessel, user }) {
 
   return (
     <div style={{padding:"24px 28px",maxWidth:1100,margin:"0 auto"}}>
-      <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4}}>📄 Documentos y Recursos</h2>
+      <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4,fontFamily:"'Sora',system-ui,sans-serif"}}>Documentos y Recursos</h2>
       <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>Documentos · Links · Manuales técnicos con IA</p>
 
       {/* Tabs */}
       <div style={{display:"flex",gap:0,marginBottom:24,borderBottom:"1px solid #e2e8f0",overflowX:"auto"}}>
         {[
-          {key:"docs",    label:"📄 Documentos"},
-          {key:"links",   label:"🔗 Links"},
-          {key:"manuals", label:"📚 Manuales de Equipos"},
-          {key:"ai",      label:"🤖 Asistente IA"},
+          {key:"docs",    label:"Documentos"},
+          {key:"links",   label:"Links"},
+          {key:"manuals", label:"Manuales de Equipos"},
+          {key:"ai",      label:"Asistente IA"},
         ].map(t=>(
           <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:activeTab===t.key?"2px solid #0ea5e9":"2px solid transparent",cursor:"pointer",fontSize:13,color:activeTab===t.key?"#0ea5e9":"#64748b",fontWeight:activeTab===t.key?600:400,whiteSpace:"nowrap"}}>{t.label}</button>
         ))}
