@@ -112,6 +112,12 @@ code {
 
 /* Ocultar el nombre de usuario en el navbar cuando la pantalla es estrecha
    (deja solo el avatar, como Gmail) para que la barra no se desborde */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .nav-username { display: none !important; }
+}
+
+/* Impedir desbordamiento horizontal en toda la app */
+html, body, #root {
+  max-width: 100%;
+  overflow-x: hidden;
 }

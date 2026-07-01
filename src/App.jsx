@@ -724,7 +724,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         ))}
       </div>
       <div style={s.navRight}>
-        <button style={s.provBtn} onClick={() => setShowProviders(true)}>👥 Proveedores</button>
+        <button style={s.provBtn} onClick={() => setShowProviders(true)}>Proveedores</button>
         <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>Tripulación</button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
