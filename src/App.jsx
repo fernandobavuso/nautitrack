@@ -41,6 +41,16 @@ async function sendWhatsApp(to, message) {
   }
 }
 
+// Iniciales: primera letra del nombre + primera del apellido (ej. "Fernando Bavuso" -> "FB")
+function getInitials(nameOrEmail) {
+  if (!nameOrEmail) return "?";
+  const clean = String(nameOrEmail).trim();
+  if (clean.includes("@")) return clean[0].toUpperCase();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 // ── DATE FORMAT — DD/MM/AAAA (Venezuela) ─────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
@@ -756,8 +766,8 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           </button>
         </div>
         <div style={{position:"relative"}}>
-          <button style={s.userBtn} onClick={() => { setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
-            <div style={s.navAvatar}>{(user?.full_name||user?.email||"?")[0].toUpperCase()}</div>
+          <button style={s.userBtn} onClick={(e) => { e.stopPropagation(); setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
+            <div style={s.navAvatar}>{getInitials(user?.full_name || user?.email)}</div>
             <div className="nav-username"><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
