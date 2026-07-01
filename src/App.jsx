@@ -467,7 +467,12 @@ export default function App() {
   }, []);
 
   const handleAddVessel = async (vesselData) => {
-    const { data } = await supabase.from("vessels").insert({ ...vesselData, owner_id: user.id }).select().single();
+    const { data, error } = await supabase.from("vessels").insert({ ...vesselData, owner_id: user.id }).select().single();
+    if (error) {
+      console.error("[Carive] Error al crear embarcación:", error);
+      alert("No se pudo crear la embarcación: " + error.message + "\n\nSi el problema persiste, avísanos.");
+      return;
+    }
     if (data) {
       const mapped = {
         ...data,
