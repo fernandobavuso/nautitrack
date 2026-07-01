@@ -109,3 +109,9 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Ocultar el nombre de usuario en el navbar cuando la pantalla es estrecha
+   (deja solo el avatar, como Gmail) para que la barra no se desborde */
+@media (max-width: 1200px) {
+  .nav-username { display: none !important; }
+}

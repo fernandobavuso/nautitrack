@@ -4,6 +4,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
+import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook } from "./icons.jsx";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
@@ -638,7 +639,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{position:"relative"}}>
-              <span style={{fontSize:20,cursor:"pointer"}} onClick={()=>setShowNotifPanel(true)}>🔔</span>
+              <span style={{cursor:"pointer",display:"flex"}} onClick={()=>setShowNotifPanel(true)}><IconBell size={20} color="#475569"/></span>
               {unreadCount>0&&<div style={s.bellBadge}>{unreadCount}</div>}
             </div>
             <button onClick={()=>setMobileMenuOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex",flexDirection:"column",gap:4}}>
@@ -746,7 +747,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           )}
         </div>
         <div style={s.bellWrap}>
-          <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifPanel(true)}>🔔</span>
+          <span style={{cursor:"pointer",display:"flex"}} onClick={()=>setShowNotifPanel(true)}><IconBell size={19} color="#475569"/></span>
           {unreadCount > 0 && <div style={s.bellBadge}>{unreadCount}</div>}
         </div>
         <div style={{position:"relative"}}>
@@ -757,7 +758,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <div style={{position:"relative"}}>
           <button style={s.userBtn} onClick={() => { setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
             <div style={s.navAvatar}>{(user?.full_name||user?.email||"?")[0].toUpperCase()}</div>
-            <div><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
+            <div className="nav-username"><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
@@ -816,7 +817,7 @@ function FleetCard({ vessels, vessel, updateVessel }) {
 
   return (
     <div style={{...s.card,flex:1.2}}>
-      <div style={s.cardHdr}><span style={s.cardTitle}>🚢 Estado de la Flota</span><span style={s.cardSub}>{vessels.length} embarcaciones</span></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBoat size={17} color="#2563eb"/> Estado de la Flota</span><span style={s.cardSub}>{vessels.length} embarcaciones</span></div>
       {vessels.map(v => {
         const od=v.tasks.filter(t=>t.status==="overdue").length, du=v.tasks.filter(t=>t.status==="due").length;
         return (
@@ -850,7 +851,7 @@ function AlertsCard({ vessel, setPage }) {
   const od = (vessel.tasks||[]).filter(t => t.status==="overdue");
   return (
     <div style={{...s.card,flex:1}}>
-      <div style={s.cardHdr}><span style={s.cardTitle}>🚨 Alertas</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver →</button></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconAlert size={17} color="#dc2626"/> Alertas</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver →</button></div>
       {od.length===0
         ? <div style={s.empty}><div style={{fontSize:28}}>✅</div><div style={{color:"#16a34a",fontWeight:600,fontSize:13}}>Sin alertas</div></div>
         : od.map(t => (
@@ -874,16 +875,16 @@ function IndicatorsCard({ vessel }) {
     : "Ninguno";
   return (
     <div style={{...s.card,flex:1}}>
-      <div style={s.cardHdr}><span style={s.cardTitle}>⚙️ Indicadores</span><span style={s.cardSub}>{vessel.name}</span></div>
+      <div style={s.cardHdr}><span style={s.cardTitle}>Indicadores</span><span style={s.cardSub}>{vessel.name}</span></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {[
-          {icon:"⛽",val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:"Combustible",color:fc,bar:true},
-          {icon:"🔧",val:`${vessel.engineHours}h`,lbl:"Horas Motor",color:"#2563eb",bar:false},
-          {icon:"⚡",val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
-          {icon:"📅",val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
+          {Icon:IconFuel,val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:"Combustible",color:fc,bar:true},
+          {Icon:IconEngine,val:`${vessel.engineHours}h`,lbl:"Horas Motor",color:"#2563eb",bar:false},
+          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
+          {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (
           <div key={ind.lbl} style={s.indBox}>
-            <div style={{fontSize:20,marginBottom:4}}>{ind.icon}</div>
+            <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>
             <div style={{fontSize:17,fontWeight:700,color:ind.color}}>{ind.val}</div>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{ind.lbl}</div>
             {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${Math.min(vessel.fuel,100)}%`,background:ind.color}} /></div>}
@@ -897,7 +898,7 @@ function IndicatorsCard({ vessel }) {
 function CalendarCard({ tasks, setPage }) {
   return (
     <div style={{...s.card,flex:1.3}}>
-      <div style={s.cardHdr}><span style={s.cardTitle}>📅 Próximos Servicios</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver todos →</button></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconCalendar size={17} color="#2563eb"/> Próximos Servicios</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver todos →</button></div>
       {tasks.length===0 && <div style={s.empty}><div style={{color:"#94a3b8",fontSize:12}}>Sin tareas pendientes</div></div>}
       {tasks.map(t => {
         const nd=new Date(t.nextDue),today=new Date(),diff=Math.round((nd-today)/(1000*60*60*24));
@@ -920,7 +921,7 @@ function CalendarCard({ tasks, setPage }) {
 function LogCard({ vessel, setPage }) {
   return (
     <div style={{...s.card,flex:1}}>
-      <div style={s.cardHdr}><span style={s.cardTitle}>📓 Bitácora Reciente</span><button onClick={() => setPage("log")} style={s.linkBtn}>Ver todo →</button></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBook size={17} color="#2563eb"/> Bitácora Reciente</span><button onClick={() => setPage("log")} style={s.linkBtn}>Ver todo →</button></div>
       {(vessel.log||[]).slice(0,4).map((e,i) => (
         <div key={i} style={s.logRow}>
           <span style={{...s.logBadge,background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type]}}>{e.type}</span>
@@ -3543,7 +3544,7 @@ function ProvidersModal({ vessel, updateVessel, onClose }) {
 }
 const s = {
   root:       { minHeight:"100vh", background:"linear-gradient(180deg,#f4f9ff 0%,#eaf2fb 100%)", fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", color:"#1e293b", fontSize:13 },
-  nav:        { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", height:56, background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12 },
+  nav:        { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", height:56, background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box", overflow:"hidden" },
   navLogo:    { display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 },
   navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
   navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center" },
