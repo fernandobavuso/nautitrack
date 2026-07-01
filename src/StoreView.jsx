@@ -69,7 +69,7 @@ export default function StoreView({ user, onLogout }) {
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/><line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/></svg>
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>NautiTrack</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Carive</div>
             <div style={{fontSize:10,color:"#64748b"}}>Tienda de Repuestos</div>
           </div>
         </div>

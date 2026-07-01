@@ -33,7 +33,7 @@ export default function InviteCaptain({ vessel, onClose }) {
         .from("profiles").select("id").eq("email", email.trim()).single();
 
       if (!profile) {
-        setMsg({ type:"error", text:"Este email no tiene cuenta en NautiTrack. Pídele que se registre primero." });
+        setMsg({ type:"error", text:"Este email no tiene cuenta en Carive. Pídele que se registre primero." });
         setSaving(false); return;
       }
 
@@ -97,7 +97,7 @@ export default function InviteCaptain({ vessel, onClose }) {
               </div>
             </div>
             <div style={{marginBottom:12}}>
-              <label style={s.label}>Email (debe tener cuenta en NautiTrack) *</label>
+              <label style={s.label}>Email (debe tener cuenta en Carive) *</label>
               <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="capitan@email.com" style={s.input} type="email"/>
             </div>
             {msg&&<div style={{padding:"8px 12px",borderRadius:8,fontSize:12,fontWeight:600,marginBottom:10,background:msg.type==="success"?"#f0fdf4":"#fff5f5",color:msg.type==="success"?"#15803d":"#dc2626"}}>{msg.text}</div>}

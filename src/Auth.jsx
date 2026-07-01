@@ -57,7 +57,7 @@ export default function Auth({ onLogin }) {
       if (userRole==="owner" && boatRole==="dueno" && hasCrew==="si" && linkContact.trim()) {
         localStorage.setItem("nt_link_crew", linkContact.trim());
       }
-      console.log("[NautiTrack] Cuenta creada con role:", userRole, "manager:", isManager);
+      console.log("[Carive] Cuenta creada con role:", userRole, "manager:", isManager);
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
       if (loginData?.user) { onLogin({...loginData.user, role: userRole, full_name: `${firstName} ${lastName}`.trim()}); return; }
       setSuccess("¡Cuenta creada! Ya puedes iniciar sesión.");
@@ -76,7 +76,7 @@ export default function Auth({ onLogin }) {
             <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
             <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
           </svg>
-          <div style={s.brand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
+          <div style={s.brand}>Carive<span style={{color:"#2563eb"}}>.VZ</span></div>
           <div style={s.tagline}>Gestión inteligente de embarcaciones</div>
         </div>
 

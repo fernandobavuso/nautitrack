@@ -217,7 +217,7 @@ export default function CrewProfile({ user, onLogout }) {
     });
     if (error) {
       setMsg("⚠️ No se pudo guardar: " + error.message);
-      console.error("[NautiTrack] saveProfile error:", error);
+      console.error("[Carive] saveProfile error:", error);
     } else {
       setProfile(p=>({...p, badges, full_name}));
       setMsg("✅ Perfil guardado correctamente");
@@ -298,7 +298,7 @@ export default function CrewProfile({ user, onLogout }) {
         body: JSON.stringify({ profilePhotoBase64, idDocBase64, legalName: profile.legal_name }),
       });
       const data = await resp.json();
-      console.log("[NautiTrack] verify-id respuesta:", data);
+      console.log("[Carive] verify-id respuesta:", data);
 
       if (data.error) {
         setMsg("⚠️ Error del verificador: " + data.error);
@@ -473,7 +473,7 @@ export default function CrewProfile({ user, onLogout }) {
             <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
           </svg>
           <div>
-            <div style={{fontSize:14,fontWeight:800,color:"#0f172a",lineHeight:1}}>NautiTrack</div>
+            <div style={{fontSize:14,fontWeight:800,color:"#0f172a",lineHeight:1}}>Carive</div>
             <div style={{fontSize:10,color:"#64748b"}}>Perfil Tripulación</div>
           </div>
         </div>

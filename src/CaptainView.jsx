@@ -58,7 +58,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
             <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
           </svg>
           <div>
-            <div style={{fontSize:14, fontWeight:800, color:"#0f172a", lineHeight:1}}>NautiTrack</div>
+            <div style={{fontSize:14, fontWeight:800, color:"#0f172a", lineHeight:1}}>Carive</div>
             <div style={{fontSize:10, color:"#64748b"}}>Vista Capitán</div>
           </div>
         </div>

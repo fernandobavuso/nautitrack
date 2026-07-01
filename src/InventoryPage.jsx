@@ -223,7 +223,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                               {rp.message&&<div style={{fontSize:12,color:"#475569",marginTop:3}}>{rp.message}</div>}
                             </div>
                             {rp.response_type!=="decline"&&rp.store?.store_phone&&(
-                              <a href={`https://wa.me/${rp.store.store_phone.replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola, soy dueño de embarcación en NautiTrack. Te escribo por mi solicitud de: ${r.item_name}`)}`} target="_blank" rel="noreferrer" style={{background:"#fff",border:"1px solid #bbf7d0",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#16a34a",fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",height:"fit-content"}}>WhatsApp</a>
+                              <a href={`https://wa.me/${rp.store.store_phone.replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola, soy dueño de embarcación en Carive. Te escribo por mi solicitud de: ${r.item_name}`)}`} target="_blank" rel="noreferrer" style={{background:"#fff",border:"1px solid #bbf7d0",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#16a34a",fontWeight:700,textDecoration:"none",whiteSpace:"nowrap",height:"fit-content"}}>WhatsApp</a>
                             )}
                           </div>
                           {/* Botón elegir ganador (solo si no resuelto y tiene precio) */}

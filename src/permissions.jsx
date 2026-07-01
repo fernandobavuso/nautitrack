@@ -1,4 +1,4 @@
-// Sistema central de permisos de NautiTrack
+// Sistema central de permisos de Carive
 // Define qué puede hacer cada rol sobre un barco.
 // El "rol" aquí es el rol de la persona SOBRE ESTE barco: 'owner' | 'captain' | 'manager'
 

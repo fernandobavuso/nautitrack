@@ -125,7 +125,7 @@ export default function DayTripsOwner({ vessel, user }) {
       // Enviar a cada uno (sin bloquear la UI)
       matched.forEach(c => {
         const phone = `${(c.phone_code||"+58").replace(/[^0-9+]/g,"")}${(c.phone||"").replace(/[^0-9]/g,"")}`;
-        const message = `Hola${c.first_name?" "+c.first_name:""}, hay un nuevo viaje disponible en NautiTrack para ${form.crew_role} en ${cityLabel||"tu zona"} el ${new Date(form.trip_date).toLocaleDateString("es-VE")}. Paga: ${pay}. Entra a la app para postularte: https://nautitrack.vercel.app`;
+        const message = `Hola${c.first_name?" "+c.first_name:""}, hay un nuevo viaje disponible en Carive para ${form.crew_role} en ${cityLabel||"tu zona"} el ${new Date(form.trip_date).toLocaleDateString("es-VE")}. Paga: ${pay}. Entra a la app para postularte: https://nautitrack.vercel.app`;
         fetch('/api/whatsapp', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ to: phone, message }),

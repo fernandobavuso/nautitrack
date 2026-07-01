@@ -33,7 +33,7 @@ export default function PlansModal({ vessel, user, onClose }) {
   if (selected) {
     const plan = PLANS[selected];
     const amount = price(plan);
-    const waMsg = encodeURIComponent(`Hola, quiero activar el plan ${plan.name} (${yearly?"anual":"mensual"}) de NautiTrack por $${amount}. Mi cuenta es ${user?.email}.`);
+    const waMsg = encodeURIComponent(`Hola, quiero activar el plan ${plan.name} (${yearly?"anual":"mensual"}) de Carive por $${amount}. Mi cuenta es ${user?.email}.`);
     return (
       <div style={overlay} onClick={onClose}>
         <div style={{...box,maxWidth:440}} onClick={e=>e.stopPropagation()}>
@@ -66,7 +66,7 @@ export default function PlansModal({ vessel, user, onClose }) {
       <div style={box} onClick={e=>e.stopPropagation()}>
         <div style={{padding:"20px 24px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>Planes de NautiTrack</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>Planes de Carive</div>
             <div style={{fontSize:12,color:"#64748b"}}>Elige el plan que se ajusta a ti</div>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>

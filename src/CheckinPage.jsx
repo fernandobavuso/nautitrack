@@ -232,7 +232,7 @@ export default function CheckinPage() {
         )}
 
         <div style={{marginTop:20, textAlign:"center", fontSize:11, color:"#cbd5e1"}}>
-          NautiTrack.VZ · Gestión inteligente de embarcaciones
+          Carive · Gestión inteligente de embarcaciones
         </div>
       </div>
     </div>

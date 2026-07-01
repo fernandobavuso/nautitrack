@@ -57,7 +57,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const assignCrew = async () => {
     if (!assignForm.email.trim() || !assignForm.full_name.trim()) { setAssignMsg("Completa nombre y email"); return; }
     const { data: prof } = await supabase.from("profiles").select("id").eq("email", assignForm.email.trim()).maybeSingle();
-    if (!prof) { setAssignMsg("⚠️ Ese email no tiene cuenta en NautiTrack. Pídele que se registre primero."); return; }
+    if (!prof) { setAssignMsg("⚠️ Ese email no tiene cuenta en Carive. Pídele que se registre primero."); return; }
     const { error } = await supabase.from("captain_profiles").insert({
       user_id:prof.id, vessel_id:vessel.id, full_name:assignForm.full_name.trim(),
       role:assignForm.role, phone:assignForm.phone.trim(), active:true,
@@ -336,7 +336,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                     {["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico"].map(r=><option key={r}>{r}</option>)}
                   </select>
                 </div>
-                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (debe tener cuenta en NautiTrack)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
+                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (debe tener cuenta en Carive)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
                 <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder="Teléfono (opcional)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
                 <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(135deg,#1d4ed8,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
                 {assignMsg&&<div style={{fontSize:11,color:assignMsg.startsWith("✅")?"#16a34a":"#dc2626",marginTop:8,textAlign:"center"}}>{assignMsg}</div>}

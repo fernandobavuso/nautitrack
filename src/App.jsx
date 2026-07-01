@@ -399,7 +399,7 @@ export default function App() {
     let role = knownRole;
     const { data: prof, error: profErr } = await supabase.from("profiles").select("role").eq("id", uid).maybeSingle();
     if (prof?.role) role = prof.role;
-    console.log("[NautiTrack] checkIfCaptain — uid:", uid, "knownRole:", knownRole, "profileRole:", prof?.role, "finalRole:", role, "profErr:", profErr?.message);
+    console.log("[Carive] checkIfCaptain — uid:", uid, "knownRole:", knownRole, "profileRole:", prof?.role, "finalRole:", role, "profErr:", profErr?.message);
 
     if (role === "store") {
       setStoreProfile({ role });
@@ -506,7 +506,7 @@ export default function App() {
 
   if (authLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>⚓</div><div style={{fontSize:14,color:"#64748b"}}>Cargando NautiTrack...</div></div>
+      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>⚓</div><div style={{fontSize:14,color:"#64748b"}}>Cargando Carive...</div></div>
     </div>
   );
 
@@ -629,13 +629,12 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
       <>
         <nav style={{...s.nav, padding:"0 16px", justifyContent:"space-between"}} onClick={e=>e.stopPropagation()}>
           <div style={s.navLogo} onClick={()=>setPage("home")}>
-            <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
-              <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".1"/>
-              <path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/>
-              <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
-              <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="15" fill="#38bdf8" opacity=".12"/>
+              <path d="M16 4 L27 26 H5 Z" stroke="#38bdf8" strokeWidth="2.2" fill="rgba(56,189,248,0.15)" strokeLinejoin="round"/>
+              <line x1="16" y1="4" x2="16" y2="26" stroke="#7dd3fc" strokeWidth="1.5"/>
             </svg>
-            <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
+            <div style={s.navBrand}>Carive</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{position:"relative"}}>
@@ -656,7 +655,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
             <div style={{position:"absolute",left:0,top:0,bottom:0,width:280,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
               {/* Header del panel */}
               <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
+                <div style={s.navBrand}>Carive</div>
                 <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
               </div>
 
@@ -717,7 +716,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
           <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
         </svg>
-        <div style={s.navBrand}>NautiTrack<span style={{color:"#2563eb"}}>.VZ</span></div>
+        <div style={s.navBrand}>Carive</div>
       </div>
       <div style={s.navLinks}>
         {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
@@ -2181,7 +2180,7 @@ function ReportModal({ vessel, onClose }) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;">
       <div>
         <div style="font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:8px;text-transform:uppercase;">Reporte Oficial de Embarcación</div>
-        <div style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;">NautiTrack<span style="color:#38bdf8;">.VZ</span></div>
+        <div style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;">Carive<span style="color:#38bdf8;">.VZ</span></div>
         <div style="font-size:13px;opacity:0.7;">Gestión inteligente de embarcaciones marinas</div>
       </div>
       <div style="text-align:right;">
@@ -2227,7 +2226,7 @@ function ReportModal({ vessel, onClose }) {
   <!-- FOOTER -->
   <div style="background:#0a1628;color:rgba(255,255,255,0.5);padding:20px 56px;display:flex;justify-content:space-between;align-items:center;margin-top:40px;">
     <div style="display:flex;align-items:center;gap:8px;">
-      <div style="font-size:14px;font-weight:700;color:#38bdf8;">NautiTrack.VZ</div>
+      <div style="font-size:14px;font-weight:700;color:#38bdf8;">Carive</div>
       <div style="font-size:11px;">— nautitrack.vercel.app</div>
     </div>
     <div style="font-size:11px;">Documento confidencial · ${vessel.name} · ${today}</div>
@@ -2666,7 +2665,7 @@ function DocsPage({ vessel, user }) {
               </div>
               <div style={{padding:"20px 24px",whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.9,color:"#1e293b",maxHeight:500,overflowY:"auto"}}>{aiResult}</div>
               <div style={{background:"#fefce8",padding:"12px 20px",borderTop:"1px solid #fde68a",fontSize:12,color:"#92400e"}}>
-                💡 <strong>Servicio de Procura NautiTrack:</strong> Ordenamos estos repuestos desde USA y coordinamos el envío a Venezuela.
+                💡 <strong>Servicio de Procura Carive:</strong> Ordenamos estos repuestos desde USA y coordinamos el envío a Venezuela.
               </div>
             </div>
           )}
@@ -2791,8 +2790,8 @@ function NotificationsModal({ vessel, user, onClose }) {
       bg: "#fff5f5",
       border: "#fecaca",
       generate: () => overdueTasks.length === 0
-        ? `✅ *NautiTrack.VZ* — ${vessel.name}\n\nSin tareas vencidas. ¡Todo al día!`
-        : `🚨 *NautiTrack.VZ* — ${vessel.name}\n\n⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:\n\n${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
+        ? `✅ *Carive* — ${vessel.name}\n\nSin tareas vencidas. ¡Todo al día!`
+        : `🚨 *Carive* — ${vessel.name}\n\n⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:\n\n${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
     },
     {
       key: "due_soon",
@@ -2802,8 +2801,8 @@ function NotificationsModal({ vessel, user, onClose }) {
       bg: "#fffbeb",
       border: "#fde68a",
       generate: () => dueTasks.length === 0
-        ? `✅ *NautiTrack.VZ* — ${vessel.name}\n\nSin tareas por vencer esta semana.`
-        : `⏰ *NautiTrack.VZ* — ${vessel.name}\n\n📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:\n\n${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
+        ? `✅ *Carive* — ${vessel.name}\n\nSin tareas por vencer esta semana.`
+        : `⏰ *Carive* — ${vessel.name}\n\n📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:\n\n${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
     },
     {
       key: "status",
@@ -2812,7 +2811,7 @@ function NotificationsModal({ vessel, user, onClose }) {
       color: "#2563eb",
       bg: "#eff6ff",
       border: "#bfdbfe",
-      generate: () => `📊 *NautiTrack.VZ* — Reporte ${vessel.name}\n\n🚢 *${vessel.name}* · ${vessel.type||""}\n📍 ${vessel.marina||""}\n\n🔧 Motor: ${vessel.engineHours||0}h\n⚡ Generador: ${vessel.genHours||0}h\n⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}\n\n✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}\n⚠️ Vencidas: ${overdueTasks.length}\n📋 Bitácora: ${(vessel.log||[]).length} entradas\n\n📱 nautitrack.vercel.app`
+      generate: () => `📊 *Carive* — Reporte ${vessel.name}\n\n🚢 *${vessel.name}* · ${vessel.type||""}\n📍 ${vessel.marina||""}\n\n🔧 Motor: ${vessel.engineHours||0}h\n⚡ Generador: ${vessel.genHours||0}h\n⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}\n\n✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}\n⚠️ Vencidas: ${overdueTasks.length}\n📋 Bitácora: ${(vessel.log||[]).length} entradas\n\n📱 nautitrack.vercel.app`
     },
     {
       key: "custom",
@@ -3544,10 +3543,10 @@ function ProvidersModal({ vessel, updateVessel, onClose }) {
   );
 }
 const s = {
-  root:       { minHeight:"100vh", background:"#f0f7ff", fontFamily:"'Segoe UI',system-ui,sans-serif", color:"#1e293b", fontSize:13 },
-  nav:        { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", height:56, background:"#fff", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(0,0,0,0.06)", position:"sticky", top:0, zIndex:20, gap:12 },
+  root:       { minHeight:"100vh", background:"linear-gradient(180deg,#f4f9ff 0%,#eaf2fb 100%)", fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", color:"#1e293b", fontSize:13 },
+  nav:        { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", height:56, background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12 },
   navLogo:    { display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 },
-  navBrand:   { fontSize:17, fontWeight:800, color:"#0f172a", letterSpacing:"-0.4px" },
+  navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
   navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center" },
   navLink:    { padding:"18px 11px", background:"none", border:"none", cursor:"pointer", fontSize:12, transition:"all 0.15s", whiteSpace:"nowrap" },
   navRight:   { display:"flex", alignItems:"center", gap:10, flexShrink:0 },
@@ -3641,7 +3640,7 @@ function CaptainManagerModal({ vessel, user, onClose }) {
         .single();
 
       if (!profile) {
-        setMsg("⚠️ Ese email no tiene cuenta en NautiTrack. Pídele que se registre primero en nautitrack.vercel.app");
+        setMsg("⚠️ Ese email no tiene cuenta en Carive. Pídele que se registre primero en nautitrack.vercel.app");
         setSaving(false); return;
       }
 
@@ -3744,7 +3743,7 @@ function CaptainManagerModal({ vessel, user, onClose }) {
                   </div>
                 </div>
                 <div>
-                  <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Email (debe tener cuenta en NautiTrack) *</label>
+                  <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Email (debe tener cuenta en Carive) *</label>
                   <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="capitan@email.com" style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
                 </div>
                 <div>
