@@ -313,5 +313,6 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 }
 
 const lbl = {display:"block",fontSize:12,fontWeight:600,color:"#374151",marginBottom:6};
+const tag = {fontSize:10,background:"#eff6ff",color:"#2563eb",padding:"3px 9px",borderRadius:10,fontWeight:600};
 const inp = {width:"100%",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"};
 const chip = (active) => ({padding:"6px 13px",borderRadius:18,fontSize:12,cursor:"pointer",border:"1.5px solid",background:active?"#eff6ff":"#fff",borderColor:active?"#2563eb":"#e2e8f0",color:active?"#2563eb":"#64748b",fontWeight:active?700:400});
