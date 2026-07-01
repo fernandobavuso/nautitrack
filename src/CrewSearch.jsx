@@ -16,6 +16,10 @@ export default function CrewSearch({ vessel, user, onPublished }) {
   const [msg, setMsg] = useState("");
   const [resultInfo, setResultInfo] = useState(null); // resultado tras publicar
   const [publishing, setPublishing] = useState(false);
+  const [results, setResults] = useState(null); // lista de tripulantes que hacen match
+  const [searchId, setSearchId] = useState(null); // id de la búsqueda creada
+  const [sentTo, setSentTo] = useState({}); // a quién ya se le envió oferta
+  const [sortBy, setSortBy] = useState("match"); // match / experiencia
 
   const cityFromVessel = vessel?.details?.city || vessel?.marina || "";
 
@@ -38,45 +42,44 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
   const toggle = (field, val) => setF(s=>({...s, [field]: s[field].includes(val) ? s[field].filter(x=>x!==val) : [...s[field], val]}));
 
-  const publish = async () => {
+  // BUSCAR: encuentra tripulantes que hacen match y los MUESTRA (no envía nada)
+  const search = async () => {
     if (!f.city.trim()) { setMsg("Indica la ciudad del barco"); setTimeout(()=>setMsg(""),3000); return; }
     setPublishing(true);
-    // 1) Crear la búsqueda
-    const { data: search, error } = await supabase.from("crew_searches").insert({
-      owner_id:user.id, vessel_id:vessel.id, role:f.role, city:f.city.trim(),
-      min_age:f.min_age?parseInt(f.min_age):null, max_age:f.max_age?parseInt(f.max_age):null,
-      gender:f.gender, languages:f.languages, min_experience:f.min_experience?parseInt(f.min_experience):null,
-      certifications:f.certifications, contract_type:f.contract_type, liveaboard:f.liveaboard, notes:f.notes,
-      status:"open",
-    }).select().single();
-    if (error) { setMsg("Error: "+error.message); setPublishing(false); return; }
+    setResults(null);
 
-    // 2) Buscar capitanes que califican (rol + ciudad obligatoria + filtros)
     const { data: crews } = await supabase.from("profiles").select("*").eq("role","crew");
     const cityL = f.city.toLowerCase().trim();
-    let matched = 0;
+    const matches = [];
+
     for (const c of (crews||[])) {
-      // Rol: principal o secundario
+      let score = 0; // puntaje de match para ordenar
+      // Rol: principal o secundario (obligatorio si hay perfil de rol)
       const roles = [c.crew_role, c.secondary_role].filter(Boolean).map(r=>r.toLowerCase());
       if (roles.length && !roles.includes(f.role.toLowerCase())) continue;
-      // Ciudad OBLIGATORIA (work_zone del capitán debe coincidir con ciudad del barco)
+      if (roles.includes(f.role.toLowerCase())) score += 30;
+      // Ciudad OBLIGATORIA
       const zone = (c.work_zone||"").toLowerCase().trim();
       if (cityL && zone && !(zone.includes(cityL) || cityL.includes(zone))) continue;
-      if (cityL && !zone) continue; // si no tiene zona, no podemos garantizar ciudad
-      // Idiomas: debe tener al menos los pedidos
+      if (cityL && !zone) continue;
+      score += 20;
+      // Idiomas
       if (f.languages.length) {
         const cl = (c.languages||[]).map(x=>x.toLowerCase());
         if (!f.languages.every(l=>cl.includes(l.toLowerCase()))) continue;
+        score += 10;
       }
-      // Experiencia mínima (años ~ cantidad de experiencias registradas)
+      // Experiencia
+      const years = (c.experience||[]).length;
       if (f.min_experience) {
-        const years = (c.experience||[]).length;
         if (years < parseInt(f.min_experience)) continue;
       }
-      // Certificaciones requeridas
+      score += Math.min(years * 3, 20); // más experiencia, más arriba
+      // Certificaciones
       if (f.certifications.length) {
         const cc = (c.certifications||[]).map(x=>(x.name||"").toLowerCase());
         if (!f.certifications.every(cert=>cc.some(x=>x.includes(cert.toLowerCase())))) continue;
+        score += 15;
       }
       // Edad
       if ((f.min_age||f.max_age) && c.birth_date) {
@@ -87,21 +90,41 @@ export default function CrewSearch({ vessel, user, onPublished }) {
       // Género
       if (f.gender!=="cualquiera" && c.gender && c.gender!==f.gender) continue;
 
-      // Crear propuesta + notificar
-      await supabase.from("crew_proposals").insert({
-        search_id:search.id, crew_id:c.id, owner_id:user.id, vessel_id:vessel.id,
-        crew_status:"pending", owner_status:"new",
-      });
-      notify(c.id, { type:"crew_search", title:"Oferta de trabajo fijo", body:`Un propietario busca ${f.role} en ${f.city}. ¿Te interesa?`, link:"propuestas" });
-      matched++;
+      matches.push({ ...c, _score: score, _years: years });
     }
 
+    // Ordenar por mejor match
+    matches.sort((a,b)=>b._score-a._score);
+    setResults(matches);
     setPublishing(false);
-    if (matched === 0) {
-      setResultInfo({ count: 0 });
-    } else {
-      setResultInfo({ count: matched, city: f.city });
+  };
+
+  // ENVIAR OFERTA: a un tripulante específico que el dueño eligió
+  const sendOffer = async (crew) => {
+    // Crear/asegurar la búsqueda una sola vez
+    let sid = searchId;
+    if (!sid) {
+      const { data: srch, error } = await supabase.from("crew_searches").insert({
+        owner_id:user.id, vessel_id:vessel.id, role:f.role, city:f.city.trim(),
+        min_age:f.min_age?parseInt(f.min_age):null, max_age:f.max_age?parseInt(f.max_age):null,
+        gender:f.gender, languages:f.languages, min_experience:f.min_experience?parseInt(f.min_experience):null,
+        certifications:f.certifications, contract_type:f.contract_type, liveaboard:f.liveaboard, notes:f.notes,
+        status:"open",
+      }).select().single();
+      if (error) { setMsg("Error: "+error.message); return; }
+      sid = srch.id;
+      setSearchId(sid);
     }
+    // Crear la propuesta + notificar al tripulante elegido
+    const { error: perr } = await supabase.from("crew_proposals").insert({
+      search_id:sid, crew_id:crew.id, owner_id:user.id, vessel_id:vessel.id,
+      crew_status:"pending", owner_status:"new",
+    });
+    if (perr && perr.code==="23505") { setMsg("Ya le enviaste oferta a este tripulante"); setTimeout(()=>setMsg(""),3000); return; }
+    notify(crew.id, { type:"crew_search", title:"Oferta de trabajo fijo", body:`Un propietario busca ${f.role} en ${f.city}. ¿Te interesa?`, link:"propuestas" });
+    setSentTo(prev=>({...prev, [crew.id]:true}));
+    setMsg("Oferta enviada. Si le interesa, aparecerá en Posible Tripulación.");
+    setTimeout(()=>setMsg(""),3500);
     onPublished && onPublished();
   };
 
@@ -116,30 +139,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
       {sub==="buscar"&&(
         <div style={{maxWidth:680}}>
-          {/* Panel de resultado tras publicar */}
-          {resultInfo && (
-            <div style={{marginBottom:18,borderRadius:12,padding:"16px 18px",background:resultInfo.count>0?"#eff6ff":"#fffbeb",border:`1px solid ${resultInfo.count>0?"#bfdbfe":"#fde68a"}`}}>
-              {resultInfo.count>0 ? (
-                <>
-                  <div style={{fontSize:14,fontWeight:700,color:"#1e40af",marginBottom:6}}>Búsqueda publicada — enviada a {resultInfo.count} {resultInfo.count===1?"candidato":"candidatos"} en {resultInfo.city}</div>
-                  <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>
-                    Ahora esos tripulantes recibirán tu oferta y decidirán si les interesa. <strong>Los que digan "Me interesa" aparecerán en la pestaña "Posible Tripulación"</strong>, donde podrás ver su perfil y contactarlos.
-                  </div>
-                  <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>No verás a nadie aquí todavía hasta que respondan.</div>
-                </>
-              ) : (
-                <>
-                  <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:6}}>Búsqueda publicada, pero no hay candidatos que califiquen aún</div>
-                  <div style={{fontSize:12,color:"#78350f",lineHeight:1.5}}>
-                    No encontramos tripulantes que cumplan todos tus requisitos en esa ciudad. Prueba a ampliar los criterios (menos certificaciones obligatorias, rango de edad más amplio, o revisa que la ciudad esté bien escrita).
-                  </div>
-                </>
-              )}
-              <button onClick={()=>setResultInfo(null)} style={{marginTop:10,fontSize:12,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0}}>Publicar otra búsqueda</button>
-            </div>
-          )}
-
-          {!resultInfo && <div style={{fontSize:13,color:"#64748b",marginBottom:18}}>Define el perfil que buscas. Tu oferta llegará a los tripulantes que califican y están en la misma ciudad de tu barco.</div>}
+          <div style={{fontSize:13,color:"#64748b",marginBottom:18}}>Define el perfil que buscas y toca "Buscar tripulación". Verás la lista de tripulantes que hacen match, y podrás enviarles la oferta a los que elijas.</div>
 
           {/* Rol */}
           <div style={{marginBottom:16}}>
@@ -222,9 +222,60 @@ export default function CrewSearch({ vessel, user, onPublished }) {
             <textarea value={f.notes} onChange={e=>setF({...f,notes:e.target.value})} rows={3} placeholder="Describe el trabajo, horario, expectativas..." style={{...inp,resize:"vertical"}}/>
           </div>
 
-          <button onClick={publish} disabled={publishing} style={{width:"100%",padding:"13px",background:publishing?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-            {publishing?"Publicando...":"Publicar búsqueda"}
+          <button onClick={search} disabled={publishing} style={{width:"100%",padding:"13px",background:publishing?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            {publishing?"Buscando...":"Buscar tripulación"}
           </button>
+
+          {/* Resultados de la búsqueda */}
+          {results !== null && (
+            <div style={{marginTop:24}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <div style={{fontSize:15,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>
+                  {results.length} {results.length===1?"tripulante":"tripulantes"} {results.length===1?"encontrado":"encontrados"}
+                </div>
+                {results.length>0 && (
+                  <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"7px 10px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#1e293b",background:"#fff"}}>
+                    <option value="match">Mejor coincidencia</option>
+                    <option value="experiencia">Más experiencia</option>
+                  </select>
+                )}
+              </div>
+
+              {results.length===0 && (
+                <div style={{textAlign:"center",padding:"36px 20px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12}}>
+                  <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:6}}>No hay tripulantes que coincidan</div>
+                  <div style={{fontSize:12,color:"#78350f",lineHeight:1.5}}>Prueba a ampliar los criterios: menos certificaciones obligatorias, rango de edad más amplio, o revisa que la ciudad esté bien escrita.</div>
+                </div>
+              )}
+
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {[...results].sort((a,b)=> sortBy==="experiencia" ? b._years-a._years : b._score-a._score).map(c=>{
+                  const name = c.full_name?.trim() || `${c.first_name||""} ${c.last_name||""}`.trim() || "Tripulante";
+                  const sent = sentTo[c.id];
+                  const age = c.birth_date ? Math.floor((Date.now()-new Date(c.birth_date))/(365.25*24*3600*1000)) : null;
+                  return (
+                    <div key={c.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16,display:"flex",gap:14,alignItems:"flex-start"}}>
+                      {c.photo_url
+                        ? <img src={c.photo_url} style={{width:56,height:56,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+                        : <div style={{width:56,height:56,borderRadius:"50%",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:20,flexShrink:0}}>{name[0].toUpperCase()}</div>}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>{name}</div>
+                        <div style={{fontSize:12,color:"#64748b",marginBottom:6}}>{c.crew_role||"Tripulante"}{c.work_zone?` · ${c.work_zone}`:""}{age?` · ${age} años`:""}</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                          {c._years>0 && <span style={tag}>{c._years} {c._years===1?"experiencia":"experiencias"}</span>}
+                          {(c.languages||[]).slice(0,3).map(l=><span key={l} style={tag}>{l}</span>)}
+                          {(c.certifications||[]).slice(0,2).map((cert,i)=><span key={i} style={tag}>{cert.name||cert}</span>)}
+                        </div>
+                      </div>
+                      <button onClick={()=>sendOffer(c)} disabled={sent} style={{flexShrink:0,padding:"9px 16px",borderRadius:9,border:"none",fontSize:12,fontWeight:700,cursor:sent?"default":"pointer",background:sent?"#f1f5f9":"linear-gradient(120deg,#2563eb,#0ea5e9)",color:sent?"#94a3b8":"#fff"}}>
+                        {sent?"Oferta enviada":"Enviar oferta"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
