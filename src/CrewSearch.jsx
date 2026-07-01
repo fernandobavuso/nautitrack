@@ -263,8 +263,8 @@ export default function CrewSearch({ vessel, user, onPublished }) {
                         <div style={{fontSize:12,color:"#64748b",marginBottom:6}}>{c.crew_role||"Tripulante"}{c.work_zone?` · ${c.work_zone}`:""}{age?` · ${age} años`:""}</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                           {c._years>0 && <span style={tag}>{c._years} {c._years===1?"experiencia":"experiencias"}</span>}
-                          {(c.languages||[]).slice(0,3).map(l=><span key={l} style={tag}>{l}</span>)}
-                          {(c.certifications||[]).slice(0,2).map((cert,i)=><span key={i} style={tag}>{cert.name||cert}</span>)}
+                          {(c.languages||[]).slice(0,3).map((l,i)=><span key={i} style={tag}>{typeof l==="string"?l:(l?.name||l?.language||"")}</span>)}
+                          {(c.certifications||[]).slice(0,2).map((cert,i)=><span key={i} style={tag}>{typeof cert==="string"?cert:(cert?.name||"")}</span>)}
                         </div>
                       </div>
                       <button onClick={()=>sendOffer(c)} disabled={sent} style={{flexShrink:0,padding:"9px 16px",borderRadius:9,border:"none",fontSize:12,fontWeight:700,cursor:sent?"default":"pointer",background:sent?"#f1f5f9":"linear-gradient(120deg,#2563eb,#0ea5e9)",color:sent?"#94a3b8":"#fff"}}>
