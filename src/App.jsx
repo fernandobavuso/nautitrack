@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
-import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle } from "./icons.jsx";
+import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle, SystemIcon } from "./icons.jsx";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
@@ -1114,7 +1114,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
               return (
                 <>
                   <tr key={task.id} style={{...s.trow,background:expanded===task.id?"#f0f7ff":"#fff",cursor:"pointer"}} onClick={() => setExpanded(expanded===task.id?null:task.id)}>
-                    <td style={s.td}><span style={{fontSize:14}}>{sys?.icon||"🔧"}</span> {task.system}</td>
+                    <td style={s.td}><span style={{display:"inline-flex",verticalAlign:"middle",marginRight:5}}><SystemIcon id={task.systemId} size={15} color="#64748b"/></span> {task.system}</td>
                     <td style={s.td}>{task.equipment}</td>
                     <td style={{...s.td,fontWeight:500,color:"#1e293b"}}>{task.name}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.assigned?.split(" ")[0]}</td>
@@ -1278,7 +1278,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
               {allSystems.map(sys => (
                 <button key={sys.id} onClick={() => { setSystemId(sys.id); setEquipment(""); }} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",border:"1.5px solid",borderRadius:8,cursor:"pointer",background:systemId===sys.id?"#eff6ff":"#f8fafc",borderColor:systemId===sys.id?"#2563eb":"#e2e8f0"}}>
-                  <span style={{fontSize:16}}>{sys.icon}</span>
+                  <span style={{display:"flex",flexShrink:0}}><SystemIcon id={sys.id} size={18} color={systemId===sys.id?"#2563eb":"#64748b"}/></span>
                   <span style={{fontSize:11,fontWeight:systemId===sys.id?700:400,color:systemId===sys.id?"#2563eb":"#1e293b",lineHeight:1.3}}>{sys.label}</span>
                   {sys.id.startsWith("custom_")&&<span style={{fontSize:9,color:"#94a3b8",marginLeft:"auto"}}>✎</span>}
                 </button>
@@ -1583,7 +1583,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               <label style={s.label}>Sistema</label>
               <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");}} style={s.input}>
                 <option value="">Seleccionar sistema...</option>
-                {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.icon} {sys.label}</option>)}
+                {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.label}</option>)}
               </select>
             </div>
             {systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
@@ -1638,7 +1638,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               <label style={s.label}>Sistema <span style={{color:"#dc2626"}}>*</span></label>
               <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");}} style={{...s.input,borderColor:errors.system?"#dc2626":"#e2e8f0"}}>
                 <option value="">Seleccionar sistema...</option>
-                {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.icon} {sys.label}</option>)}
+                {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.label}</option>)}
               </select>
               {errors.system&&<div style={s.errMsg}>{errors.system}</div>}
             </div>

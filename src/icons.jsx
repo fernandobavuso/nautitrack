@@ -91,3 +91,51 @@ export const IconClipboard = ({ size, color }) => (
 export const IconCheckCircle = ({ size, color }) => (
   <svg {...base(size, color)}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 );
+
+// ── Íconos de sistemas del barco ──
+export const IconGear = ({ size, color }) => (
+  <svg {...base(size, color)}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+);
+export const IconPlug = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z"/></svg>
+);
+export const IconDrop = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+);
+export const IconSnow = ({ size, color }) => (
+  <svg {...base(size, color)}><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+);
+export const IconCompass = ({ size, color }) => (
+  <svg {...base(size, color)}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+);
+export const IconSpiral = ({ size, color }) => (
+  <svg {...base(size, color)}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>
+);
+export const IconSail = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M3 20h18"/><path d="M5 20l7-16v16"/><path d="M12 6l6 14"/></svg>
+);
+export const IconHome = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+);
+export const IconSofa = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M3 13a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4H3z"/><line x1="6" y1="21" x2="6" y2="17"/><line x1="18" y1="21" x2="18" y2="17"/></svg>
+);
+export const IconDinghy = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M2 18a5 5 0 0 0 10 0 5 5 0 0 0 10 0"/><path d="M4 16l2-6h12l2 6"/><line x1="12" y1="4" x2="12" y2="10"/></svg>
+);
+export const IconBolt2 = ({ size, color }) => (
+  <svg {...base(size, color)}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+);
+
+// Mapa: id de sistema -> componente de ícono
+import React from "react";
+const SYSTEM_ICON_MAP = {
+  motores: IconWrench, generador: IconBolt2, seakeeper: IconSpiral, casco: IconBoat,
+  eje: IconGear, electrico: IconPlug, agua: IconDrop, ac: IconSnow,
+  navegacion: IconCompass, hidraulico: IconGear, seguridad: IconShield, velas: IconSail,
+  cubierta: IconHome, interior: IconSofa, dinghy: IconDinghy,
+};
+export function SystemIcon({ id, size = 20, color = "#475569" }) {
+  const Cmp = SYSTEM_ICON_MAP[id] || IconWrench;
+  return <Cmp size={size} color={color} />;
+}
