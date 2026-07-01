@@ -272,7 +272,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                   onView={()=>setSelectedCrew(app.crew)}
                   actions={
                     <button onClick={()=>setActiveChat(app)} style={{width:"100%",padding:"8px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                      💬 Chatear
+                      Chatear
                     </button>
                   }/>
               ))}
@@ -469,7 +469,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           )}
 
           <div style={{fontSize:11,color:"#94a3b8",textAlign:"center",borderTop:"1px solid #f1f5f9",paddingTop:14}}>
-            🔒 El contacto se comparte al hacer match
+            El contacto se comparte al hacer match
           </div>
         </div>
       </div>
