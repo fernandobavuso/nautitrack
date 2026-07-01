@@ -87,3 +87,7 @@ export const IconShield = ({ size, color }) => (
 export const IconClipboard = ({ size, color }) => (
   <svg {...base(size, color)}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
 );
+
+export const IconCheckCircle = ({ size, color }) => (
+  <svg {...base(size, color)}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+);

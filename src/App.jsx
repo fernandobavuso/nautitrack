@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
-import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor } from "./icons.jsx";
+import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle } from "./icons.jsx";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
@@ -866,7 +866,7 @@ function AlertsCard({ vessel, setPage }) {
     <div style={{...s.card,flex:1}}>
       <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconAlert size={17} color="#dc2626"/> Alertas</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver →</button></div>
       {od.length===0
-        ? <div style={s.empty}><div style={{fontSize:28}}>✅</div><div style={{color:"#16a34a",fontWeight:600,fontSize:13}}>Sin alertas</div></div>
+        ? <div style={s.empty}><div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconCheckCircle size={32} color="#16a34a"/></div><div style={{color:"#16a34a",fontWeight:600,fontSize:13}}>Sin alertas</div></div>
         : od.map(t => (
           <div key={t.id} style={s.alertRow}>
             <div style={s.alertDot} />

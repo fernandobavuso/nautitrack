@@ -14,6 +14,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
   const [editing, setEditing] = useState(null); // item en edición o "new"
   const [msg, setMsg] = useState("");
   const [filter, setFilter] = useState("all"); // all / low / requests
+  const [collapsedCats, setCollapsedCats] = useState({}); // categorías plegadas
   const [requesting, setRequesting] = useState(null); // item para pedir o "new"
   const [myRequests, setMyRequests] = useState([]);
   const [commTiers, setCommTiers] = useState(null);
@@ -169,8 +170,29 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
               <div style={{fontSize:12,marginTop:4}}>Usa "Pedir repuesto" para que las tiendas de tu zona te coticen</div>
             </div>
           )}
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {myRequests.map(r=>{
+          <div style={{display:"flex",flexDirection:"column",gap:20}}>
+            {(() => {
+              // Clasificar pedidos por estado
+              const clasificar = (r) => {
+                if (r.status==="resolved") return "comprado";
+                if (r.winner_response_id) return "proceso"; // ya eligió tienda, finiquitando
+                return "pendiente";
+              };
+              const grupos = { pendiente:[], proceso:[], comprado:[] };
+              myRequests.forEach(r => { grupos[clasificar(r)].push(r); });
+              const secciones = [
+                { key:"pendiente", label:"Pendientes", desc:"Esperando ofertas de tiendas", color:"#2563eb" },
+                { key:"proceso",   label:"En proceso", desc:"Finiquitando detalles con la tienda", color:"#d97706" },
+                { key:"comprado",  label:"Comprados",  desc:"Compras completadas", color:"#16a34a" },
+              ];
+              return secciones.map(sec => grupos[sec.key].length===0 ? null : (
+                <div key={sec.key}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                    <span style={{fontSize:14,fontWeight:700,color:sec.color,fontFamily:"'Sora',system-ui,sans-serif"}}>{sec.label}</span>
+                    <span style={{fontSize:11,color:"#94a3b8"}}>{grupos[sec.key].length} · {sec.desc}</span>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    {grupos[sec.key].map(r=>{
               const resolved = r.status==="resolved";
               const pendingApproval = r.status==="pending_approval";
               const resp = r.responses||[];
@@ -238,7 +260,11 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                   {resp.length===0&&!resolved&&<div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>Esperando respuestas de las tiendas...</div>}
                 </div>
               );
-            })}
+                    })}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       ) : (
@@ -251,29 +277,61 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
         </div>
       )}
 
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {shown.map(it=>{
-          const low = Number(it.min_quantity)>0 && Number(it.quantity)<=Number(it.min_quantity);
-          return (
-            <div key={it.id} style={{background:"#fff",border:`1px solid ${low?"#fecaca":"#e2e8f0"}`,borderRadius:10,padding:"12px 14px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{it.name}{low&&<span style={{marginLeft:8,fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>Reponer</span>}</div>
-                  <div style={{fontSize:11,color:"#64748b"}}>{it.category}{it.brand?` · ${it.brand}`:""}{it.part_num?` · ${it.part_num}`:""}{it.location_type?` · ${it.location_type}`:""}{it.location?` (${it.location})`:""}</div>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <button onClick={()=>adjust(it,-1)} style={qtyBtn}>−</button>
-                  <div style={{minWidth:54,textAlign:"center"}}>
-                    <div style={{fontSize:15,fontWeight:800,color:low?"#dc2626":"#0f172a"}}>{Number(it.quantity)}</div>
-                    <div style={{fontSize:9,color:"#94a3b8"}}>{it.unit}</div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {(() => {
+          // Agrupar por categoría
+          const groups = {};
+          shown.forEach(it => {
+            const cat = it.category || "Otro";
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(it);
+          });
+          const catNames = Object.keys(groups).sort();
+          return catNames.map(cat => {
+            const catItems = groups[cat];
+            const lowCount = catItems.filter(it=>Number(it.min_quantity)>0 && Number(it.quantity)<=Number(it.min_quantity)).length;
+            const collapsed = collapsedCats[cat];
+            return (
+              <div key={cat} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden"}}>
+                {/* Cabecera de la carpeta/categoría */}
+                <button onClick={()=>setCollapsedCats(c=>({...c,[cat]:!c[cat]}))} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"12px 16px",background:"#f8fafc",border:"none",borderBottom:collapsed?"none":"1px solid #eef2f7",cursor:"pointer",textAlign:"left"}}>
+                  <span style={{fontSize:12,color:"#94a3b8",transform:collapsed?"rotate(-90deg)":"none",transition:".15s"}}>▼</span>
+                  <span style={{fontSize:14,fontWeight:700,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>{cat}</span>
+                  <span style={{fontSize:11,color:"#94a3b8"}}>{catItems.length} {catItems.length===1?"repuesto":"repuestos"}</span>
+                  {lowCount>0 && <span style={{fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>{lowCount} por reponer</span>}
+                </button>
+                {/* Items de la categoría */}
+                {!collapsed && (
+                  <div style={{display:"flex",flexDirection:"column"}}>
+                    {catItems.map(it=>{
+                      const low = Number(it.min_quantity)>0 && Number(it.quantity)<=Number(it.min_quantity);
+                      return (
+                        <div key={it.id} style={{padding:"12px 16px",borderBottom:"1px solid #f4f7fa",background:low?"#fff8f8":"#fff"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:12}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{it.name}{low&&<span style={{marginLeft:8,fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700}}>Reponer</span>}</div>
+                              <div style={{fontSize:11,color:"#64748b"}}>{it.brand?`${it.brand}`:""}{it.part_num?`${it.brand?" · ":""}${it.part_num}`:""}{it.location_type?` · ${it.location_type}`:""}{it.location?` (${it.location})`:""}</div>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <button onClick={()=>adjust(it,-1)} style={qtyBtn}>−</button>
+                              <div style={{minWidth:54,textAlign:"center"}}>
+                                <div style={{fontSize:15,fontWeight:800,color:low?"#dc2626":"#0f172a"}}>{Number(it.quantity)}</div>
+                                <div style={{fontSize:9,color:"#94a3b8"}}>{it.unit}</div>
+                              </div>
+                              <button onClick={()=>adjust(it,1)} style={qtyBtn}>+</button>
+                            </div>
+                            <button onClick={()=>openEdit(it)} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,fontWeight:600}}>Editar</button>
+                            <button onClick={()=>{ if(confirm(`¿Eliminar "${it.name}" del inventario?`)) del(it.id); }} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13,fontWeight:600}}>Eliminar</button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <button onClick={()=>adjust(it,1)} style={qtyBtn}>+</button>
-                </div>
-                <button onClick={()=>openEdit(it)} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13,fontWeight:600}}>Editar</button>
+                )}
               </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
       </>
       )}
