@@ -766,13 +766,15 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           </button>
         </div>
         <div style={{position:"relative"}}>
-          <button style={s.userBtn} onClick={(e) => { e.stopPropagation(); setShowUserMenu(!showUserMenu); setShowVesselMenu(false); }}>
+          <button style={s.userBtn} onClick={(e) => { e.stopPropagation(); setShowVesselMenu(false); setShowUserMenu(v => !v); }}>
             <div style={s.navAvatar}>{getInitials(user?.full_name || user?.email)}</div>
             <div className="nav-username"><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
-            <div style={{...s.drop,minWidth:210}}>
+            <>
+              <div onClick={(e)=>{e.stopPropagation(); setShowUserMenu(false);}} style={{position:"fixed",inset:0,zIndex:25}}/>
+              <div style={{...s.drop,minWidth:210,zIndex:26}} onClick={e=>e.stopPropagation()}>
               <div style={{padding:"10px 14px 4px",fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em"}}>MI CUENTA</div>
               {[
                 {icon:"👤",label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
@@ -785,7 +787,8 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                   <span>{item.icon}</span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
                 </button>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </div>
