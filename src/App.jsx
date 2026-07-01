@@ -710,11 +710,10 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
   return (
     <nav style={s.nav} onClick={e => e.stopPropagation()}>
       <div style={s.navLogo} onClick={() => setPage("home")}>
-        <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
-          <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".1"/>
-          <path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/>
-          <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
-          <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" fill="#38bdf8" opacity=".12"/>
+          <path d="M16 4 L27 26 H5 Z" stroke="#38bdf8" strokeWidth="2.2" fill="rgba(56,189,248,0.15)" strokeLinejoin="round"/>
+          <line x1="16" y1="4" x2="16" y2="26" stroke="#7dd3fc" strokeWidth="1.5"/>
         </svg>
         <div style={s.navBrand}>Carive</div>
       </div>
@@ -3549,7 +3548,7 @@ const s = {
   navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
   navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center" },
   navLink:    { padding:"18px 11px", background:"none", border:"none", cursor:"pointer", fontSize:12, transition:"all 0.15s", whiteSpace:"nowrap" },
-  navRight:   { display:"flex", alignItems:"center", gap:10, flexShrink:0 },
+  navRight:   { display:"flex", alignItems:"center", gap:10, flexShrink:0, paddingRight:4 },
   provBtn:    { padding:"5px 11px", border:"1.5px solid #e2e8f0", borderRadius:6, background:"#f8fafc", cursor:"pointer", fontSize:12, fontWeight:500, color:"#1e293b", whiteSpace:"nowrap" },
   vesselSelector: { display:"flex", alignItems:"center", gap:7, padding:"5px 10px", border:"1.5px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer", fontSize:12 },
   dot:        { width:8, height:8, borderRadius:"50%", flexShrink:0 },
@@ -3559,8 +3558,8 @@ const s = {
   bellWrap:   { position:"relative" },
   bellBadge:  { position:"absolute", top:-4, right:-4, background:"#ef4444", color:"#fff", fontSize:9, fontWeight:700, width:16, height:16, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" },
   navAvatar:  { width:32, height:32, borderRadius:"50%", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", color:"#fff", fontWeight:700, fontSize:11, display:"flex", alignItems:"center", justifyContent:"center" },
-  navName:    { fontSize:12, fontWeight:600, color:"#0f172a", maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
-  navRole:    { fontSize:10, color:"#94a3b8" },
+  navName:    { fontSize:12, fontWeight:600, color:"#0f172a", maxWidth:110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
+  navRole:    { fontSize:10, color:"#94a3b8", maxWidth:110, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   body:       { padding:"20px 24px", maxWidth:1440, margin:"0 auto" },
   home:       { display:"flex", flexDirection:"column", gap:16 },
   row:        { display:"flex", gap:16, alignItems:"stretch" },
