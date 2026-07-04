@@ -644,7 +644,7 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── MI PERFIL: DATOS ── */}
         {tab==="perfil"&&perfilSub==="datos"&&(
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:20}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:20,maxWidth:980,margin:"0 auto"}}>
 
             {/* Columna izquierda — foto + badge */}
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -1194,7 +1194,7 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── BUSCAR BARCO ── */}
         {tab==="buscar"&&(
-          <div style={{maxWidth:600}}>
+          <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🔍 Buscar Embarcación</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Encuentra barcos por ciudad o tipo y aplica directamente</div>
@@ -1246,7 +1246,7 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── DAY TRIPS ── */}
         {tab==="daytrips"&&(
-          <div style={{maxWidth:600}}>
+          <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:12}}>Viajes Disponibles</div>
               <DayTripsCrew user={user} profile={profile}/>
@@ -1260,7 +1260,7 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── SOLICITUDES ── */}
         {tab==="solicitudes"&&(
-          <div style={{maxWidth:600}}>
+          <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:16}}>📬 Mis Aplicaciones</div>
               {requests.length===0&&(
@@ -1345,7 +1345,12 @@ export default function CrewProfile({ user, onLogout }) {
         {/* Popup de verificación exitosa */}
         {/* Chat interno */}
         {showNotifPanel&&(
-          <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="daytrips")setTab("daytrips"); }}/>
+          <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{
+            if(link==="daytrips") setTab("daytrips");
+            else if(link==="propuestas") setTab("propuestas");
+            else if(link==="perfil"||link==="documentos"||link==="certificaciones") setTab("perfil");
+            else if(link==="buscar") setTab("buscar");
+          }}/>
         )}
 
         {activeChat&&(

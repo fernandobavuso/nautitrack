@@ -1494,6 +1494,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [fuelQty,setFuelQty]         = useState(initial?.fuelQty||"");
   const [ownerAboard,setOwnerAboard] = useState(initial?.ownerAboard||false);
   const [crewSel,setCrewSel]         = useState(initial?.crewSel||[]);
+  const [crewInput,setCrewInput]     = useState("");
   const [persons,setPersons]         = useState(initial?.persons||"");
   const [dest,setDest]               = useState(initial?.dest||"");
   const [deptTime,setDeptTime]       = useState(initial?.deptTime||"");
@@ -1693,7 +1694,31 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                   <div><label style={s.label}>N° Personas</label><input type="number" value={persons} onChange={e=>setPersons(e.target.value)} style={s.input}/></div>
                 </div>
                 <div><label style={s.label}>Dueño a bordo</label><div style={{display:"flex",gap:8,marginTop:4}}>{[true,false].map(v=><button key={String(v)} onClick={()=>setOwnerAboard(v)} style={{...s.typeChip,background:ownerAboard===v?"#2563eb22":"#f8fafc",borderColor:ownerAboard===v?"#2563eb":"#e2e8f0",color:ownerAboard===v?"#2563eb":"#64748b",fontWeight:ownerAboard===v?700:400}}>{v?"Sí":"No"}</button>)}</div></div>
-                <div><label style={s.label}>Tripulación</label><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>{(vessel.crew||[]).map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}</div></div>
+                <div>
+                  <label style={s.label}>Tripulación a bordo</label>
+                  {(vessel.crew||[]).length>0 ? (
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                      {(vessel.crew||[]).map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}
+                    </div>
+                  ) : (
+                    <div style={{fontSize:11,color:"#94a3b8",marginTop:4,marginBottom:6}}>No tienes tripulación cargada en este barco. Agrégala abajo o en "Mi Tripulación".</div>
+                  )}
+                  {/* Agregar tripulante por nombre libre */}
+                  <div style={{display:"flex",gap:6,marginTop:8}}>
+                    <input value={crewInput} onChange={e=>setCrewInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&crewInput.trim()){setCrewSel(cs=>[...cs,crewInput.trim()]);setCrewInput("");}}} placeholder="Escribe un nombre y presiona Enter" style={{...s.input,flex:1}}/>
+                    <button onClick={()=>{if(crewInput.trim()){setCrewSel(cs=>[...cs,crewInput.trim()]);setCrewInput("");}}} style={{...s.typeChip,background:"#eff6ff",borderColor:"#2563eb",color:"#2563eb",fontWeight:700,whiteSpace:"nowrap"}}>Agregar</button>
+                  </div>
+                  {/* Tripulantes seleccionados por nombre libre (no en vessel.crew) */}
+                  {crewSel.filter(c=>!(vessel.crew||[]).includes(c)).length>0 && (
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+                      {crewSel.filter(c=>!(vessel.crew||[]).includes(c)).map(c=>(
+                        <span key={c} style={{fontSize:11,background:"#eff6ff",color:"#2563eb",padding:"4px 10px",borderRadius:12,fontWeight:600,display:"inline-flex",alignItems:"center",gap:6}}>
+                          {c}<button onClick={()=>setCrewSel(cs=>cs.filter(x=>x!==c))} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",padding:0,fontWeight:700}}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div>
                   <label style={s.label}>Combustible al salir</label>
                   <div style={{display:"flex",gap:10}}>
@@ -1752,6 +1777,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               <div><label style={s.label}>Costo Bs</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>Bs</span><input type="number" value={costBs} onChange={e=>setCostBs(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
             </div>
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+            <div><label style={s.label}>¿Quién hizo la compra?</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option><option value="Dueño">Dueño</option><option value="Capitán">Capitán</option>{crewOptions.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
             <div><label style={s.label}>Notas adicionales</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
             <PhotoFld photos={photos} setPhotos={setPhotos} label="Foto del recibo" userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
