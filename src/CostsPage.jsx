@@ -14,6 +14,7 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [period, setPeriod] = useState("month"); // month / year / all
+  const [showHelp, setShowHelp] = useState(true);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({
     category:"Combustible", description:"", amount:"", currency:"USD",
@@ -81,13 +82,34 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
     <div style={{maxWidth:900,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:20,fontWeight:800,color:"#0f172a"}}>Costos de {vessel.name}</div>
-          <div style={{fontSize:13,color:"#64748b"}}>Cuánto te cuesta tu embarcación. Los gastos que registras en la bitácora aparecen aquí automáticamente.</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Costos de {vessel.name}</div>
+          <div style={{fontSize:13,color:"#64748b"}}>Todo lo que te cuesta tu embarcación, en un solo lugar.</div>
         </div>
         <button onClick={()=>setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           Registrar gasto
         </button>
       </div>
+
+      {/* Panel explicativo: quién anota qué */}
+      {showHelp && (
+        <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:"14px 16px",marginBottom:16,position:"relative"}}>
+          <button onClick={()=>setShowHelp(false)} style={{position:"absolute",top:10,right:12,background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16}}>×</button>
+          <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:8}}>¿Cómo se llenan los costos?</div>
+          <div style={{fontSize:12,color:"#475569",lineHeight:1.6}}>
+            Hay dos formas de que un gasto llegue aquí, y las dos terminan en esta misma lista:
+            <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap",marginTop:1}}>desde bitácora</span>
+                <span>Cuando el capitán (o quien esté a bordo) registra una <strong>compra</strong> en la Bitácora, ese gasto aparece aquí solo. No hay que anotarlo dos veces.</span>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:9,background:"#f1f5f9",color:"#64748b",padding:"2px 7px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap",marginTop:1}}>directo</span>
+                <span>Gastos que no son compras del barco (seguro, marina, sueldos...) los registras tú aquí con "Registrar gasto".</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Selector de periodo */}
       <div style={{display:"flex",gap:8,marginBottom:16}}>
@@ -146,7 +168,7 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
           <div key={e.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:4,height:36,borderRadius:2,background:CAT_COLORS[e.category]||"#64748b",flexShrink:0}}/>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>desde bitácora</span>:""}</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span title="Este gasto viene de una compra registrada en la Bitácora. No se anota dos veces." style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle",cursor:"help"}}>desde bitácora</span>:""}</div>
               <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("es-VE")}</div>
             </div>
             <div style={{fontSize:14,fontWeight:800,color:"#0f172a",whiteSpace:"nowrap"}}>

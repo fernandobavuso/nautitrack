@@ -305,7 +305,8 @@ export default function App() {
           : entry.type==="Combustible" ? "Combustible"
           : entry.type==="Servicio" ? "Mantenimiento"
           : entry.type==="Reparación" ? "Reparación" : "Otro";
-        const desc = entry.item || entry.equipment || entry.desc || entry.type;
+        const baseDesc = entry.item || entry.equipment || entry.desc || entry.type;
+        const desc = entry.performedBy ? `${baseDesc} · por ${entry.performedBy}` : baseDesc;
         if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log" }).then(()=>{});
         if (costBs>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costBs, currency:"VES", expense_date:entry.date, source:"log" }).then(()=>{});
       }
@@ -1780,6 +1781,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
             <div><label style={s.label}>¿Quién hizo la compra?</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option><option value="Dueño">Dueño</option><option value="Capitán">Capitán</option>{crewOptions.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
             <div><label style={s.label}>Notas adicionales</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#0369a1",display:"flex",gap:8,alignItems:"flex-start"}}>
+              <span style={{fontWeight:700}}>ℹ</span>
+              <span>Al guardar esta compra, el monto aparecerá automáticamente en la pestaña <strong>Costos</strong>. No necesitas registrarlo de nuevo allá.</span>
+            </div>
             <PhotoFld photos={photos} setPhotos={setPhotos} label="Foto del recibo" userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
 
