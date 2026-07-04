@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
-import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle, SystemIcon } from "./icons.jsx";
+import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle, SystemIcon, IconUser, IconCard, IconLogout } from "./icons.jsx";
 import QRPanel from "./QRPanel";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
@@ -777,14 +777,14 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
               <div style={{...s.drop,minWidth:210,zIndex:26}} onClick={e=>e.stopPropagation()}>
               <div style={{padding:"10px 14px 4px",fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em"}}>MI CUENTA</div>
               {[
-                {icon:"👤",label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
-                {icon:"⚓",label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
-                {icon:"💳",label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
-                ...(isAdminUser?[{icon:"📊",label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
-                {icon:"🚪",label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
+                {Icon:IconUser,  label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
+                {Icon:IconBoat,  label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
+                {Icon:IconCard,  label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
+                ...(isAdminUser?[{Icon:IconChart,label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
+                {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
                 <button key={item.label} onClick={item.action} style={{...s.dropItem,gap:10}}>
-                  <span>{item.icon}</span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
+                  <span style={{display:"flex",color:"#64748b"}}><item.Icon size={16} color="#64748b"/></span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
                 </button>
               ))}
               </div>
@@ -2386,10 +2386,10 @@ function DocsPage({ vessel, user }) {
     "Electrónica / Navegación","Eléctrico","Hidráulico","Seguridad","Velas y Jarcia","Otro"
   ];
 
-  const CAT_ICONS = {
-    "Mecánica / Motores":"🔧","Generadores":"⚡","Refrigeración / A/C":"❄️",
-    "Sistemas de Agua":"💧","Electrónica / Navegación":"🧭","Eléctrico":"🔌",
-    "Hidráulico":"🔩","Seguridad":"🛡️","Velas y Jarcia":"⛵","Otro":"📄"
+  const CAT_TO_SYS = {
+    "Mecánica / Motores":"motores","Generadores":"generador","Refrigeración / A/C":"ac",
+    "Sistemas de Agua":"agua","Electrónica / Navegación":"navegacion","Eléctrico":"electrico",
+    "Hidráulico":"hidraulico","Seguridad":"seguridad","Velas y Jarcia":"velas","Otro":"casco"
   };
 
   // Load manuals from Supabase
@@ -2575,7 +2575,7 @@ function DocsPage({ vessel, user }) {
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
             {["Todos",...MANUAL_CATS].map(c=>(
               <button key={c} onClick={()=>setSelectedCat(c)} style={{...s.filterBtn,background:selectedCat===c?"#1e3a5f":"transparent",color:selectedCat===c?"#fff":"#64748b",borderColor:selectedCat===c?"#4a9eff":"#e2e8f0",fontSize:11,padding:"4px 10px"}}>
-                {CAT_ICONS[c]||"📂"} {c}
+                <span style={{display:"inline-flex",verticalAlign:"middle",marginRight:6}}><SystemIcon id={CAT_TO_SYS[c]||"casco"} size={14} color="#64748b"/></span>{c}
                 {c!=="Todos"&&<span style={{marginLeft:4,fontSize:10,opacity:.7}}>({manuals.filter(m=>m.category===c).length})</span>}
               </button>
             ))}
@@ -2589,7 +2589,7 @@ function DocsPage({ vessel, user }) {
                 <div key={m.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
                   {/* Card header by category */}
                   <div style={{background:`linear-gradient(135deg,#1e3a5f,#2563eb)`,padding:"16px",color:"#fff"}}>
-                    <div style={{fontSize:28,marginBottom:6}}>{CAT_ICONS[m.category]||"📄"}</div>
+                    <div style={{marginBottom:6,display:"flex"}}><SystemIcon id={CAT_TO_SYS[m.category]||"casco"} size={26} color="#2563eb"/></div>
                     <div style={{fontSize:12,opacity:.7,letterSpacing:"0.06em",marginBottom:2}}>{m.category?.toUpperCase()}</div>
                   </div>
                   <div style={{padding:"14px 16px"}}>
@@ -2627,7 +2627,7 @@ function DocsPage({ vessel, user }) {
           {/* Selected manual context */}
           {selectedManual&&(
             <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,marginBottom:16}}>
-              <span style={{fontSize:20}}>{CAT_ICONS[selectedManual.category]||"📄"}</span>
+              <span style={{display:"flex"}}><SystemIcon id={CAT_TO_SYS[selectedManual.category]||"casco"} size={20} color="#2563eb"/></span>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#0369a1"}}>Manual activo: {selectedManual.name}</div>
                 <div style={{fontSize:11,color:"#64748b"}}>{pdfLoading?"⏳ Cargando PDF para IA...":pdfText&&pdfText!=="error"?"✓ PDF cargado — la IA puede leer el contenido completo":"⚠ PDF no disponible — la IA usará su conocimiento base"}</div>

@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
 import DayTripsCrew from "./DayTripsCrew";
+import { IconBell, IconCard } from "./icons.jsx";
 import CrewProposals from "./CrewProposals";
 import NotifPanel from "./NotifPanel";
 import { countUnread } from "./notifications";
@@ -500,7 +501,7 @@ export default function CrewProfile({ user, onLogout }) {
               </button>
             ))}
             <div style={{position:"relative",marginLeft:4}}>
-              <span style={{fontSize:18,cursor:"pointer"}} onClick={()=>setShowNotifPanel(true)}>🔔</span>
+              <span style={{cursor:"pointer",display:"flex"}} onClick={()=>setShowNotifPanel(true)}><IconBell size={19} color="#475569"/></span>
               {unreadCount>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#dc2626",color:"#fff",fontSize:9,fontWeight:700,minWidth:15,height:15,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{unreadCount}</div>}
             </div>
             <button onClick={onLogout} style={{padding:"5px 10px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:11,color:"#94a3b8",marginLeft:4}}>Salir</button>
@@ -1071,7 +1072,7 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="pagos"&&(
           <div style={{maxWidth:700}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>💳 Métodos de Pago</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4,display:"flex",alignItems:"center",gap:8}}><IconCard size={17} color="#2563eb"/> Métodos de Pago</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:20}}>Activa los métodos que aceptas y completa tus datos</div>
 
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
