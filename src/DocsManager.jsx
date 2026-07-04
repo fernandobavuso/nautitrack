@@ -44,11 +44,10 @@ export default function DocsManager({ vessel }) {
       const path = `${vessel.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: upErr } = await supabase.storage.from("documentos").upload(path, file);
       if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(path);
       const { error: insErr } = await supabase.from("vessel_documents").insert({
         vessel_id: vessel.id, owner_id: vessel.owner_id, folder: currentFolder,
         title: newTitle.trim() || file.name, kind: "file",
-        url: urlData.publicUrl, file_path: path, file_size: file.size, mime_type: file.type,
+        file_path: path, file_size: file.size, mime_type: file.type,
       });
       if (insErr) throw insErr;
       flash("Documento cargado");
@@ -92,6 +91,15 @@ export default function DocsManager({ vessel }) {
     await supabase.from("vessel_documents").delete().eq("id", doc.id);
     flash("Eliminado");
     load();
+  };
+
+  // Abrir un documento: genera un link temporal seguro (bucket privado)
+  const openDoc = async (doc) => {
+    if (doc.kind === "link") { window.open(doc.url, "_blank"); return; }
+    if (!doc.file_path) { flash("Documento no disponible"); return; }
+    const { data, error } = await supabase.storage.from("documentos").createSignedUrl(doc.file_path, 3600);
+    if (error || !data?.signedUrl) { flash("No se pudo abrir el documento"); return; }
+    window.open(data.signedUrl, "_blank");
   };
 
   const deleteFolder = async (folderName) => {
@@ -181,10 +189,10 @@ export default function DocsManager({ vessel }) {
           <div key={doc.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
             <span style={{flexShrink:0,color:doc.kind==="link"?"#0ea5e9":"#2563eb"}}>{doc.kind==="link"?<LinkIcon/>:<FileIcon/>}</span>
             <div style={{flex:1,minWidth:0}}>
-              <a href={doc.url} target="_blank" rel="noreferrer" style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none"}}>{doc.title}</a>
+              <button onClick={()=>openDoc(doc)} style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left"}}>{doc.title}</button>
               <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{doc.kind==="link"?"Link externo":formatSize(doc.file_size)}{doc.created_at?` · ${new Date(doc.created_at).toLocaleDateString("es-VE")}`:""}</div>
             </div>
-            <a href={doc.url} target="_blank" rel="noreferrer" style={{...btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none"}}>Abrir</a>
+            <button onClick={()=>openDoc(doc)} style={{...btnOutline,padding:"5px 12px",fontSize:11}}>Abrir</button>
             <button onClick={()=>del(doc)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>Eliminar</button>
           </div>
         ))}
