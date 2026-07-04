@@ -13,6 +13,7 @@ import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
+import DocsManager from "./DocsManager";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
@@ -2723,40 +2724,7 @@ function DocsPage({ vessel, user }) {
 
       {/* ── DOCS TAB ── */}
       {activeTab==="docs"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
-            <button style={s.btnPrimary} onClick={()=>setShowAddDoc(!showAddDoc)}>＋ Agregar Documento</button>
-          </div>
-          {showAddDoc&&(
-            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Nuevo Documento</div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <div><label style={s.label}>Título *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Registro de Matrícula" style={s.input}/></div>
-                <div><label style={s.label}>URL *</label><input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="https://drive.google.com/..." style={s.input}/></div>
-              </div>
-              <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
-                <button style={s.btnOutline} onClick={()=>{setShowAddDoc(false);setNewTitle("");setNewUrl("");}}>Cancelar</button>
-                <button style={s.btnPrimary} onClick={addDoc}>Guardar</button>
-              </div>
-            </div>
-          )}
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {docs.length===0&&<div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}><div style={{fontSize:32,marginBottom:8}}>📄</div>Agrega documentos como registros, pólizas, zarpes, certificaciones y más</div>}
-            {docs.map(doc=>(
-              <div key={doc.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-                <span style={{fontSize:22,flexShrink:0}}>{doc.icon}</span>
-                <div style={{flex:1}}>
-                  <a href={doc.url} target="_blank" rel="noreferrer" style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none"}}>{doc.title}</a>
-                  <div style={{fontSize:11,color:"#94a3b8",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:500}}>{doc.url}</div>
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  <a href={doc.url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 12px",fontSize:11,textDecoration:"none",display:"inline-flex",alignItems:"center"}}>↗ Abrir</a>
-                  <button onClick={()=>setDocs(d=>d.filter(x=>x.id!==doc.id))} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"4px 8px"}}>✕</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <DocsManager vessel={vessel} />
       )}
 
       {/* ── LINKS TAB ── */}
