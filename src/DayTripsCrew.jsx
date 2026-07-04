@@ -64,6 +64,14 @@ export default function DayTripsCrew({ user, profile }) {
     setTimeout(()=>setMsg(""),3000);
   };
 
+  const removeApp = async (appId) => {
+    if (!confirm("¿Retirar esta postulación?")) return;
+    await supabase.from("day_trip_applications").delete().eq("id", appId);
+    setMsg("Postulación retirada");
+    loadMyApps(); loadCompleted();
+    setTimeout(()=>setMsg(""),3000);
+  };
+
   const apply = async () => {
     const { error } = await supabase.from("day_trip_applications").insert({
       trip_id:applyTrip.id, crew_id:user.id,
@@ -113,7 +121,10 @@ export default function DayTripsCrew({ user, profile }) {
                       <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("es-VE"):""}{t.city?` · ${t.city}`:""}</div>
                       {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>El propietario te contactará. Revisa tus notificaciones.</div>}
                     </div>
-                    <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",background:bg,color,border:`1px solid ${border}`}}>{estado}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",background:bg,color,border:`1px solid ${border}`}}>{estado}</span>
+                      <button onClick={()=>removeApp(a.id)} title="Retirar postulación" style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:11,fontWeight:600}}>Retirar</button>
+                    </div>
                   </div>
                   {a.status==="accepted"&&t.status!=="completed"&&(
                     <button onClick={()=>markCompleted(t)} style={{width:"100%",marginTop:10,padding:"8px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,color:"#16a34a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Marcar viaje como completado</button>

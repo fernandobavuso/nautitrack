@@ -172,6 +172,16 @@ export default function DayTripsOwner({ vessel, user }) {
     loadTrips();
   };
 
+  const deleteTrip = async (trip) => {
+    if (!confirm("¿Eliminar este viaje? Se borrarán también las postulaciones recibidas.")) return;
+    await supabase.from("day_trip_applications").delete().eq("trip_id", trip.id);
+    await supabase.from("day_trips").delete().eq("id", trip.id);
+    setMsg("Viaje eliminado");
+    setTimeout(()=>setMsg(""),3000);
+    setSelectedTrip(null);
+    loadTrips();
+  };
+
   if (loading) return <div style={{textAlign:"center",padding:30,color:"#94a3b8"}}>Cargando...</div>;
 
   return (
@@ -376,6 +386,9 @@ export default function DayTripsOwner({ vessel, user }) {
                   </button>
                 </>
               )}
+              <button onClick={()=>deleteTrip(trip)} style={{width:"100%",marginTop:8,padding:"7px",background:"none",border:"1px solid #fecaca",borderRadius:8,color:"#dc2626",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                Eliminar viaje
+              </button>
             </div>
           );
         })}
