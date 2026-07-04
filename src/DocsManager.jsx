@@ -116,11 +116,10 @@ export default function DocsManager({ vessel }) {
         <div style={{fontSize:13,color:"#64748b"}}>
           {currentFolder ? (
             <span><button onClick={()=>setCurrentFolder("")} style={{background:"none",border:"none",color:"#2563eb",cursor:"pointer",fontWeight:600,padding:0}}>Documentos</button> / <strong>{currentFolder}</strong></span>
-          ) : "Tus documentos, organizados en carpetas. Sube archivos o guarda links."}
+          ) : "Tus documentos, organizados en carpetas. Sube tus archivos a la nube."}
         </div>
         <div style={{display:"flex",gap:8}}>
           {!currentFolder && <button onClick={()=>setMode(mode==="folder"?null:"folder")} style={btnOutline}>Nueva carpeta</button>}
-          <button onClick={()=>setMode(mode==="link"?null:"link")} style={btnOutline}>Agregar link</button>
           <label style={{...btnPrimary,cursor:uploading?"default":"pointer",opacity:uploading?.6:1}}>
             {uploading ? "Subiendo..." : "Cargar documento"}
             <input type="file" style={{display:"none"}} onChange={handleFile} disabled={uploading}/>
@@ -140,18 +139,8 @@ export default function DocsManager({ vessel }) {
       )}
 
       {/* Panel agregar link */}
-      {mode==="link" && (
-        <div style={panel}>
-          <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:10}}>Nuevo link{currentFolder?` en ${currentFolder}`:""}</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            <input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Título (ej: Registro de Matrícula)" style={inp}/>
-            <input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="https://drive.google.com/..." style={inp}/>
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-              <button onClick={()=>{setMode(null);setNewTitle("");setNewUrl("");}} style={btnOutline}>Cancelar</button>
-              <button onClick={addLink} style={btnPrimary}>Guardar link</button>
-            </div>
-          </div>
-        </div>
+      {false && mode==="link" && (
+        <div style={panel}></div>
       )}
 
       {/* Título opcional para el archivo a subir */}
