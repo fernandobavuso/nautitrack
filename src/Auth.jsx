@@ -76,7 +76,7 @@ export default function Auth({ onLogin }) {
             <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
             <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
           </svg>
-          <div style={s.brand}>Carive<span style={{color:"#2563eb"}}>.VZ</span></div>
+          <div style={s.brand}>Carive</div>
           <div style={s.tagline}>Gestión inteligente de embarcaciones</div>
         </div>
 

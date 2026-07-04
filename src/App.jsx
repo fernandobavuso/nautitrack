@@ -2225,7 +2225,7 @@ function ReportModal({ vessel, onClose }) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;">
       <div>
         <div style="font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:8px;text-transform:uppercase;">Reporte Oficial de Embarcación</div>
-        <div style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;">Carive<span style="color:#38bdf8;">.VZ</span></div>
+        <div style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;">Carive</div>
         <div style="font-size:13px;opacity:0.7;">Gestión inteligente de embarcaciones marinas</div>
       </div>
       <div style="text-align:right;">
