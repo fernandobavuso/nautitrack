@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import CariveLogo from "./CariveLogo";
 import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
@@ -467,12 +468,7 @@ export default function CrewProfile({ user, onLogout }) {
       {/* NAV */}
       <nav style={{...s.nav, padding:isMobile?"10px 14px":"12px 24px"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
-            <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".15"/>
-            <path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/>
-            <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
-            <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
-          </svg>
+          <CariveLogo size={30} />
           <div>
             <div style={{fontSize:14,fontWeight:800,color:"#0f172a",lineHeight:1}}>Carive</div>
             <div style={{fontSize:10,color:"#64748b"}}>Perfil Tripulación</div>

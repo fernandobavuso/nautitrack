@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CariveLogo from "./CariveLogo";
 
 const VESSEL_TYPES = [
   "Yate Motor","Velero","Catamarán","Lancha","Bote de Pesca",
@@ -64,12 +65,7 @@ export default function AddVessel({ onAdd, onSkip }) {
       <div style={s.card}>
         {/* Header */}
         <div style={s.header}>
-          <svg width="40" height="40" viewBox="0 0 30 30" fill="none">
-            <circle cx="15" cy="15" r="14" fill="#0ea5e9" opacity=".15"/>
-            <path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/>
-            <line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/>
-            <path d="M5 24 Q15 19 25 24" stroke="#0ea5e9" strokeWidth="2" fill="none"/>
-          </svg>
+          <CariveLogo size={44} />
           <div style={s.headerText}>
             <div style={s.title}>Agrega tu primera embarcación</div>
             <div style={s.subtitle}>Puedes editar todos los detalles después</div>

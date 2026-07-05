@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CariveLogo from "./CariveLogo";
 
 // Guía de bienvenida para dueños nuevos.
 // Aparece la primera vez (3 slides) y luego deja un checklist de primeros pasos.
@@ -27,7 +28,7 @@ export default function Onboarding({ onStart }) {
     <div style={{position:"fixed",inset:0,background:"linear-gradient(160deg,#0a2540,#061a30)",zIndex:5000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{maxWidth:420,width:"100%",textAlign:"center",color:"#fff"}}>
         <div style={{width:84,height:84,margin:"0 auto 24px",borderRadius:"50%",background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <svg width="40" height="40" viewBox="0 0 32 32" fill="none"><path d="M16 4 L27 26 H5 Z" stroke="#38bdf8" strokeWidth="2.2" fill="rgba(56,189,248,0.15)" strokeLinejoin="round"/><line x1="16" y1="4" x2="16" y2="26" stroke="#7dd3fc" strokeWidth="1.5"/></svg>
+          <CariveLogo size={44} />
         </div>
         <div style={{fontSize:24,fontWeight:800,marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{s.title}</div>
         <div style={{fontSize:15,lineHeight:1.6,color:"#9fb4cc",marginBottom:32}}>{s.body}</div>

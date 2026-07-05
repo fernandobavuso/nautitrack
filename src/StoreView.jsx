@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import CariveLogo from "./CariveLogo";
 import { supabase } from "./supabase";
 import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
@@ -67,7 +68,7 @@ export default function StoreView({ user, onLogout }) {
       {/* Barra superior */}
       <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M15 4 L27 24 H3 Z" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round"/><line x1="15" y1="4" x2="15" y2="24" stroke="#0ea5e9" strokeWidth="1.4"/></svg>
+          <CariveLogo size={30} />
           <div>
             <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Carive</div>
             <div style={{fontSize:10,color:"#64748b"}}>Tienda de Repuestos</div>

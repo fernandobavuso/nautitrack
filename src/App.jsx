@@ -14,6 +14,7 @@ import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
+import CariveLogo from "./CariveLogo";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
@@ -642,11 +643,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
       <>
         <nav style={{...s.nav, padding:"0 16px", justifyContent:"space-between"}} onClick={e=>e.stopPropagation()}>
           <div style={s.navLogo} onClick={()=>setPage("home")}>
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="16" r="15" fill="#38bdf8" opacity=".12"/>
-              <path d="M16 4 L27 26 H5 Z" stroke="#38bdf8" strokeWidth="2.2" fill="rgba(56,189,248,0.15)" strokeLinejoin="round"/>
-              <line x1="16" y1="4" x2="16" y2="26" stroke="#7dd3fc" strokeWidth="1.5"/>
-            </svg>
+            <CariveLogo size={30} />
             <div style={s.navBrand}>Carive</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -723,11 +720,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
   return (
     <nav style={s.nav} onClick={e => e.stopPropagation()}>
       <div style={s.navLogo} onClick={() => setPage("home")}>
-        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="15" fill="#38bdf8" opacity=".12"/>
-          <path d="M16 4 L27 26 H5 Z" stroke="#38bdf8" strokeWidth="2.2" fill="rgba(56,189,248,0.15)" strokeLinejoin="round"/>
-          <line x1="16" y1="4" x2="16" y2="26" stroke="#7dd3fc" strokeWidth="1.5"/>
-        </svg>
+        <CariveLogo size={30} />
         <div style={s.navBrand}>Carive</div>
       </div>
       <div style={s.navLinks}>
@@ -2225,7 +2218,10 @@ function ReportModal({ vessel, onClose }) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;">
       <div>
         <div style="font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:8px;text-transform:uppercase;">Reporte Oficial de Embarcación</div>
-        <div style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;">Carive</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M24 6 L39 12 V25 C39 34 24 43 24 43 C24 43 9 34 9 25 V12 Z" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linejoin="round"/><path d="M24 15 L31 31 H17 Z" fill="#38bdf8"/><path d="M16 34 Q24 30 32 34" stroke="#7dd3fc" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+          <div style="font-size:32px;font-weight:900;letter-spacing:-1px;">Carive</div>
+        </div>
         <div style="font-size:13px;opacity:0.7;">Gestión inteligente de embarcaciones marinas</div>
       </div>
       <div style="text-align:right;">
