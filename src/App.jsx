@@ -20,7 +20,7 @@ import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
 import AdminPanel, { isAdmin } from "./AdminPanel";
 import { countUnread } from "./notifications";
-import { getPlan, isExpiringSoon, daysLeft } from "./plans.jsx";
+import { getPlan, isExpiringSoon, daysLeft, FounderBanner } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
 
 
@@ -797,6 +797,7 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
   const rowStyle = { ...s.row, flexDirection: isMobile ? "column" : "row" };
   return (
     <div style={s.home}>
+      <FounderBanner />
       <div style={rowStyle}>
         <FleetCard vessels={vessels} vessel={vessel} updateVessel={updateVessel} />
         <AlertsCard vessel={vessel} setPage={setPage} />

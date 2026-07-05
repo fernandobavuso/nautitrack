@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PLANS } from "./plans.jsx";
+import { PLANS, FOUNDER_ACCESS } from "./plans.jsx";
 import ManualCheckout from "./ManualCheckout.jsx";
 
 // Pantalla de planes con toggle mensual/anual y pago manual
@@ -56,6 +56,12 @@ export default function PlansModal({ vessel, user, onClose, onReported }) {
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
         </div>
+        {FOUNDER_ACCESS && (
+          <div style={{margin:"16px 24px 0",background:"linear-gradient(120deg,#0a2540,#1e3a8a)",borderRadius:12,padding:"12px 16px"}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#fff",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:2}}>Estás en Acceso de Fundador</div>
+            <div style={{fontSize:11,color:"#bfdbfe",lineHeight:1.4}}>Ahora mismo tienes todas las funciones desbloqueadas, gratis. Estos son los planes que estarán disponibles más adelante — como fundador tendrás condiciones especiales.</div>
+          </div>
+        )}
 
         <div style={{padding:"20px 24px",overflowY:"auto"}}>
           {/* Toggle mensual / anual */}

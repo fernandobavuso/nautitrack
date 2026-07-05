@@ -1,6 +1,16 @@
 // Sistema central de planes de Carive
 // El plan del dueño se guarda en details._subscription.plan ("free" | "pro")
 
+// ─────────────────────────────────────────────────────────────
+// ACCESO DE FUNDADOR (modo lanzamiento)
+// Mientras esté en true, TODOS los usuarios tienen acceso completo
+// (nivel Flota) gratis. El día que quieras empezar a cobrar,
+// cambia esto a false y se activa el flujo de pago normal.
+export const FOUNDER_ACCESS = true;
+// Plan que reciben todos durante el Acceso de Fundador:
+const FOUNDER_PLAN = "fleet";
+// ─────────────────────────────────────────────────────────────
+
 export const PLANS = {
   free: {
     name: "Gratis",
@@ -37,6 +47,8 @@ export const PLANS = {
 // Lee el plan vigente de la embarcación, respetando la fecha de vencimiento.
 // Si la suscripción expiró, vuelve a "gratis" automáticamente.
 export function getPlan(vessel) {
+  // Durante el Acceso de Fundador, todos tienen el plan máximo gratis
+  if (FOUNDER_ACCESS) return PLANS[FOUNDER_PLAN];
   const sub = vessel?.details?._subscription;
   const plan = sub?.plan || "free";
   if (plan !== "free" && sub?.expires_at) {
@@ -64,6 +76,33 @@ export function daysLeft(vessel) {
 // ¿El dueño tiene acceso a esta feature?
 export function hasFeature(vessel, featureKey) {
   return !!getPlan(vessel).features[featureKey];
+}
+
+// Banner discreto de Acceso de Fundador para el dashboard
+export function FounderBanner() {
+  if (!FOUNDER_ACCESS) return null;
+  return (
+    <div style={{
+      background:"linear-gradient(120deg,#0a2540,#1e3a8a)",
+      borderRadius:14, padding:"14px 18px", marginBottom:16,
+      display:"flex", alignItems:"center", gap:14, flexWrap:"wrap",
+      boxShadow:"0 4px 16px rgba(10,37,64,0.15)"
+    }}>
+      <div style={{
+        flexShrink:0, width:38, height:38, borderRadius:10,
+        background:"linear-gradient(120deg,#2563eb,#38bdf8)",
+        display:"flex", alignItems:"center", justifyContent:"center"
+      }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21l2.3-7.4-6-4.6h7.6z"/></svg>
+      </div>
+      <div style={{flex:1, minWidth:220}}>
+        <div style={{fontSize:14, fontWeight:800, color:"#fff", fontFamily:"'Sora',system-ui,sans-serif"}}>Acceso de Fundador</div>
+        <div style={{fontSize:12, color:"#bfdbfe", lineHeight:1.4, marginTop:2}}>
+          Disfrutas todas las funciones gratis durante el lanzamiento. Gracias por estar entre los primeros — tendrás condiciones especiales cuando lancemos los planes.
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Componente de aviso para features premium bloqueadas
