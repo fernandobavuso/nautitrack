@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { activateSubscription } from "./subscriptions.jsx";
+import { notify } from "./notifications.js";
 
 // Panel de administrador (solo visible para los correos en ADMIN_EMAILS)
 // Tablero de ingresos: comisiones por venta + activación de planes
@@ -14,10 +15,11 @@ export function isAdmin(user) {
 }
 
 export default function AdminPanel({ user, onClose }) {
-  const [tab, setTab] = useState("ingresos");
+  const [tab, setTab] = useState("pendientes");
   const [sales, setSales] = useState([]);
   const [stores, setStores] = useState([]);
   const [vessels, setVessels] = useState([]);
+  const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
@@ -35,7 +37,42 @@ export default function AdminPanel({ user, onClose }) {
     // Embarcaciones (para activar planes)
     const { data: vs } = await supabase.from("vessels").select("id,name,details,owner_id");
     setVessels(vs||[]);
+    // Pagos pendientes de verificar
+    const { data: pr } = await supabase.from("payment_requests")
+      .select("*, owner:owner_id(full_name,email), vessel:vessel_id(name,details,owner_id)")
+      .eq("status","pending").order("created_at",{ascending:false});
+    setPending(pr||[]);
     setLoading(false);
+  };
+
+  // Ver el comprobante (link temporal firmado, bucket privado)
+  const viewProof = async (path) => {
+    if (!path) return;
+    const { data } = await supabase.storage.from("comprobantes").createSignedUrl(path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
+  // Aprobar un pago: activa el plan + marca la solicitud como aprobada
+  const approvePayment = async (req) => {
+    if (!req.vessel) { setMsg("No se encontró la embarcación"); return; }
+    if (!confirm(`¿Aprobar el pago de ${req.owner?.email||"este cliente"} y activar el plan ${req.plan}?`)) return;
+    const vesselObj = { id: req.vessel_id, owner_id: req.vessel.owner_id || req.owner_id, details: req.vessel.details || {} };
+    await activateSubscription(vesselObj, req.plan, req.billing_period, { method: req.method, amount: req.amount, currency: req.currency, reference: req.reference });
+    await supabase.from("payment_requests").update({ status:"approved", reviewed_at:new Date().toISOString(), reviewed_by:user.id }).eq("id", req.id);
+    // notificar al cliente
+    try { notify(req.owner_id, { type:"plan_activated", title:"¡Tu plan está activo!", body:`Confirmamos tu pago. El plan ${req.plan} ya está activo en ${req.vessel?.name||"tu barco"}.`, link:"" }); } catch(e){}
+    setMsg(`Plan ${req.plan} activado para ${req.owner?.email||"cliente"}`);
+    setTimeout(()=>setMsg(""),3000);
+    loadAll();
+  };
+
+  const rejectPayment = async (req) => {
+    if (!confirm("¿Rechazar este reporte de pago? El cliente no recibirá el plan.")) return;
+    await supabase.from("payment_requests").update({ status:"rejected", reviewed_at:new Date().toISOString(), reviewed_by:user.id }).eq("id", req.id);
+    try { notify(req.owner_id, { type:"plan_rejected", title:"Problema con tu pago", body:`No pudimos verificar tu pago del plan ${req.plan}. Contáctanos por WhatsApp para resolverlo.`, link:"" }); } catch(e){}
+    setMsg("Pago rechazado");
+    setTimeout(()=>setMsg(""),3000);
+    loadAll();
   };
 
   // Activar plan a una embarcación (con periodo y vencimiento)
@@ -74,13 +111,47 @@ export default function AdminPanel({ user, onClose }) {
       </div>
 
       <div style={{display:"flex",gap:6,padding:"12px 22px 0",borderBottom:"1px solid #e2e8f0"}}>
-        {[{k:"ingresos",l:"Ingresos"},{k:"tiendas",l:"Comisiones por tienda"},{k:"planes",l:"Planes"}].map(t=>(
+        {[{k:"pendientes",l:"Pagos pendientes"},{k:"ingresos",l:"Ingresos"},{k:"tiendas",l:"Comisiones por tienda"},{k:"planes",l:"Planes"}].map(t=>(
           <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"8px 14px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,color:tab===t.k?"#2563eb":"#64748b",borderBottom:tab===t.k?"2px solid #2563eb":"2px solid transparent",marginBottom:-1}}>{t.l}</button>
         ))}
       </div>
 
       <div style={{padding:22,overflowY:"auto"}}>
         {/* INGRESOS */}
+        {tab==="pendientes"&&(
+          <div>
+            {pending.length===0 ? (
+              <div style={{textAlign:"center",padding:"40px 20px",color:"#94a3b8"}}>
+                <div style={{fontWeight:600}}>No hay pagos pendientes de verificar</div>
+                <div style={{fontSize:12,marginTop:4}}>Cuando un cliente reporte un pago, aparecerá aquí para que lo apruebes.</div>
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {pending.map(req=>(
+                  <div key={req.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                      <div style={{flex:1,minWidth:200}}>
+                        <div style={{fontSize:14,fontWeight:700,color:"#0a2540"}}>Plan {req.plan} · {req.billing_period==="yearly"?"Anual":"Mensual"}</div>
+                        <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{req.owner?.full_name||req.owner?.email||"Cliente"} · Barco: {req.vessel?.name||"—"}</div>
+                        <div style={{fontSize:12,color:"#475569",marginTop:6}}>
+                          <strong>${req.amount} {req.currency}</strong> · vía {req.method}
+                          {req.reference?<span> · Ref: {req.reference}</span>:""}
+                        </div>
+                        <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>Reportado el {new Date(req.created_at).toLocaleString("es-VE")}</div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"stretch"}}>
+                        {req.proof_url && <button onClick={()=>viewProof(req.proof_url)} style={{padding:"7px 14px",border:"1.5px solid #2563eb",background:"#fff",color:"#2563eb",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>Ver comprobante</button>}
+                        <button onClick={()=>approvePayment(req)} style={{padding:"7px 14px",border:"none",background:"linear-gradient(120deg,#16a34a,#22c55e)",color:"#fff",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>Aprobar y activar</button>
+                        <button onClick={()=>rejectPayment(req)} style={{padding:"7px 14px",border:"1px solid #fecaca",background:"#fff",color:"#dc2626",borderRadius:8,fontSize:11,fontWeight:600,cursor:"pointer"}}>Rechazar</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab==="ingresos"&&(
           <div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:24}}>

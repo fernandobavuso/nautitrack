@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { PLANS } from "./plans.jsx";
+import ManualCheckout from "./ManualCheckout.jsx";
 
 // Pantalla de planes con toggle mensual/anual y pago manual
 // Props: vessel, user, onClose
-export default function PlansModal({ vessel, user, onClose }) {
+export default function PlansModal({ vessel, user, onClose, onReported }) {
   const [yearly, setYearly] = useState(true);
   const [selected, setSelected] = useState(null); // plan elegido para pagar
 
@@ -33,31 +34,15 @@ export default function PlansModal({ vessel, user, onClose }) {
   if (selected) {
     const plan = PLANS[selected];
     const amount = price(plan);
-    const waMsg = encodeURIComponent(`Hola, quiero activar el plan ${plan.name} (${yearly?"anual":"mensual"}) de Carive por $${amount}. Mi cuenta es ${user?.email}.`);
     return (
-      <div style={overlay} onClick={onClose}>
-        <div style={{...box,maxWidth:440}} onClick={e=>e.stopPropagation()}>
-          <div style={{padding:"20px 24px"}}>
-            <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",cursor:"pointer",color:"#64748b",fontSize:13,fontWeight:600,marginBottom:12}}>← Volver a planes</button>
-            <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>Activar plan {plan.name}</div>
-            <div style={{fontSize:24,fontWeight:800,color:"#1d4ed8",margin:"8px 0 4px"}}>${amount} <span style={{fontSize:14,color:"#64748b",fontWeight:600}}>{period}</span></div>
-            <div style={{fontSize:12,color:"#64748b",marginBottom:20}}>Realiza el pago por uno de estos métodos y te activamos el plan al confirmar.</div>
-
-            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
-              {/* TODO Fernando: reemplaza estos datos por tus cuentas reales */}
-              <PayMethod title="Zelle" detail="info@theboatingzone.com" />
-              <PayMethod title="Pago Móvil" detail="Solicita los datos al confirmar" />
-              <PayMethod title="USDT (TRC-20)" detail="Solicita la dirección al confirmar" />
-            </div>
-
-            <a href={`https://wa.me/?text=${waMsg}`} target="_blank" rel="noreferrer"
-              style={{display:"block",textAlign:"center",padding:"12px",background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,textDecoration:"none"}}>
-              Enviar comprobante por WhatsApp
-            </a>
-            <div style={{fontSize:11,color:"#94a3b8",textAlign:"center",marginTop:12}}>Tu plan se activa apenas confirmemos el pago, normalmente en pocas horas.</div>
-          </div>
-        </div>
-      </div>
+      <ManualCheckout
+        vessel={vessel}
+        user={user}
+        planKey={selected}
+        period={yearly ? "yearly" : "monthly"}
+        onClose={onClose}
+        onReported={onReported}
+      />
     );
   }
 
