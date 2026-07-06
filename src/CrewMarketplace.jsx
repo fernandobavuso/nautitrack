@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { createInvitation } from "./invitations.jsx";
 import ChatPanel from "./ChatPanel";
 import DayTripsOwner from "./DayTripsOwner";
 import CrewSearch from "./CrewSearch";
@@ -24,6 +25,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const [assignedCrew, setAssignedCrew] = useState([]);
   const [assignForm, setAssignForm] = useState({ email:"", full_name:"", role:"Capitán", phone:"" });
   const [assignMsg, setAssignMsg] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
 
   useEffect(() => { loadApplications(); loadConnections(); loadAssigned(); loadPossibles(); }, []);
 
@@ -57,7 +59,19 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const assignCrew = async () => {
     if (!assignForm.email.trim() || !assignForm.full_name.trim()) { setAssignMsg("Completa nombre y email"); return; }
     const { data: prof } = await supabase.from("profiles").select("id").eq("email", assignForm.email.trim()).maybeSingle();
-    if (!prof) { setAssignMsg("⚠️ Ese email no tiene cuenta en Carive. Pídele que se registre primero."); return; }
+    if (!prof) {
+      // No tiene cuenta: generar link de invitación
+      try {
+        const kind = assignForm.role === "Capitán" ? "captain" : "crew";
+        const link = await createInvitation({
+          kind, inviter:user, vessel,
+          invitedEmail:assignForm.email, invitedName:assignForm.full_name, roleDetail:assignForm.role,
+        });
+        setInviteLink(link);
+        setAssignMsg("");
+      } catch(e) { setAssignMsg("Error: "+e.message); }
+      return;
+    }
     const { error } = await supabase.from("captain_profiles").insert({
       user_id:prof.id, vessel_id:vessel.id, full_name:assignForm.full_name.trim(),
       role:assignForm.role, phone:assignForm.phone.trim(), active:true,
@@ -66,6 +80,12 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
     setAssignMsg("✅ Agregado. Al iniciar sesión verá la vista de tripulante de este barco.");
     setAssignForm({ email:"", full_name:"", role:"Capitán", phone:"" });
     loadAssigned();
+    setTimeout(()=>setAssignMsg(""),4000);
+  };
+
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setAssignMsg("✅ Link copiado. Envíaselo por WhatsApp o correo.");
     setTimeout(()=>setAssignMsg(""),4000);
   };
 
@@ -336,9 +356,19 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                     {["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico"].map(r=><option key={r}>{r}</option>)}
                   </select>
                 </div>
-                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (debe tener cuenta en Carive)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
+                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (si no tiene cuenta, te damos un link para invitar)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
                 <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder="Teléfono (opcional)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
                 <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
+                {inviteLink && (
+                  <div style={{background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:10,padding:12,marginTop:10}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>No tiene cuenta — envíale este link para unirse</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <input readOnly value={inviteLink} onClick={e=>e.target.select()} style={{flex:1,padding:"7px 10px",border:"1px solid #a7f3d0",borderRadius:6,fontSize:10,background:"#fff",boxSizing:"border-box"}}/>
+                      <button onClick={copyInviteLink} style={{padding:"7px 12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:6,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Copiar</button>
+                    </div>
+                    <button onClick={()=>{setInviteLink("");setAssignForm({email:"",full_name:"",role:"Capitán",phone:""});}} style={{background:"none",border:"none",color:"#059669",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:6,padding:0}}>Listo</button>
+                  </div>
+                )}
                 {assignMsg&&<div style={{fontSize:11,color:assignMsg.startsWith("✅")?"#16a34a":"#dc2626",marginTop:8,textAlign:"center"}}>{assignMsg}</div>}
               </div>
             </div>
