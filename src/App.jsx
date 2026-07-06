@@ -685,7 +685,7 @@ export default function App() {
   );
 }
 
-const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
+const mobileItemStyle = {display:"flex",alignItems:"center",gap:10,width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
 // Navegación agrupada en menús desplegables (barra más limpia)
 const NAV_GROUPS = [
@@ -819,19 +819,19 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
 
               {/* Acciones */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                <button onClick={()=>{setShowProviders(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👥 Proveedores</button>
-                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>Tripulación</button>
-                <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>📱 QR Check-in</button>
+                <button onClick={()=>{setShowProviders(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconWrench size={17} color="#64748b"/>Proveedores</button>
+                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Tripulación</button>
+                <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconClipboard size={17} color="#64748b"/>QR Check-in</button>
               </div>
 
               {/* Cuenta */}
               <div style={{padding:"12px 12px"}}>
-                <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👤 Mi Perfil</button>
-                <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>⚓ Mi Embarcación</button>
-                <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>💳 Planes y Suscripción</button>
-                {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👥 Equipo de gestión</button>}
-                {isAdminUser && <button onClick={()=>{setShowAdmin(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>📊 Panel de Administrador</button>}
-                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}>🚪 Cerrar Sesión</button>
+                <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Mi Perfil</button>
+                <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconBoat size={17} color="#64748b"/>Mi Embarcación</button>
+                <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>Planes y Suscripción</button>
+                {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Equipo de gestión</button>}
+                {isAdminUser && <button onClick={()=>{setShowAdmin(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>Panel de Administrador</button>}
+                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}><IconLogout size={17} color="#dc2626"/>Cerrar Sesión</button>
               </div>
             </div>
           </div>
@@ -879,7 +879,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         </div>
         <div style={{position:"relative"}}>
           <button onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12,color:"#0369a1",fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
-            📱 QR
+            <IconClipboard size={14} color="#0369a1"/> QR
           </button>
         </div>
         <div style={{position:"relative"}}>
@@ -3619,7 +3619,7 @@ function ProvidersModal({ vessel, updateVessel, onClose }) {
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:720}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>👥 Proveedores</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>Directorio de proveedores y técnicos</div></div>
+          <div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>Proveedores</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>Directorio de proveedores y técnicos</div></div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}><button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar</button><button onClick={onClose} style={s.modalClose}>✕</button></div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"16px 24px"}}>
