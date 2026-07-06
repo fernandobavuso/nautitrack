@@ -118,6 +118,14 @@ const STATUS_CFG      = {
   done:    { label:"Completado",color:"#16a34a", bg:"#dcfce7" },
 };
 
+const EMPTY_VESSEL = {
+  id: "__empty__", name: "Sin embarcación", type: "", marina: "",
+  fuel: 0, fuelUnit: "gal", engineHours: 0, genHours: 0, status: "ok",
+  tasks: [], log: [], records: [], alerts: 0, crew: [], customSystems: [],
+  details: {}, profile: {}, config: {}, subscription: { plan:"free" },
+  weather: { temp:"—", wind:"—", condition:"—", icon:"" },
+};
+
 const INIT_VESSELS = [
   {
     id:1, name:"La Gaviota", type:"Velero 60'", marina:"Puerto La Cruz",
@@ -576,28 +584,8 @@ export default function App() {
     <AddVessel onAdd={handleAddVessel} onSkip={()=>setAddingVessel(false)}/>
   );
 
-  // Omitió el setup y no tiene barcos: mostrar app con estado vacío amable
-  if (!vesselsLoading && vessels.length === 0 && skippedSetup) return (
-    <div style={s.root}>
-      <nav style={s.nav}>
-        <div style={s.navLogo}><CariveLogo size={30} /><div style={s.navBrand}>Carive</div></div>
-        <button onClick={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }} style={{background:"none",border:"none",cursor:"pointer",color:"#64748b",fontSize:13,fontWeight:600}}>Cerrar sesión</button>
-      </nav>
-      <div style={{maxWidth:520,margin:"0 auto",padding:"60px 24px",textAlign:"center"}}>
-        <div style={{display:"flex",justifyContent:"center",marginBottom:20}}><CariveLogo size={64} /></div>
-        <div style={{fontSize:24,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:10}}>¡Bienvenido a Carive!</div>
-        <div style={{fontSize:14,color:"#64748b",lineHeight:1.6,marginBottom:28}}>
-          Tu cuenta está lista. Para empezar a gestionar tu embarcación —tareas, bitácora, costos, repuestos y más— agrega tu primer barco. Toma menos de un minuto.
-        </div>
-        <button onClick={()=>{ setSkippedSetup(false); setAddingVessel(true); }} style={{padding:"13px 28px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(37,99,235,0.3)"}}>
-          Agregar mi embarcación
-        </button>
-        <div style={{fontSize:12,color:"#94a3b8",marginTop:20}}>Si gestionas barcos de otras personas, también puedes pedir que te agreguen como co-gestor desde su cuenta.</div>
-      </div>
-    </div>
-  );
-
-  const vessel = vessels.find(v => v.id === vesselId) || vessels[0];
+  const vessel = vessels.find(v => v.id === vesselId) || vessels[0] || EMPTY_VESSEL;
+  const noVessels = vessels.length === 0;
 
   return (
     <div style={s.root} onClick={() => { setShowVesselMenu(false); setShowUserMenu(false); }}>
@@ -618,7 +606,21 @@ export default function App() {
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
       />
       <div style={{...s.body, padding:isMobile?"14px 12px":"20px 24px"}}>
-        {page==="home" && !hideChecklist && (
+        {page==="home" && noVessels && (
+          <div style={{maxWidth:1100,margin:"0 auto 18px",background:"linear-gradient(120deg,#eff6ff,#e0f2fe)",border:"1px solid #bae6fd",borderRadius:16,padding:"22px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+            <div style={{display:"flex",alignItems:"center",gap:16}}>
+              <CariveLogo size={44} />
+              <div>
+                <div style={{fontSize:17,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>¡Bienvenido a Carive, {(user?.full_name||"").split(" ")[0]||""}!</div>
+                <div style={{fontSize:13,color:"#475569",marginTop:2}}>Agrega tu primera embarcación para empezar a gestionar tareas, bitácora, costos y más.</div>
+              </div>
+            </div>
+            <button onClick={()=>setAddingVessel(true)} style={{padding:"11px 22px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 3px 12px rgba(37,99,235,0.28)"}}>
+              Agregar embarcación
+            </button>
+          </div>
+        )}
+        {page==="home" && !hideChecklist && !noVessels && (
           <OnboardingChecklist
             vessel={vessel}
             onAddTask={()=>setPage("tasks")}
