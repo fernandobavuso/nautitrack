@@ -613,6 +613,7 @@ export default function App() {
         setShowVesselDetails={setShowVesselDetails}
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
         setShowFleetManagers={setShowFleetManagers}
+        canManageFleet={getPlan(vessel).features?.multiFleet}
         setShowNotifications={setShowNotifications}
         setShowNotifPanel={setShowNotifPanel}
         unreadCount={unreadCount}
@@ -681,7 +682,7 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
-function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,canManageFleet,page,setPage,onLogout }) {
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
@@ -825,7 +826,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {Icon:IconUser,  label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
                 {Icon:IconBoat,  label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
                 {Icon:IconCard,  label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
-                {Icon:IconUser,  label:"Equipo de gestión",    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }},
+                ...(canManageFleet?[{Icon:IconUser,  label:"Equipo de gestión",    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }}]:[]),
                 ...(isAdminUser?[{Icon:IconChart,label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
                 {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
