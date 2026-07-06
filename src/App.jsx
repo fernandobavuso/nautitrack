@@ -3505,28 +3505,21 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
             ))}
           </div>
 
-          {/* TRIPULACIÓN */}
+          {/* TRIPULACIÓN (solo lectura — se gestiona en el tab Tripulación) */}
           <div style={{marginBottom:18}}>
             <div style={s.secTitle}>Tripulación</div>
-            {crew.map((c,i)=>(
+            {crew.length===0 ? (
+              <div style={{fontSize:12,color:"#94a3b8",padding:"10px 0"}}>Sin tripulación asignada.</div>
+            ) : crew.map((c,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:c.primary?"#f0f9ff":"#f8fafc",borderRadius:8,marginBottom:6,border:`1px solid ${c.primary?"#bae6fd":"#e2e8f0"}`}}>
-                <span style={{fontSize:16}}>{ROLE_ICON[c.role]||"👤"}</span>
                 <span style={{flex:1,fontWeight:600,fontSize:13,color:"#0f172a"}}>{c.name}</span>
-                {editMode&&<select value={c.role} onChange={e=>setCrewRole(i,e.target.value)} style={{...s.input,width:110,padding:"3px 6px",fontSize:11}}>
-                  {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
-                </select>}
-                {!editMode&&<span style={{fontSize:11,color:"#64748b",background:"#e2e8f0",padding:"2px 8px",borderRadius:20}}>{c.role}</span>}
-                <button onClick={()=>setPrimary(i)} title={c.primary?"Quitar como principal":"Marcar como principal"} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:c.primary?"#f59e0b":"#d1d5db"}}>★</button>
-                {editMode&&<button onClick={()=>rmCrew(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>✕</button>}
+                <span style={{fontSize:11,color:"#64748b",background:"#e2e8f0",padding:"2px 8px",borderRadius:20}}>{c.role}</span>
+                {c.primary&&<span title="Principal" style={{fontSize:14,color:"#f59e0b"}}>★</span>}
               </div>
             ))}
-            {editMode&&<div style={{display:"flex",gap:8,marginTop:10}}>
-              <input value={newCrew} onChange={e=>setNewCrew(e.target.value)} placeholder="Nombre del tripulante..." style={{...s.input,flex:1}}/>
-              <select value={newRole} onChange={e=>setNewRole(e.target.value)} style={{...s.input,width:110}}>
-                {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
-              </select>
-              <button style={s.btnPrimary} onClick={addCrew}>Agregar</button>
-            </div>}
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:8,background:"#f8fafc",borderRadius:8,padding:"8px 10px",lineHeight:1.5}}>
+              Para agregar, quitar o cambiar tripulación, usa el botón <strong>Tripulación</strong> en la barra superior. Aquí solo se muestra.
+            </div>
           </div>
 
         </div>

@@ -361,12 +361,16 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                 <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
                 {inviteLink && (
                   <div style={{background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:10,padding:12,marginTop:10}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>No tiene cuenta — envíale este link para unirse</div>
-                    <div style={{display:"flex",gap:6}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>No tiene cuenta — invítalo a unirse</div>
+                    <div style={{display:"flex",gap:6,marginBottom:8}}>
                       <input readOnly value={inviteLink} onClick={e=>e.target.select()} style={{flex:1,padding:"7px 10px",border:"1px solid #a7f3d0",borderRadius:6,fontSize:10,background:"#fff",boxSizing:"border-box"}}/>
-                      <button onClick={copyInviteLink} style={{padding:"7px 12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:6,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Copiar</button>
+                      <button onClick={copyInviteLink} style={{padding:"7px 12px",background:"#fff",border:"1px solid #a7f3d0",borderRadius:6,color:"#059669",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Copiar</button>
                     </div>
-                    <button onClick={()=>{setInviteLink("");setAssignForm({email:"",full_name:"",role:"Capitán",phone:""});}} style={{background:"none",border:"none",color:"#059669",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:6,padding:0}}>Listo</button>
+                    <div style={{display:"flex",gap:6}}>
+                      <a href={`https://wa.me/${(assignForm.phone||"").replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola ${assignForm.full_name}, te invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}. Abre este link para crear tu cuenta: ${inviteLink}`)}`} target="_blank" rel="noreferrer" style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>Enviar por WhatsApp</a>
+                      <a href={`mailto:${assignForm.email}?subject=${encodeURIComponent("Invitación a Carive")}&body=${encodeURIComponent(`Hola ${assignForm.full_name},\n\nTe invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}.\n\nAbre este link para crear tu cuenta:\n${inviteLink}\n\nSaludos`)}`} style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>Enviar por Email</a>
+                    </div>
+                    <button onClick={()=>{setInviteLink("");setAssignForm({email:"",full_name:"",role:"Capitán",phone:""});}} style={{background:"none",border:"none",color:"#059669",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>Listo</button>
                   </div>
                 )}
                 {assignMsg&&<div style={{fontSize:11,color:assignMsg.startsWith("✅")?"#16a34a":"#dc2626",marginTop:8,textAlign:"center"}}>{assignMsg}</div>}
