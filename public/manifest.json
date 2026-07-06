@@ -1,0 +1,16 @@
+{
+  "name": "Carive — Tu flota. Tu mar.",
+  "short_name": "Carive",
+  "description": "Gestión inteligente de embarcaciones: tareas, bitácora, costos, tripulación y más.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a2540",
+  "theme_color": "#0a2540",
+  "lang": "es",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
