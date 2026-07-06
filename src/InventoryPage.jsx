@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { hasFeature, PremiumLock } from "./plans.jsx";
+import { findCityCoords } from "./geo.js";
 import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
 
@@ -458,10 +459,17 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
     setSaving(true);
     const city = vessel.details?.city||vessel.marina||"";
     const authorName = user?.full_name || user?.email || (isCaptain?"Capitán":"Dueño");
+    // Coordenadas del barco: de sus detalles, o inferidas de su ciudad conocida
+    let reqLat = vessel.details?.lat ?? null, reqLng = vessel.details?.lng ?? null;
+    if (reqLat==null && city) {
+      const match = findCityCoords(city);
+      if (match) { reqLat = match.lat; reqLng = match.lng; }
+    }
     const { data: inserted, error } = await supabase.from("part_requests").insert({
       owner_id: vessel.owner_id || user.id, vessel_id:vessel.id,
       item_name:form.item_name, category:form.category, part_num:form.part_num,
       description:form.description, photo_url:photoUrl, city, urgent:form.urgent,
+      req_lat:reqLat, req_lng:reqLng,
       status: needsApproval ? "pending_approval" : "open",
       requested_by: user.id, requested_by_name: authorName,
       needs_approval: needsApproval, approval_status: needsApproval ? "pending" : null,

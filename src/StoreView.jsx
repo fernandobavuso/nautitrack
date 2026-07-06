@@ -3,6 +3,8 @@ import CariveLogo from "./CariveLogo";
 import { supabase } from "./supabase";
 import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
+import LocationPicker from "./LocationPicker.jsx";
+import { distanceKm, kmToMi } from "./geo.js";
 
 const STORE_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
 
@@ -29,24 +31,53 @@ export default function StoreView({ user, onLogout }) {
       store_name:profile.store_name, store_city:profile.store_city,
       store_categories:profile.store_categories||[], store_phone:profile.store_phone,
       store_ships_nationwide:profile.store_ships_nationwide||false, store_address:profile.store_address,
+      store_lat:profile.store_lat, store_lng:profile.store_lng, store_radius_km:profile.store_radius_km||50,
     }).eq("id", user.id);
     setMsg(error?("Error: "+error.message):"Perfil guardado");
     setTimeout(()=>setMsg(""),3000);
   };
 
   const loadRequests = async () => {
-    // Solicitudes abiertas que calzan con la ciudad y categorías de la tienda
+    // Solicitudes abiertas que calzan por categoría y por distancia (radio de cobertura)
     const { data } = await supabase.from("part_requests")
       .select("*, owner:owner_id(full_name)")
       .eq("status","open").order("created_at",{ascending:false});
     const cats = (profile.store_categories||[]).map(c=>c.toLowerCase());
-    const city = (profile.store_city||"").toLowerCase().trim();
     const nationwide = profile.store_ships_nationwide;
-    const filtered = (data||[]).filter(r => {
+    const sLat = profile.store_lat, sLng = profile.store_lng;
+    const radius = profile.store_radius_km || 50;
+
+    const filtered = (data||[]).map(r => {
       const catMatch = cats.length===0 || cats.includes((r.category||"").toLowerCase());
-      const cityMatch = nationwide || !city || !r.city || r.city.toLowerCase().includes(city) || city.includes(r.city.toLowerCase());
-      return catMatch && cityMatch;
+      if (!catMatch) return null;
+
+      // Distancia si ambas partes tienen coordenadas
+      let dist = null;
+      if (sLat!=null && sLng!=null && r.req_lat!=null && r.req_lng!=null) {
+        dist = distanceKm(sLat, sLng, r.req_lat, r.req_lng);
+      }
+
+      // Reglas de match:
+      // - Si envío nacional: entra todo (de su categoría)
+      // - Si hay distancia calculable: entra si está dentro del radio
+      // - Si no hay coordenadas (datos viejos): entra por compatibilidad, marcado sin distancia
+      let matches;
+      if (nationwide) matches = true;
+      else if (dist!=null) matches = dist <= radius;
+      else matches = true; // sin coordenadas, no filtramos por distancia
+
+      if (!matches) return null;
+      return { ...r, _distKm: dist };
+    }).filter(Boolean);
+
+    // Ordenar por cercanía (los con distancia primero, más cerca arriba)
+    filtered.sort((a,b) => {
+      if (a._distKm==null && b._distKm==null) return 0;
+      if (a._distKm==null) return 1;
+      if (b._distKm==null) return -1;
+      return a._distKm - b._distKm;
     });
+
     setRequests(filtered);
   };
 
@@ -101,7 +132,7 @@ export default function StoreView({ user, onLogout }) {
           <div style={{background:"linear-gradient(120deg,#0a2540,#0f3a5f)",borderRadius:18,padding:"22px 24px",color:"#fff",marginBottom:16,position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:"radial-gradient(circle,rgba(56,189,248,.22),transparent 70%)"}}/>
             <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,marginBottom:4}}>{profile.store_name}</div>
-            <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?" · Envía a toda Venezuela":""}</div>
+            <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?" · Envío nacional":profile.store_radius_km?` · Cobertura ${Math.round(kmToMi(profile.store_radius_km))} mi`:""}</div>
             <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(56,189,248,.2)",color:"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>✓ Tienda activa</div>
           </div>
         )}
@@ -166,6 +197,7 @@ export default function StoreView({ user, onLogout }) {
                         <div style={{fontSize:16,fontWeight:700,color:"#0a2540",marginBottom:6}}>{r.item_name}</div>
                         <div style={{display:"flex",gap:14,fontSize:12,color:"#94a3b8",flexWrap:"wrap"}}>
                           {r.city&&<span>{r.city}</span>}
+                          {r._distKm!=null&&<span style={{color:"#2563eb",fontWeight:600}}>a {Math.round(kmToMi(r._distKm))} mi</span>}
                           {ageLabel&&<span>{ageLabel}</span>}
                           {r.part_num&&<span>Ref: {r.part_num}</span>}
                         </div>
@@ -229,23 +261,36 @@ export default function StoreView({ user, onLogout }) {
                 <label style={lbl}>Nombre de la tienda *</label>
                 <input value={profile.store_name||""} onChange={e=>setProfile({...profile,store_name:e.target.value})} placeholder="Ej: Repuestos Náuticos del Oriente" style={inp}/>
               </div>
+              <div>
+                <label style={lbl}>Ubicación de la tienda *</label>
+                <LocationPicker
+                  value={profile.store_lat?{lat:profile.store_lat,lng:profile.store_lng,label:profile.store_city||"Ubicación guardada"}:null}
+                  onChange={(loc)=>setProfile({...profile,store_lat:loc.lat,store_lng:loc.lng,store_city:loc.label})}
+                />
+              </div>
               <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
-                  <label style={lbl}>Ciudad *</label>
-                  <input value={profile.store_city||""} onChange={e=>setProfile({...profile,store_city:e.target.value})} placeholder="Ej: Lechería" style={inp}/>
+                  <label style={lbl}>Teléfono / WhatsApp</label>
+                  <input value={profile.store_phone||""} onChange={e=>setProfile({...profile,store_phone:e.target.value})} placeholder="+1 305..." style={inp}/>
                 </div>
                 <div style={{flex:1}}>
-                  <label style={lbl}>Teléfono / WhatsApp</label>
-                  <input value={profile.store_phone||""} onChange={e=>setProfile({...profile,store_phone:e.target.value})} placeholder="+58412..." style={inp}/>
+                  <label style={lbl}>Radio de cobertura</label>
+                  <select value={profile.store_radius_km||50} onChange={e=>setProfile({...profile,store_radius_km:Number(e.target.value)})} style={inp}>
+                    <option value={15}>Hasta ~10 millas</option>
+                    <option value={30}>Hasta ~20 millas</option>
+                    <option value={50}>Hasta ~30 millas</option>
+                    <option value={80}>Hasta ~50 millas</option>
+                    <option value={160}>Hasta ~100 millas</option>
+                  </select>
                 </div>
               </div>
               <div>
-                <label style={lbl}>Dirección</label>
-                <input value={profile.store_address||""} onChange={e=>setProfile({...profile,store_address:e.target.value})} placeholder="Opcional" style={inp}/>
+                <label style={lbl}>Dirección (opcional)</label>
+                <input value={profile.store_address||""} onChange={e=>setProfile({...profile,store_address:e.target.value})} placeholder="Calle, número..." style={inp}/>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <input type="checkbox" id="nationwide" checked={profile.store_ships_nationwide||false} onChange={e=>setProfile({...profile,store_ships_nationwide:e.target.checked})} style={{width:15,height:15}}/>
-                <label htmlFor="nationwide" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>Envío a toda Venezuela (recibir solicitudes de otras ciudades)</label>
+                <label htmlFor="nationwide" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>Envío a todo el país (recibir solicitudes sin importar la distancia)</label>
               </div>
               <div>
                 <label style={lbl}>Categorías que manejas *</label>
