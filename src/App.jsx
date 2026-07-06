@@ -798,10 +798,19 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 ))}
               </div>
 
-              {/* Navegación */}
-              <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"calendar",label:"Calendario"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n=>(
-                  <button key={n.key} onClick={()=>{setPage(n.key);setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page===n.key?"#eff6ff":"transparent",color:page===n.key?"#0ea5e9":"#1e293b",fontWeight:page===n.key?700:500,fontSize:14}}>{n.label}</button>
+              {/* Navegación agrupada */}
+              <div style={{padding:"8px 12px",borderBottom:"1px solid #f1f5f9"}}>
+                {vessels.length>1 && (
+                  <button onClick={()=>{setPage("fleet");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="fleet"?"#eff6ff":"transparent",color:page==="fleet"?"#0ea5e9":"#1e293b",fontWeight:page==="fleet"?700:500,fontSize:14}}>Mi Flota</button>
+                )}
+                <button onClick={()=>{setPage("home");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="home"?"#eff6ff":"transparent",color:page==="home"?"#0ea5e9":"#1e293b",fontWeight:page==="home"?700:500,fontSize:14}}>Inicio</button>
+                {NAV_GROUPS.filter(g=>!g.single).map(g=>(
+                  <div key={g.key} style={{marginTop:10}}>
+                    <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",padding:"4px 14px"}}>{g.label.toUpperCase()}</div>
+                    {g.items.map(it=>(
+                      <button key={it.key} onClick={()=>{setPage(it.key);setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"11px 14px 11px 22px",border:"none",borderRadius:8,cursor:"pointer",background:page===it.key?"#eff6ff":"transparent",color:page===it.key?"#0ea5e9":"#1e293b",fontWeight:page===it.key?700:500,fontSize:14}}>{it.label}</button>
+                    ))}
+                  </div>
                 ))}
               </div>
 
