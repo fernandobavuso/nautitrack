@@ -760,6 +760,9 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
               <div style={{padding:"12px 12px"}}>
                 <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👤 Mi Perfil</button>
                 <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>⚓ Mi Embarcación</button>
+                <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>💳 Planes y Suscripción</button>
+                {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>👥 Equipo de gestión</button>}
+                {isAdminUser && <button onClick={()=>{setShowAdmin(true);setMobileMenuOpen(false);}} style={mobileItemStyle}>📊 Panel de Administrador</button>}
                 <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}>🚪 Cerrar Sesión</button>
               </div>
             </div>
