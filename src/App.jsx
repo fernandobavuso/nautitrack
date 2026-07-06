@@ -684,6 +684,60 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
+// Navegación agrupada en menús desplegables (barra más limpia)
+const NAV_GROUPS = [
+  { key:"home", label:"Inicio", single:true },
+  { key:"op", label:"Operación", items:[
+    { key:"tasks", label:"Tareas" },
+    { key:"calendar", label:"Calendario" },
+    { key:"log", label:"Bitácora" },
+  ]},
+  { key:"fin", label:"Finanzas", items:[
+    { key:"costs", label:"Costos" },
+    { key:"inventory", label:"Repuestos" },
+  ]},
+  { key:"reg", label:"Registros", items:[
+    { key:"records", label:"Records" },
+    { key:"docs", label:"Documentos" },
+  ]},
+];
+
+function NavGroups({ page, setPage, showFleet }) {
+  const [open, setOpen] = useState(null);
+  const groups = showFleet ? [{ key:"fleet", label:"Mi Flota", single:true }, ...NAV_GROUPS] : NAV_GROUPS;
+
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:4}} onMouseLeave={()=>setOpen(null)}>
+      {groups.map(g => {
+        if (g.single) {
+          const active = page === g.key;
+          return (
+            <button key={g.key} onClick={()=>{setPage(g.key);setOpen(null);}} style={{...s.navLink,color:active?"#0ea5e9":"#64748b",borderBottom:active?"2px solid #0ea5e9":"2px solid transparent",fontWeight:active?600:400}}>{g.label}</button>
+          );
+        }
+        const groupActive = g.items.some(it => it.key === page);
+        return (
+          <div key={g.key} style={{position:"relative"}} onMouseEnter={()=>setOpen(g.key)}>
+            <button onClick={()=>setOpen(open===g.key?null:g.key)} style={{...s.navLink,display:"flex",alignItems:"center",gap:4,color:groupActive?"#0ea5e9":"#64748b",borderBottom:groupActive?"2px solid #0ea5e9":"2px solid transparent",fontWeight:groupActive?600:400}}>
+              {g.label}<span style={{fontSize:9,color:"#94a3b8"}}>▾</span>
+            </button>
+            {open===g.key && (
+              <div style={{position:"absolute",top:"100%",left:0,marginTop:4,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 10px 30px rgba(10,37,64,0.12)",minWidth:150,padding:4,zIndex:40}}>
+                {g.items.map(it => {
+                  const active = page === it.key;
+                  return (
+                    <button key={it.key} onClick={()=>{setPage(it.key);setOpen(null);}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 12px",border:"none",borderRadius:7,cursor:"pointer",background:active?"#eff6ff":"transparent",color:active?"#0ea5e9":"#1e293b",fontWeight:active?700:500,fontSize:13}}>{it.label}</button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const iconBtn = { width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer" };
 
 function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,canManageFleet,page,setPage,onLogout }) {
@@ -782,13 +836,11 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <div style={s.navBrand}>Carive</div>
       </div>
       <div style={s.navLinks}>
-        {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"calendar",label:"Calendario"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
-          <button key={n.key} onClick={() => setPage(n.key)} style={{...s.navLink,color:page===n.key?"#0ea5e9":"#64748b",borderBottom:page===n.key?"2px solid #0ea5e9":"2px solid transparent",fontWeight:page===n.key?600:400}}>{n.label}</button>
-        ))}
+        <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} />
       </div>
       <div style={s.navRight}>
-        <button title="Proveedores" style={iconBtn} onClick={() => setShowProviders(true)}><IconWrench size={18} color="#475569"/></button>
-        <button title="Tripulación" style={iconBtn} onClick={() => setShowCrewMarket(true)}><IconUser size={18} color="#475569"/></button>
+        <button style={s.provBtn} onClick={() => setShowProviders(true)}>Proveedores</button>
+        <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>Tripulación</button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
             <span style={{...s.dot,background:STATUS_CFG[vessel.status].dot}} />
@@ -814,13 +866,15 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           {unreadCount > 0 && <div style={s.bellBadge}>{unreadCount}</div>}
         </div>
         <div style={{position:"relative"}}>
-          <button title="QR Check-in" onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"7px 9px",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center"}}>
-            📱
+          <button onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12,color:"#0369a1",fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+            📱 QR
           </button>
         </div>
         <div style={{position:"relative"}}>
-          <button title={user?.full_name||user?.email||"Mi Cuenta"} style={{...s.userBtn,padding:"4px"}} onClick={(e) => { e.stopPropagation(); setShowVesselMenu(false); setShowUserMenu(v => !v); }}>
+          <button style={s.userBtn} onClick={(e) => { e.stopPropagation(); setShowVesselMenu(false); setShowUserMenu(v => !v); }}>
             <div style={s.navAvatar}>{getInitials(user?.full_name || user?.email)}</div>
+            <div className="nav-username"><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
+            <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
             <>
