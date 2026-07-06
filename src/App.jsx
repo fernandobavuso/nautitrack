@@ -222,6 +222,7 @@ export default function App() {
   const [showFleetManagers, setShowFleetManagers] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
+  const [skippedSetup, setSkippedSetup] = useState(false);
   const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
@@ -528,7 +529,7 @@ export default function App() {
 
   if (authLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>⚓</div><div style={{fontSize:14,color:"#64748b"}}>Cargando Carive...</div></div>
+      <div style={{textAlign:"center"}}><div style={{marginBottom:16,display:"flex",justifyContent:"center"}}><CariveLogo size={48} /></div><div style={{fontSize:14,color:"#64748b"}}>Cargando Carive...</div></div>
     </div>
   );
 
@@ -547,7 +548,7 @@ export default function App() {
   // Mientras se determina el rol, mostrar loading (bloquea AddVessel)
   if (checkingRole || vesselsLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff",fontFamily:"system-ui"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:40,marginBottom:16}}>🚢</div><div style={{fontSize:14,color:"#64748b"}}>Cargando...</div></div>
+      <div style={{textAlign:"center"}}><div style={{marginBottom:16,display:"flex",justifyContent:"center"}}><CariveLogo size={48} /></div><div style={{fontSize:14,color:"#64748b"}}>Cargando...</div></div>
     </div>
   );
 
@@ -564,16 +565,36 @@ export default function App() {
     <Onboarding onStart={() => { localStorage.setItem("nt_welcomed","1"); setShowWelcome(false); }} />
   );
 
-  if (!vesselsLoading && vessels.length === 0) return (
+  if (!vesselsLoading && vessels.length === 0 && !skippedSetup) return (
     <AddVessel onAdd={handleAddVessel} onSkip={() => {
-      const demo = INIT_VESSELS.map(v => ({...v, owner_id: user.id}));
-      setVessels(demo);
-      setVesselId(demo[0].id);
+      // Omitir deja la app en blanco (sin barcos demo). El usuario puede agregar su barco cuando quiera.
+      setSkippedSetup(true);
     }}/>
   );
 
   if (addingVessel) return (
     <AddVessel onAdd={handleAddVessel} onSkip={()=>setAddingVessel(false)}/>
+  );
+
+  // Omitió el setup y no tiene barcos: mostrar app con estado vacío amable
+  if (!vesselsLoading && vessels.length === 0 && skippedSetup) return (
+    <div style={s.root}>
+      <nav style={s.nav}>
+        <div style={s.navLogo}><CariveLogo size={30} /><div style={s.navBrand}>Carive</div></div>
+        <button onClick={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }} style={{background:"none",border:"none",cursor:"pointer",color:"#64748b",fontSize:13,fontWeight:600}}>Cerrar sesión</button>
+      </nav>
+      <div style={{maxWidth:520,margin:"0 auto",padding:"60px 24px",textAlign:"center"}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:20}}><CariveLogo size={64} /></div>
+        <div style={{fontSize:24,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:10}}>¡Bienvenido a Carive!</div>
+        <div style={{fontSize:14,color:"#64748b",lineHeight:1.6,marginBottom:28}}>
+          Tu cuenta está lista. Para empezar a gestionar tu embarcación —tareas, bitácora, costos, repuestos y más— agrega tu primer barco. Toma menos de un minuto.
+        </div>
+        <button onClick={()=>{ setSkippedSetup(false); setAddingVessel(true); }} style={{padding:"13px 28px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(37,99,235,0.3)"}}>
+          Agregar mi embarcación
+        </button>
+        <div style={{fontSize:12,color:"#94a3b8",marginTop:20}}>Si gestionas barcos de otras personas, también puedes pedir que te agreguen como co-gestor desde su cuenta.</div>
+      </div>
+    </div>
   );
 
   const vessel = vessels.find(v => v.id === vesselId) || vessels[0];

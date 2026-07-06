@@ -456,7 +456,7 @@ export default function CrewProfile({ user, onLogout }) {
 
   if (loading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:40}}>⚓</div><div style={{color:"#64748b",marginTop:8}}>Cargando perfil...</div></div>
+      <div style={{textAlign:"center"}}><div style={{display:"flex",justifyContent:"center"}}><CariveLogo size={44} /></div><div style={{color:"#64748b",marginTop:8}}>Cargando perfil...</div></div>
     </div>
   );
 
