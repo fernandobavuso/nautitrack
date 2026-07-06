@@ -684,6 +684,8 @@ export default function App() {
 
 const mobileItemStyle = {display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#1e293b",fontWeight:500,fontSize:14};
 
+const iconBtn = { width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer" };
+
 function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,canManageFleet,page,setPage,onLogout }) {
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -785,8 +787,8 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         ))}
       </div>
       <div style={s.navRight}>
-        <button style={s.provBtn} onClick={() => setShowProviders(true)}>Proveedores</button>
-        <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>Tripulación</button>
+        <button title="Proveedores" style={iconBtn} onClick={() => setShowProviders(true)}><IconWrench size={18} color="#475569"/></button>
+        <button title="Tripulación" style={iconBtn} onClick={() => setShowCrewMarket(true)}><IconUser size={18} color="#475569"/></button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
             <span style={{...s.dot,background:STATUS_CFG[vessel.status].dot}} />
@@ -812,15 +814,13 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           {unreadCount > 0 && <div style={s.bellBadge}>{unreadCount}</div>}
         </div>
         <div style={{position:"relative"}}>
-          <button onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12,color:"#0369a1",fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
-            📱 QR
+          <button title="QR Check-in" onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"7px 9px",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center"}}>
+            📱
           </button>
         </div>
         <div style={{position:"relative"}}>
-          <button style={s.userBtn} onClick={(e) => { e.stopPropagation(); setShowVesselMenu(false); setShowUserMenu(v => !v); }}>
+          <button title={user?.full_name||user?.email||"Mi Cuenta"} style={{...s.userBtn,padding:"4px"}} onClick={(e) => { e.stopPropagation(); setShowVesselMenu(false); setShowUserMenu(v => !v); }}>
             <div style={s.navAvatar}>{getInitials(user?.full_name || user?.email)}</div>
-            <div className="nav-username"><div style={s.navName}>{user?.full_name||user?.email||"Mi Cuenta"}</div><div style={s.navRole}>Propietario</div></div>
-            <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showUserMenu && (
             <>
