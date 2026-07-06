@@ -778,7 +778,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           {showUserMenu && (
             <>
               <div onClick={(e)=>{e.stopPropagation(); setShowUserMenu(false);}} style={{position:"fixed",inset:0,zIndex:25}}/>
-              <div style={{...s.drop,minWidth:210,zIndex:26}} onClick={e=>e.stopPropagation()}>
+              <div style={{...s.drop,minWidth:210,zIndex:30}} onClick={e=>e.stopPropagation()}>
               <div style={{padding:"10px 14px 4px",fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em"}}>MI CUENTA</div>
               {[
                 {Icon:IconUser,  label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
@@ -788,7 +788,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 ...(isAdminUser?[{Icon:IconChart,label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
                 {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
-                <button key={item.label} onClick={item.action} style={{...s.dropItem,gap:10}}>
+                <button key={item.label} onClick={(e) => { e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>
                   <span style={{display:"flex",color:"#64748b"}}><item.Icon size={16} color="#64748b"/></span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
                 </button>
               ))}
