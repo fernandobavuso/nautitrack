@@ -9,7 +9,7 @@ const CAT_COLORS = {
   Seguro:"#0891b2", Impuestos:"#be185d", Otro:"#64748b",
 };
 
-export default function CostsPage({ vessel, user, setShowProfile }) {
+export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpense }) {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -82,10 +82,10 @@ export default function CostsPage({ vessel, user, setShowProfile }) {
     <div style={{maxWidth:900,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Costos de {vessel.name}</div>
-          <div style={{fontSize:13,color:"#64748b"}}>Todo lo que te cuesta tu embarcación, en un solo lugar.</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Finanzas de {vessel.name}</div>
+          <div style={{fontSize:13,color:"#64748b"}}>El resumen de todo lo que cuesta tu embarcación.</div>
         </div>
-        <button onClick={()=>setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+        <button onClick={()=>onRegisterExpense?onRegisterExpense():setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
           Registrar gasto
         </button>
       </div>

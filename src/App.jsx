@@ -17,6 +17,7 @@ import DocsManager from "./DocsManager";
 import CariveLogo from "./CariveLogo";
 import FleetManagers from "./FleetManagers";
 import CalendarPage from "./CalendarPage";
+import ExpenseRouter from "./ExpenseRouter";
 import { getInvitation, acceptInvitation, invitationCopy } from "./invitations.jsx";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
@@ -232,6 +233,7 @@ export default function App() {
   const [addingVessel, setAddingVessel] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
   const [showFleetManagers, setShowFleetManagers] = useState(false);
+  const [showExpenseRouter, setShowExpenseRouter] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
   const [skippedSetup, setSkippedSetup] = useState(false);
@@ -662,7 +664,7 @@ export default function App() {
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
-        {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
+        {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
         {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
         {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
@@ -676,6 +678,7 @@ export default function App() {
       {planMsg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:4000,maxWidth:340,textAlign:"center"}}>{planMsg}</div>}
       {showPlans && <PlansModal vessel={vessel} user={user} onClose={()=>setShowPlans(false)} />}
       {showFleetManagers && <FleetManagers user={user} onClose={()=>setShowFleetManagers(false)} />}
+      {showExpenseRouter && <ExpenseRouter vessel={vessel} user={user} onClose={()=>setShowExpenseRouter(false)} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}
       {showAdmin && <AdminPanel user={user} onClose={()=>setShowAdmin(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
@@ -693,7 +696,7 @@ const NAV_GROUPS = [
     { key:"log", label:"Bitácora" },
   ]},
   { key:"fin", label:"Finanzas", items:[
-    { key:"costs", label:"Costos" },
+    { key:"costs", label:"Resumen de gastos" },
     { key:"inventory", label:"Repuestos" },
   ]},
   { key:"reg", label:"Registros", items:[
