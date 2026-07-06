@@ -15,6 +15,7 @@ import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
 import CariveLogo from "./CariveLogo";
+import FleetManagers from "./FleetManagers";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
@@ -218,6 +219,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [addingVessel, setAddingVessel] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
+  const [showFleetManagers, setShowFleetManagers] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
   const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
@@ -378,7 +380,13 @@ export default function App() {
   const fetchVessels = useCallback(async (uid) => {
     setVesselsLoading(true);
     try {
-      const { data, error } = await supabase.from("vessels").select("*").eq("owner_id", uid).order("created_at", { ascending: true });
+      // IDs de dueños cuyas flotas puedo gestionar (yo + donde soy co-gestor)
+      let ownerIds = [uid];
+      const { data: fleets } = await supabase.from("fleet_managers")
+        .select("fleet_owner_id").eq("manager_id", uid).eq("status","active");
+      if (fleets && fleets.length) ownerIds = [...new Set([uid, ...fleets.map(f=>f.fleet_owner_id)])];
+
+      const { data, error } = await supabase.from("vessels").select("*").in("owner_id", ownerIds).order("created_at", { ascending: true });
       if (error) { console.error("fetchVessels error:", error.message); setVesselsLoading(false); return; }
       const mapped = await Promise.all((data || []).map(async v => {
         const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
@@ -623,6 +631,7 @@ export default function App() {
       {showNotifPanel && <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="tripulacion")setShowCrewMarket(true); }} />}
       {planMsg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:4000,maxWidth:340,textAlign:"center"}}>{planMsg}</div>}
       {showPlans && <PlansModal vessel={vessel} user={user} onClose={()=>setShowPlans(false)} />}
+      {showFleetManagers && <FleetManagers user={user} onClose={()=>setShowFleetManagers(false)} />}
       {showAdmin && <AdminPanel user={user} onClose={()=>setShowAdmin(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
@@ -775,6 +784,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {Icon:IconUser,  label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
                 {Icon:IconBoat,  label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
                 {Icon:IconCard,  label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
+                {Icon:IconUser,  label:"Equipo de gestión",    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }},
                 ...(isAdminUser?[{Icon:IconChart,label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
                 {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
