@@ -75,13 +75,10 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
             <label style={lbl}>¿Qué se compró?</label>
             <input value={op.item} onChange={e=>setOp({...op,item:e.target.value})} placeholder="Ej: Filtro de aceite, combustible..." style={inp}/>
             <div style={{display:"flex",gap:8}}>
-              <div style={{flex:1}}><label style={lbl}>Monto</label><input type="number" value={op.amount} onChange={e=>setOp({...op,amount:e.target.value})} placeholder="0" style={inp}/></div>
-              <div style={{width:90}}><label style={lbl}>Moneda</label><select value={op.currency} onChange={e=>setOp({...op,currency:e.target.value})} style={inp}><option>USD</option><option>VES</option></select></div>
+              <div style={{flex:1}}><label style={lbl}>Monto (USD)</label><input type="number" value={op.amount} onChange={e=>setOp({...op,amount:e.target.value})} placeholder="0" style={inp}/></div>
+              <div style={{flex:1}}><label style={lbl}>Pago</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
             </div>
-            <div style={{display:"flex",gap:8}}>
-              <div style={{flex:1}}><label style={lbl}>Pago</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>USDT</option><option>Otro</option></select></div>
-              <div style={{flex:1}}><label style={lbl}>Fecha</label><input type="date" value={op.date} onChange={e=>setOp({...op,date:e.target.value})} style={inp}/></div>
-            </div>
+            <div><label style={lbl}>Fecha</label><input type="date" value={op.date} onChange={e=>setOp({...op,date:e.target.value})} style={inp}/></div>
             {msg && <div style={{fontSize:12,color:"#dc2626",marginBottom:10}}>{msg}</div>}
             <button onClick={saveOperational} disabled={saving} style={{...primary,width:"100%",opacity:saving?.6:1}}>{saving?"Guardando...":"Registrar compra"}</button>
           </>
@@ -97,10 +94,7 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
             </select>
             <label style={lbl}>Descripción (opcional)</label>
             <input value={adm.description} onChange={e=>setAdm({...adm,description:e.target.value})} placeholder="Ej: Seguro anual, mensualidad marina..." style={inp}/>
-            <div style={{display:"flex",gap:8}}>
-              <div style={{flex:1}}><label style={lbl}>Monto</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
-              <div style={{width:90}}><label style={lbl}>Moneda</label><select value={adm.currency} onChange={e=>setAdm({...adm,currency:e.target.value})} style={inp}><option>USD</option><option>VES</option></select></div>
-            </div>
+            <div><label style={lbl}>Monto (USD)</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
             <label style={{...lbl,display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginTop:8}}>
               <input type="checkbox" checked={adm.recurring} onChange={e=>setAdm({...adm,recurring:e.target.checked})}/>
               Es un gasto fijo mensual (se repite)

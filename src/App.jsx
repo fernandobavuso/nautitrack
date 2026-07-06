@@ -660,6 +660,7 @@ export default function App() {
         )}
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
+        {page==="providers" && <ProvidersModal vessel={vessel} updateVessel={updateVessel} asPage />}
         {page==="calendar" && <CalendarPage vessel={vessel} isMobile={isMobile} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
@@ -669,7 +670,6 @@ export default function App() {
         {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
-      {showProviders     && <ProvidersModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowProviders(false)} />}
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
       {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
       {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
@@ -702,6 +702,9 @@ const NAV_GROUPS = [
   { key:"reg", label:"Registros", items:[
     { key:"records", label:"Records" },
     { key:"docs", label:"Documentos" },
+  ]},
+  { key:"gest", label:"Gestión", items:[
+    { key:"providers", label:"Proveedores" },
   ]},
 ];
 
@@ -819,7 +822,6 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
 
               {/* Acciones */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                <button onClick={()=>{setShowProviders(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconWrench size={17} color="#64748b"/>Proveedores</button>
                 <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Tripulación</button>
                 <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconClipboard size={17} color="#64748b"/>QR Check-in</button>
               </div>
@@ -851,7 +853,6 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} />
       </div>
       <div style={s.navRight}>
-        <button style={s.provBtn} onClick={() => setShowProviders(true)}>Proveedores</button>
         <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>Tripulación</button>
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
@@ -873,14 +874,14 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
             </div>
           )}
         </div>
-        <div style={s.bellWrap}>
-          <span style={{cursor:"pointer",display:"flex"}} onClick={()=>setShowNotifPanel(true)}><IconBell size={19} color="#475569"/></span>
-          {unreadCount > 0 && <div style={s.bellBadge}>{unreadCount}</div>}
-        </div>
         <div style={{position:"relative"}}>
           <button onClick={()=>setShowQRPanel(true)} style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:12,color:"#0369a1",fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
             <IconClipboard size={14} color="#0369a1"/> QR
           </button>
+        </div>
+        <div style={s.bellWrap}>
+          <span style={{cursor:"pointer",display:"flex"}} onClick={()=>setShowNotifPanel(true)}><IconBell size={19} color="#475569"/></span>
+          {unreadCount > 0 && <div style={s.bellBadge}>{unreadCount}</div>}
         </div>
         <div style={{position:"relative"}}>
           <button style={s.userBtn} onClick={(e) => { e.stopPropagation(); setShowVesselMenu(false); setShowUserMenu(v => !v); }}>
@@ -3603,7 +3604,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
   );
 }
 
-function ProvidersModal({ vessel, updateVessel, onClose }) {
+function ProvidersModal({ vessel, updateVessel, onClose, asPage }) {
   const [providers,setProviders] = useState(vessel.providers||[]);
   const [showAdd,setShowAdd]     = useState(false);
   const [form,setForm]           = useState({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});
@@ -3615,14 +3616,32 @@ function ProvidersModal({ vessel, updateVessel, onClose }) {
     setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});setShowAdd(false);
   };
   const remove=(id)=>{const u=providers.filter(p=>p.id!==id);setProviders(u);updateVessel({...vessel,providers:u});};
+
+  // Contenido interno (compartido entre modo página y modo modal)
+  const inner = (
+    <>
+        <div style={asPage?{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}:s.modalHeader}>
+          <div><div style={{fontSize:asPage?20:16,fontWeight:asPage?800:700,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>Proveedores</div><div style={{fontSize:asPage?13:12,color:"#64748b",marginTop:2}}>Directorio de proveedores y técnicos de {vessel.name}</div></div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}><button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar</button>{!asPage&&<button onClick={onClose} style={s.modalClose}>✕</button>}</div>
+        </div>
+        <ProvidersBody {...{providers,showAdd,setShowAdd,form,set,addProvider,remove,asPage,onClose}} />
+    </>
+  );
+
+  if (asPage) return <div style={{maxWidth:900,margin:"0 auto"}}>{inner}</div>;
   return (
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:720}} onClick={e=>e.stopPropagation()}>
-        <div style={s.modalHeader}>
-          <div><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>Proveedores</div><div style={{fontSize:12,color:"#64748b",marginTop:2}}>Directorio de proveedores y técnicos</div></div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}><button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar</button><button onClick={onClose} style={s.modalClose}>✕</button></div>
-        </div>
-        <div style={{flex:1,overflowY:"auto",padding:"16px 24px"}}>
+        {inner}
+      </div>
+    </div>
+  );
+}
+
+// Cuerpo de proveedores (lista + form) — reusado en página y modal
+function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider, remove, asPage, onClose }) {
+  return (
+    <div style={{flex:1,overflowY:asPage?"visible":"auto",padding:asPage?0:"16px 24px"}}>
           {showAdd&&(
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:16,marginBottom:16}}>
               <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Nuevo Proveedor</div>
@@ -3661,9 +3680,7 @@ function ProvidersModal({ vessel, updateVessel, onClose }) {
               ))}
             </tbody>
           </table>
-        </div>
-        <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>Cerrar</button></div>
-      </div>
+          {!asPage && <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>Cerrar</button></div>}
     </div>
   );
 }
