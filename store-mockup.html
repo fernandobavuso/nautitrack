@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Carive — Tienda modernizada (boceto)</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f1f5f9;font-family:'Inter',system-ui,sans-serif;color:#0f172a;padding:24px}
+  .wrap{max-width:820px;margin:0 auto}
+  .note{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.5}
+  /* Header tienda */
+  .storehead{background:linear-gradient(120deg,#0a2540,#0f3a5f);border-radius:18px;padding:22px 24px;color:#fff;margin-bottom:16px;position:relative;overflow:hidden}
+  .storehead .badge{position:absolute;top:0;right:0;width:180px;height:180px;background:radial-gradient(circle,rgba(56,189,248,.25),transparent 70%)}
+  .storehead h1{font-family:'Sora';font-size:22px;font-weight:800;margin-bottom:4px}
+  .storehead .loc{font-size:13px;opacity:.8;display:flex;align-items:center;gap:6px}
+  .verified{display:inline-flex;align-items:center;gap:4px;background:rgba(56,189,248,.2);color:#7dd3fc;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:10px}
+  /* Métricas */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .metric{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px}
+  .metric .v{font-family:'Sora';font-size:26px;font-weight:800;color:#0a2540}
+  .metric .l{font-size:11px;color:#64748b;margin-top:2px;font-weight:500}
+  .metric .up{font-size:11px;color:#16a34a;font-weight:700;margin-top:6px}
+  .metric.hl{background:linear-gradient(120deg,#eff6ff,#e0f2fe);border-color:#bae6fd}
+  .metric.hl .v{color:#2563eb}
+  /* Tabs */
+  .tabs{display:flex;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:5px;margin-bottom:16px;width:fit-content}
+  .tab{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:#64748b}
+  .tab.active{background:linear-gradient(120deg,#2563eb,#0ea5e9);color:#fff}
+  /* Tarjeta de solicitud */
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;margin-bottom:12px;transition:.2s;position:relative}
+  .card:hover{box-shadow:0 8px 24px rgba(10,37,64,.08);border-color:#bae6fd}
+  .card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+  .cat{display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
+  .newbadge{background:#fef2f2;color:#dc2626;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
+  .card h3{font-size:16px;font-weight:700;color:#0a2540;margin-bottom:6px}
+  .meta{display:flex;gap:14px;font-size:12px;color:#94a3b8;margin-bottom:14px;flex-wrap:wrap}
+  .meta span{display:flex;align-items:center;gap:5px}
+  .actions{display:flex;gap:8px}
+  .btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none}
+  .btn.primary{background:linear-gradient(120deg,#2563eb,#0ea5e9);color:#fff}
+  .btn.ghost{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+  /* estados en respuestas */
+  .status{font-size:11px;font-weight:800;padding:4px 11px;border-radius:20px}
+  .st-pend{background:#fffbeb;color:#d97706}
+  .st-won{background:#f0fdf4;color:#16a34a}
+  .st-lost{background:#f8fafc;color:#94a3b8}
+  .sectitle{font-family:'Sora';font-size:15px;font-weight:800;color:#0a2540;margin:22px 0 12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="note"><strong>Boceto de la tienda modernizada.</strong> Así se vería cuando un dueño de tienda entra. Fíjate en: el encabezado tipo "storefront", las métricas de negocio arriba, y las solicitudes como tarjetas con estado. Dime qué ajustar antes de construirlo de verdad.</div>
+
+  <!-- Header storefront -->
+  <div class="storehead">
+    <div class="badge"></div>
+    <h1>Repuestos Náuticos del Oriente</h1>
+    <div class="loc">📍 Lechería, Anzoátegui · Envía a toda Venezuela</div>
+    <div class="verified">✓ Tienda verificada</div>
+  </div>
+
+  <!-- Métricas: pulso del negocio -->
+  <div class="metrics">
+    <div class="metric hl">
+      <div class="v">3</div>
+      <div class="l">Pedidos nuevos</div>
+      <div class="up">para ti hoy</div>
+    </div>
+    <div class="metric">
+      <div class="v">5</div>
+      <div class="l">Ventas del mes</div>
+      <div class="up">↑ 25% vs mes pasado</div>
+    </div>
+    <div class="metric">
+      <div class="v">12</div>
+      <div class="l">Cotizaciones enviadas</div>
+    </div>
+    <div class="metric">
+      <div class="v">80%</div>
+      <div class="l">Tasa de respuesta</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active">Solicitudes</button>
+    <button class="tab">Mis cotizaciones</button>
+    <button class="tab">Mi tienda</button>
+  </div>
+
+  <!-- Tarjetas de solicitud -->
+  <div class="card">
+    <div class="top">
+      <span class="cat">⚙️ Motor · Repuestos</span>
+      <span class="newbadge">NUEVO</span>
+    </div>
+    <h3>Filtro de aceite Fleetguard FF5052 (x2)</h3>
+    <div class="meta">
+      <span>📍 Puerto La Cruz</span>
+      <span>🕐 hace 2 horas</span>
+      <span>⛵ Velero 60'</span>
+    </div>
+    <div class="actions">
+      <button class="btn primary">Enviar cotización</button>
+      <button class="btn ghost">Ver detalle</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <span class="cat">🔌 Eléctrico</span>
+    </div>
+    <h3>Batería de ciclo profundo 12V 200Ah</h3>
+    <div class="meta">
+      <span>📍 Margarita</span>
+      <span>🕐 hace 5 horas</span>
+      <span>⛵ Catamarán 55'</span>
+    </div>
+    <div class="actions">
+      <button class="btn primary">Enviar cotización</button>
+      <button class="btn ghost">Ver detalle</button>
+    </div>
+  </div>
+
+  <!-- Sección de cotizaciones con estados -->
+  <div class="sectitle">Mis cotizaciones recientes</div>
+
+  <div class="card">
+    <div class="top">
+      <div>
+        <h3 style="margin-bottom:4px">Bomba de achique Rule 1100 GPH</h3>
+        <div class="meta" style="margin-bottom:0">
+          <span>💵 Cotizaste $85</span>
+          <span>🕐 hace 1 día</span>
+        </div>
+      </div>
+      <span class="status st-won">✓ GANADA</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <div>
+        <h3 style="margin-bottom:4px">Hélice 3 palas bronce 18x18</h3>
+        <div class="meta" style="margin-bottom:0">
+          <span>💵 Cotizaste $340</span>
+          <span>🕐 hace 3 horas</span>
+        </div>
+      </div>
+      <span class="status st-pend">⏳ PENDIENTE</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="top">
+      <div>
+        <h3 style="margin-bottom:4px">Ánodos de zinc (kit x4)</h3>
+        <div class="meta" style="margin-bottom:0">
+          <span>💵 Cotizaste $60</span>
+          <span>🕐 hace 2 días</span>
+        </div>
+      </div>
+      <span class="status st-lost">No seleccionada</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

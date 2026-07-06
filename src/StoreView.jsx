@@ -61,28 +61,69 @@ export default function StoreView({ user, onLogout }) {
   const respondedIds = myResponses.map(r=>r.request_id);
   const profileComplete = profile?.store_name && profile?.store_city && (profile?.store_categories||[]).length>0;
 
+  // Métricas del negocio
+  const newRequests = requests.filter(r => !respondedIds.includes(r.id)).length;
+  const wonSales = myResponses.filter(r => r.is_winner).length;
+  const thisMonthWon = myResponses.filter(r => {
+    if (!r.is_winner || !r.confirmed_at) return false;
+    const d = new Date(r.confirmed_at); const now = new Date();
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).length;
+  const quotesSent = myResponses.length;
+  const responseRate = requests.length>0 ? Math.round((myResponses.length/(requests.length+myResponses.length))*100) : 0;
+
   if (loading) return <div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando...</div>;
 
   return (
-    <div style={{minHeight:"100vh",background:"#f0f7ff"}}>
+    <div style={{minHeight:"100vh",background:"#f1f5f9"}}>
       {/* Barra superior */}
       <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <CariveLogo size={30} />
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Carive</div>
-            <div style={{fontSize:10,color:"#64748b"}}>Tienda de Repuestos</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Carive</div>
+            <div style={{fontSize:10,color:"#64748b"}}>Portal de Tiendas</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:6}}>
-          {[{k:"solicitudes",l:"Solicitudes"},{k:"respuestas",l:"Mis respuestas"},{k:"perfil",l:"Mi Tienda"}].map(t=>(
-            <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,background:tab===t.k?"#eff6ff":"transparent",color:tab===t.k?"#0ea5e9":"#64748b"}}>{t.l}</button>
-          ))}
-          <button onClick={onLogout} style={{padding:"6px 12px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#94a3b8"}}>Salir</button>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:10,padding:4}}>
+            {[{k:"solicitudes",l:"Solicitudes"},{k:"respuestas",l:"Mis cotizaciones"},{k:"perfil",l:"Mi tienda"}].map(t=>(
+              <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,background:tab===t.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"transparent",color:tab===t.k?"#fff":"#64748b"}}>{t.l}</button>
+            ))}
+          </div>
+          <button onClick={onLogout} style={{padding:"7px 12px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#94a3b8",marginLeft:4}}>Salir</button>
         </div>
       </div>
 
-      <div style={{maxWidth:760,margin:"0 auto",padding:"24px 20px"}}>
+      <div style={{maxWidth:820,margin:"0 auto",padding:"24px 20px"}}>
+        {/* Header storefront (solo con perfil completo) */}
+        {profileComplete && (
+          <div style={{background:"linear-gradient(120deg,#0a2540,#0f3a5f)",borderRadius:18,padding:"22px 24px",color:"#fff",marginBottom:16,position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:"radial-gradient(circle,rgba(56,189,248,.22),transparent 70%)"}}/>
+            <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,marginBottom:4}}>{profile.store_name}</div>
+            <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?" · Envía a toda Venezuela":""}</div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(56,189,248,.2)",color:"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>✓ Tienda activa</div>
+          </div>
+        )}
+
+        {/* Métricas: pulso del negocio */}
+        {profileComplete && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+            {[
+              {v:newRequests, l:"Pedidos nuevos", sub:"para ti", hl:true},
+              {v:thisMonthWon, l:"Ventas del mes", sub:wonSales>0?`${wonSales} en total`:""},
+              {v:quotesSent, l:"Cotizaciones enviadas", sub:""},
+              {v:responseRate+"%", l:"Tasa de respuesta", sub:""},
+            ].map((m,i)=>(
+              <div key={i} style={{background:m.hl?"linear-gradient(120deg,#eff6ff,#e0f2fe)":"#fff",border:`1px solid ${m.hl?"#bae6fd":"#e2e8f0"}`,borderRadius:14,padding:16}}>
+                <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:26,fontWeight:800,color:m.hl?"#2563eb":"#0a2540"}}>{m.v}</div>
+                <div style={{fontSize:11,color:"#64748b",marginTop:2,fontWeight:500}}>{m.l}</div>
+                {m.sub&&<div style={{fontSize:11,color:"#16a34a",fontWeight:700,marginTop:6}}>{m.sub}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Aviso de perfil incompleto */}
         {!profileComplete && tab!=="perfil" && (
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16,marginBottom:16}}>
@@ -95,31 +136,45 @@ export default function StoreView({ user, onLogout }) {
         {/* ── SOLICITUDES ── */}
         {tab==="solicitudes"&&(
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:4}}>Solicitudes de repuestos</div>
-            <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Pedidos que coinciden con tus categorías{profile.store_city?` en ${profile.store_city}`:""}</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Solicitudes para ti{profile.store_city?` · ${profile.store_city}`:""}</div>
             {requests.length===0&&(
               <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                 <div style={{fontWeight:600}}>Sin solicitudes por ahora</div>
                 <div style={{fontSize:12,marginTop:4}}>Te avisaremos cuando llegue un pedido de tu categoría</div>
               </div>
             )}
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {requests.map(r=>{
                 const responded = respondedIds.includes(r.id);
+                const ageHours = r.created_at ? Math.round((Date.now()-new Date(r.created_at))/3600000) : null;
+                const ageLabel = ageHours==null?"":ageHours<1?"hace minutos":ageHours<24?`hace ${ageHours}h`:`hace ${Math.round(ageHours/24)}d`;
+                const isNew = ageHours!=null && ageHours < 6;
                 return (
-                  <div key={r.id} style={{background:"#fff",border:`1px solid ${r.urgent?"#fecaca":"#e2e8f0"}`,borderRadius:12,padding:14}}>
-                    {r.urgent&&<div style={{display:"inline-block",fontSize:10,background:"#fee2e2",color:"#dc2626",padding:"2px 8px",borderRadius:10,fontWeight:700,marginBottom:6}}>URGENTE · Barco varado</div>}
-                    <div style={{display:"flex",gap:12}}>
-                      {r.photo_url&&<img src={r.photo_url} style={{width:60,height:60,borderRadius:8,objectFit:"cover",flexShrink:0}} alt=""/>}
+                  <div key={r.id} style={{background:"#fff",border:`1px solid ${r.urgent?"#fecaca":"#e2e8f0"}`,borderRadius:16,padding:18,transition:".2s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 8px 24px rgba(10,37,64,.08)";e.currentTarget.style.borderColor="#bae6fd";}}
+                    onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=r.urgent?"#fecaca":"#e2e8f0";}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:10}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20}}>{r.category||"Repuesto"}</span>
+                      <div style={{display:"flex",gap:6}}>
+                        {r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>URGENTE</span>}
+                        {isNew&&!r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>NUEVO</span>}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:14,marginBottom:14}}>
+                      {r.photo_url&&<img src={r.photo_url} style={{width:56,height:56,borderRadius:10,objectFit:"cover",flexShrink:0}} alt=""/>}
                       <div style={{flex:1}}>
-                        <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{r.item_name}</div>
-                        <div style={{fontSize:11,color:"#64748b"}}>{r.category}{r.part_num?` · ${r.part_num}`:""} · {r.city||""}</div>
-                        {r.description&&<div style={{fontSize:12,color:"#475569",marginTop:4}}>{r.description}</div>}
+                        <div style={{fontSize:16,fontWeight:700,color:"#0a2540",marginBottom:6}}>{r.item_name}</div>
+                        <div style={{display:"flex",gap:14,fontSize:12,color:"#94a3b8",flexWrap:"wrap"}}>
+                          {r.city&&<span>{r.city}</span>}
+                          {ageLabel&&<span>{ageLabel}</span>}
+                          {r.part_num&&<span>Ref: {r.part_num}</span>}
+                        </div>
+                        {r.description&&<div style={{fontSize:12,color:"#475569",marginTop:8}}>{r.description}</div>}
                       </div>
                     </div>
                     {responded
-                      ? <div style={{marginTop:10,fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center"}}>Ya respondiste a esta solicitud</div>
-                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",marginTop:10,padding:"9px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Responder</button>
+                      ? <div style={{fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center",background:"#f0fdf4",borderRadius:9,padding:"9px"}}>✓ Ya enviaste tu cotización</div>
+                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar cotización</button>
                     }
                   </div>
                 );
@@ -128,34 +183,39 @@ export default function StoreView({ user, onLogout }) {
           </div>
         )}
 
-        {/* ── MIS RESPUESTAS ── */}
+        {/* ── MIS COTIZACIONES ── */}
         {tab==="respuestas"&&(
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:16}}>Mis respuestas</div>
-            {myResponses.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>Aún no has respondido a ninguna solicitud</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {myResponses.map(r=>(
-                <div key={r.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
-                  <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{r.request?.item_name||"Repuesto"}</div>
-                  <div style={{fontSize:11,color:"#64748b",marginBottom:6}}>{r.request?.category}</div>
-                  <div style={{fontSize:12,color:"#475569"}}>
-                    Tu respuesta: {r.response_type==="have"?`Disponible · ${r.currency==="USD"?"$":"Bs."} ${r.price}`:r.response_type==="have_questions"?"Disponible, con preguntas":"No disponible"}
+            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Mis cotizaciones</div>
+            {myResponses.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>Aún no has enviado ninguna cotización</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {myResponses.map(r=>{
+                const won = r.is_winner;
+                const resolved = r.request?.status==="resolved";
+                const st = won ? {bg:"#f0fdf4",c:"#16a34a",l:"✓ GANADA"} : resolved ? {bg:"#f8fafc",c:"#94a3b8",l:"No seleccionada"} : {bg:"#fffbeb",c:"#d97706",l:"⏳ PENDIENTE"};
+                return (
+                  <div key={r.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,padding:18}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:16,fontWeight:700,color:"#0a2540",marginBottom:6}}>{r.request?.item_name||"Repuesto"}</div>
+                        <div style={{display:"flex",gap:14,fontSize:12,color:"#94a3b8",flexWrap:"wrap"}}>
+                          <span>{r.request?.category}</span>
+                          {r.response_type==="have"&&<span style={{color:"#475569",fontWeight:600}}>Cotizaste ${r.price}</span>}
+                          {r.response_type==="have_questions"&&<span>Disponible, con preguntas</span>}
+                          {r.response_type==="dont_have"&&<span>No disponible</span>}
+                        </div>
+                        {r.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:8,fontStyle:"italic"}}>"{r.message}"</div>}
+                      </div>
+                      <span style={{fontSize:11,fontWeight:800,padding:"4px 11px",borderRadius:20,background:st.bg,color:st.c,whiteSpace:"nowrap"}}>{st.l}</span>
+                    </div>
+                    {won&&r.sale_amount&&(
+                      <div style={{marginTop:12,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 12px",fontSize:11,color:"#15803d"}}>
+                        Venta: ${r.sale_amount}{r.commission_amount!=null?` · Comisión (${r.commission_rate}%): $${r.commission_amount} · Recibes: $${(Number(r.sale_amount)-Number(r.commission_amount)).toFixed(2)}`:""}
+                      </div>
+                    )}
                   </div>
-                  {r.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:4,fontStyle:"italic"}}>"{r.message}"</div>}
-                  {r.is_winner ? (
-                    <div style={{marginTop:8,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"10px 12px"}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>¡Ganaste esta venta!</div>
-                      {r.sale_amount&&<div style={{fontSize:11,color:"#15803d",marginTop:3}}>
-                        Venta: ${r.sale_amount}{r.commission_amount!=null?` · Comisión plataforma (${r.commission_rate}%): $${r.commission_amount} · Recibes: $${(Number(r.sale_amount)-Number(r.commission_amount)).toFixed(2)}`:""}
-                      </div>}
-                    </div>
-                  ) : (
-                    <div style={{marginTop:6,fontSize:11,fontWeight:700,color:r.request?.status==="resolved"?"#94a3b8":"#d97706"}}>
-                      {r.request?.status==="resolved"?"El cliente eligió otra oferta":"Esperando al cliente"}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
