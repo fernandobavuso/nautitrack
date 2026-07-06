@@ -788,7 +788,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 ...(isAdminUser?[{Icon:IconChart,label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
                 {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
-                <button key={item.label} onClick={(e) => { e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>
+                <button key={item.label} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>
                   <span style={{display:"flex",color:"#64748b"}}><item.Icon size={16} color="#64748b"/></span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
                 </button>
               ))}
