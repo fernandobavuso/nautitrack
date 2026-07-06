@@ -16,6 +16,7 @@ import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
 import CariveLogo from "./CariveLogo";
 import FleetManagers from "./FleetManagers";
+import CalendarPage from "./CalendarPage";
 import { getInvitation, acceptInvitation, invitationCopy } from "./invitations.jsx";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
@@ -657,6 +658,7 @@ export default function App() {
         )}
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
+        {page==="calendar" && <CalendarPage vessel={vessel} isMobile={isMobile} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
@@ -742,7 +744,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
 
               {/* Navegación */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n=>(
+                {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"calendar",label:"Calendario"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n=>(
                   <button key={n.key} onClick={()=>{setPage(n.key);setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page===n.key?"#eff6ff":"transparent",color:page===n.key?"#0ea5e9":"#1e293b",fontWeight:page===n.key?700:500,fontSize:14}}>{n.label}</button>
                 ))}
               </div>
@@ -775,7 +777,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <div style={s.navBrand}>Carive</div>
       </div>
       <div style={s.navLinks}>
-        {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
+        {[...(vessels.length>1?[{key:"fleet",label:"Mi Flota"}]:[]),{key:"home",label:"Inicio"},{key:"tasks",label:"Tareas"},{key:"calendar",label:"Calendario"},{key:"log",label:"Bitácora"},{key:"records",label:"Records"},{key:"costs",label:"Costos"},{key:"inventory",label:"Repuestos"},{key:"docs",label:"Documentos"}].map(n => (
           <button key={n.key} onClick={() => setPage(n.key)} style={{...s.navLink,color:page===n.key?"#0ea5e9":"#64748b",borderBottom:page===n.key?"2px solid #0ea5e9":"2px solid transparent",fontWeight:page===n.key?600:400}}>{n.label}</button>
         ))}
       </div>
