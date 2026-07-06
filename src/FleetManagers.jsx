@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { createInvitation } from "./invitations.jsx";
 
 // Panel donde el dueño de la flota (Fernando) invita a co-gestores
 // (ej: su colega de The Boating Zone) con acceso total a todos sus barcos.
@@ -9,6 +10,7 @@ export default function FleetManagers({ user, onClose }) {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
 
   useEffect(() => { load(); }, []);
 
@@ -29,36 +31,44 @@ export default function FleetManagers({ user, onClose }) {
     try {
       // Buscar el perfil por correo
       const { data: prof } = await supabase.from("profiles").select("id,email,full_name").eq("email", em).maybeSingle();
-      if (!prof) {
-        flash("No hay ninguna cuenta con ese correo. Pídele que se registre primero en Carive y vuelve a intentarlo.");
-        setAdding(false);
-        return;
-      }
-      if (prof.id === user.id) { flash("Ese eres tú."); setAdding(false); return; }
-      const { error } = await supabase.from("fleet_managers").insert({
-        fleet_owner_id: user.id, manager_id: prof.id, manager_email: em, status:"active",
-      });
-      if (error) {
-        if (error.code === "23505") flash("Esa persona ya es co-gestor de tu flota.");
-        else flash("Error: " + error.message);
-        setAdding(false);
-        return;
-      }
-      // Notificar al colega
-      try {
-        await supabase.from("app_notifications").insert({
-          user_id: prof.id, type:"fleet_access",
-          title:"Ahora gestionas una flota",
-          body:`${user.full_name || user.email} te dio acceso a gestionar sus barcos en Carive. Vuelve a entrar para verlos.`,
+
+      if (prof) {
+        // Ya tiene cuenta: vincular directo
+        if (prof.id === user.id) { flash("Ese eres tú."); setAdding(false); return; }
+        const { error } = await supabase.from("fleet_managers").insert({
+          fleet_owner_id: user.id, manager_id: prof.id, manager_email: em, status:"active",
         });
-      } catch(e){}
-      flash(`${prof.full_name || em} ahora tiene acceso a todos tus barcos.`);
-      setEmail("");
-      load();
+        if (error) {
+          if (error.code === "23505") flash("Esa persona ya es co-gestor de tu flota.");
+          else flash("Error: " + error.message);
+          setAdding(false);
+          return;
+        }
+        try {
+          await supabase.from("app_notifications").insert({
+            user_id: prof.id, type:"fleet_access",
+            title:"Ahora gestionas una flota",
+            body:`${user.full_name || user.email} te dio acceso a gestionar sus barcos en Carive. Vuelve a entrar para verlos.`,
+          });
+        } catch(e){}
+        flash(`${prof.full_name || em} ahora tiene acceso a todos tus barcos.`);
+        setEmail("");
+        load();
+      } else {
+        // No tiene cuenta: generar link de invitación
+        const link = await createInvitation({ kind:"manager", inviter:user, invitedEmail:em });
+        setInviteLink(link);
+        flash("");
+      }
     } catch (err) {
       flash("Error: " + err.message);
     }
     setAdding(false);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    flash("Link copiado. Compártelo con tu colega por WhatsApp, correo o donde quieras.");
   };
 
   const removeManager = async (m) => {
@@ -86,8 +96,21 @@ export default function FleetManagers({ user, onClose }) {
             <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@ejemplo.com" style={{...inp,flex:1}}/>
             <button onClick={addManager} disabled={adding} style={{...btnPrimary,opacity:adding?.6:1,whiteSpace:"nowrap"}}>{adding?"Agregando...":"Dar acceso"}</button>
           </div>
-          <div style={{fontSize:10,color:"#94a3b8",marginTop:6}}>La persona debe tener ya una cuenta en Carive con ese correo.</div>
+          <div style={{fontSize:10,color:"#94a3b8",marginTop:6}}>Si no tiene cuenta, te generamos un link de invitación para enviarle.</div>
         </div>
+
+        {/* Link de invitación generado */}
+        {inviteLink && (
+          <div style={{background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:12,padding:14,marginBottom:18}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#065f46",marginBottom:6}}>Esta persona aún no tiene cuenta — envíale este link</div>
+            <div style={{fontSize:11,color:"#047857",marginBottom:10,lineHeight:1.5}}>Cuando lo abra y cree su cuenta, quedará automáticamente como co-gestor de tu flota con acceso a todos tus barcos.</div>
+            <div style={{display:"flex",gap:8}}>
+              <input readOnly value={inviteLink} style={{...inp,flex:1,fontSize:11,background:"#fff"}} onClick={e=>e.target.select()}/>
+              <button onClick={copyLink} style={{...btnPrimary,whiteSpace:"nowrap"}}>Copiar link</button>
+            </div>
+            <button onClick={()=>{setInviteLink("");setEmail("");}} style={{background:"none",border:"none",color:"#059669",fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>Listo</button>
+          </div>
+        )}
 
         {msg && <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{msg}</div>}
 

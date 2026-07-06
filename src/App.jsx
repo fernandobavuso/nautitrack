@@ -16,6 +16,7 @@ import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
 import CariveLogo from "./CariveLogo";
 import FleetManagers from "./FleetManagers";
+import { getInvitation, acceptInvitation, invitationCopy } from "./invitations.jsx";
 import FleetPage from "./FleetPage";
 import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
@@ -211,6 +212,8 @@ function getEquipmentList(vessel, systemId) {
 export default function App() {
   const { isMobile } = useResponsive();
   const [user, setUser]               = useState(null);
+  const [inviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
+  const [pendingInvite, setPendingInvite] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [vessels, setVessels]         = useState([]);
   const [vesselsLoading, setVesselsLoading] = useState(true);
@@ -478,6 +481,12 @@ export default function App() {
   }, [user?.id, showNotifPanel]);
 
   useEffect(() => {
+    if (inviteToken) {
+      getInvitation(inviteToken).then(inv => { if (inv && inv.status === "pending") setPendingInvite(inv); });
+    }
+  }, [inviteToken]);
+
+  useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
       setUser(u);
@@ -541,7 +550,15 @@ export default function App() {
     </div>
   );
 
-  if (!user) return <Auth onLogin={async (u) => { setUser(u); setCheckingRole(true); const isCrew = await checkIfCaptain(u.id, u.role); setCheckingRole(false); if (!isCrew) fetchVessels(u.id); }} />;
+  if (!user) return <Auth invite={pendingInvite} onLogin={async (u) => {
+    // Si vino con invitación pendiente, aceptarla (vincula como gestor/capitán/tripulante)
+    if (pendingInvite) {
+      try { await acceptInvitation(pendingInvite, u); } catch(e){ console.error("aceptar invitación:", e); }
+      setPendingInvite(null);
+      window.history.replaceState({}, "", "/"); // limpiar el ?invite= de la URL
+    }
+    setUser(u); setCheckingRole(true); const isCrew = await checkIfCaptain(u.id, u.role); setCheckingRole(false); if (!isCrew) fetchVessels(u.id);
+  }} />;
 
   // Si el usuario es capitán → mostrar vista de capitán
   if (captainProfile && captainVessel) return (

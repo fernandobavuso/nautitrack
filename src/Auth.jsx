@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import CariveLogo from "./CariveLogo";
+import { invitationCopy } from "./invitations.jsx";
 import { supabase } from "./supabase";
 
-export default function Auth({ onLogin }) {
+export default function Auth({ onLogin, invite }) {
   const [mode, setMode]           = useState("login");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -73,6 +74,13 @@ export default function Auth({ onLogin }) {
         <div style={s.logoWrap}>
           <CariveLogo size={56} />
           <div style={s.brand}>Carive</div>
+          {invite && (() => { const c = invitationCopy(invite); return (
+            <div style={{background:"#eff6ff",border:"1px solid #bae6fd",borderRadius:12,padding:"14px 16px",marginTop:16,textAlign:"left"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:4}}>{c.title}</div>
+              <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>{c.body}</div>
+              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>Crea tu cuenta abajo para aceptar la invitación.</div>
+            </div>
+          ); })()}
           <div style={s.tagline}>Gestión inteligente de embarcaciones</div>
         </div>
 
