@@ -32,8 +32,14 @@ export default function Auth({ onLogin, invite }) {
     setLoading(true); setError("");
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
     if (err) { setError("Email o contraseña incorrectos"); setLoading(false); return; }
-    // Chequear si la cuenta está deshabilitada
-    const { data: prof } = await supabase.from("profiles").select("disabled").eq("id", data.user.id).maybeSingle();
+    // Chequear si la cuenta está deshabilitada o eliminada
+    const { data: prof } = await supabase.from("profiles").select("disabled,deleted_at").eq("id", data.user.id).maybeSingle();
+    if (prof?.deleted_at) {
+      await supabase.auth.signOut();
+      setError("Esta cuenta ya no está disponible. Contacta al administrador.");
+      setLoading(false);
+      return;
+    }
     if (prof?.disabled) {
       await supabase.auth.signOut();
       setError("Esta cuenta está deshabilitada. Contacta al administrador.");
