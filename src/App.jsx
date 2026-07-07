@@ -661,6 +661,7 @@ export default function App() {
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
         {page==="providers" && <ProvidersModal vessel={vessel} updateVessel={updateVessel} asPage />}
+        {page==="admin" && isAdmin(user) && <AdminPanel user={user} asPage />}
         {page==="calendar" && <CalendarPage vessel={vessel} isMobile={isMobile} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
@@ -708,9 +709,10 @@ const NAV_GROUPS = [
   ]},
 ];
 
-function NavGroups({ page, setPage, showFleet }) {
+function NavGroups({ page, setPage, showFleet, isAdminUser }) {
   const [open, setOpen] = useState(null);
-  const groups = showFleet ? [{ key:"fleet", label:"Mi Flota", single:true }, ...NAV_GROUPS] : NAV_GROUPS;
+  const adminGroup = isAdminUser ? [{ key:"admin", label:"Panel", single:true }] : [];
+  const groups = [...(showFleet ? [{ key:"fleet", label:"Mi Flota", single:true }] : []), ...NAV_GROUPS, ...adminGroup];
 
   return (
     <div style={{display:"flex",alignItems:"center",gap:4}} onMouseLeave={()=>setOpen(null)}>
@@ -832,7 +834,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconBoat size={17} color="#64748b"/>Mi Embarcación</button>
                 <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>Planes y Suscripción</button>
                 {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Equipo de gestión</button>}
-                {isAdminUser && <button onClick={()=>{setShowAdmin(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>Panel de Administrador</button>}
+                {isAdminUser && <button onClick={()=>{setPage("admin");setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>Panel de Administrador</button>}
                 <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}><IconLogout size={17} color="#dc2626"/>Cerrar Sesión</button>
               </div>
             </div>
@@ -850,7 +852,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <div style={s.navBrand}>Carive</div>
       </div>
       <div style={s.navLinks}>
-        <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} />
+        <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} isAdminUser={isAdminUser} />
       </div>
       <div style={s.navRight}>
         <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>Tripulación</button>
@@ -899,7 +901,6 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {Icon:IconBoat,  label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
                 {Icon:IconCard,  label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
                 ...(canManageFleet?[{Icon:IconUser,  label:"Equipo de gestión",    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }}]:[]),
-                ...(isAdminUser?[{Icon:IconChart,label:"Panel de Administrador", action:() => { setShowAdmin(true); setShowUserMenu(false); }}]:[]),
                 {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
               ].map(item => (
                 <button key={item.label} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>

@@ -15,11 +15,12 @@ export function isAdmin(user) {
   return user?.email && ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(user.email.toLowerCase());
 }
 
-export default function AdminPanel({ user, onClose }) {
-  const [tab, setTab] = useState("pedidos");
+export default function AdminPanel({ user, onClose, asPage }) {
+  const [tab, setTab] = useState(asPage ? "resumen" : "pedidos");
   const [sales, setSales] = useState([]);
   const [stores, setStores] = useState([]);
   const [vessels, setVessels] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [pending, setPending] = useState([]);
   const [openRequests, setOpenRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,8 +38,11 @@ export default function AdminPanel({ user, onClose }) {
     const { data: st } = await supabase.from("profiles").select("*").eq("role","store");
     setStores(st||[]);
     // Embarcaciones (para activar planes)
-    const { data: vs } = await supabase.from("vessels").select("id,name,details,owner_id");
+    const { data: vs } = await supabase.from("vessels").select("id,name,details,owner_id,created_at");
     setVessels(vs||[]);
+    // Todos los usuarios (para el panel de control)
+    const { data: users } = await supabase.from("profiles").select("*").order("created_at",{ascending:false});
+    setAllUsers(users||[]);
     // Pagos pendientes de verificar
     const { data: pr } = await supabase.from("payment_requests")
       .select("*, owner:owner_id(full_name,email), vessel:vessel_id(name,details,owner_id)")
@@ -129,24 +133,129 @@ export default function AdminPanel({ user, onClose }) {
   });
   const storeComm = Object.values(byStore).sort((a,b)=>b.total-a.total);
 
-  return (
-    <Overlay onClose={onClose}>
-      <div style={{padding:"18px 22px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+  // ── Métricas del negocio (para el tab Resumen) ──
+  const usersByRole = { owner:0, store:0, crew:0, other:0 };
+  allUsers.forEach(u => { usersByRole[u.role] !== undefined ? usersByRole[u.role]++ : usersByRole.other++; });
+  const totalUsers = allUsers.length;
+  const disabledUsers = allUsers.filter(u => u.disabled).length;
+  // Planes de pago activos (barcos con suscripción distinta de free)
+  const paidVessels = vessels.filter(v => { const p = v.details?._subscription?.plan; return p && p!=="free" && p!=="Free"; });
+  const planCounts = {};
+  vessels.forEach(v => { const p = v.details?._subscription?.plan || "free"; planCounts[p] = (planCounts[p]||0)+1; });
+  // Nuevos usuarios este mes
+  const now = new Date();
+  const newThisMonth = allUsers.filter(u => { if(!u.created_at) return false; const d=new Date(u.created_at); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).length;
+
+  const wrap = (children) => asPage
+    ? <div style={{maxWidth:1000,margin:"0 auto"}}>{children}</div>
+    : <Overlay onClose={onClose}>{children}</Overlay>;
+
+  if (loading) return wrap(<div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando panel...</div>);
+
+  const TABS = [
+    {k:"resumen",l:"Resumen"},
+    {k:"usuarios",l:"Cuentas"},
+    {k:"pedidos",l:"Pedidos → Tiendas"},
+    {k:"pendientes",l:"Pagos pendientes"},
+    {k:"ingresos",l:"Ingresos"},
+    {k:"tiendas",l:"Comisiones"},
+    {k:"planes",l:"Planes"},
+  ];
+
+  const disableUser = async (u) => {
+    const action = u.disabled ? "habilitar" : "deshabilitar";
+    if (!confirm(`¿Seguro que quieres ${action} la cuenta de ${u.full_name||u.email}?${!u.disabled?" No podrá iniciar sesión hasta que la reactives.":""}`)) return;
+    await supabase.from("profiles").update({ disabled: !u.disabled }).eq("id", u.id);
+    setMsg(`Cuenta de ${u.full_name||u.email} ${u.disabled?"habilitada":"deshabilitada"}`);
+    setTimeout(()=>setMsg(""),3000);
+    loadAll();
+  };
+
+  return wrap(
+    <>
+      <div style={{padding:asPage?"0 0 18px":"18px 22px",borderBottom:asPage?"none":"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div>
-          <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>Panel de Administrador</div>
-          <div style={{fontSize:12,color:"#64748b"}}>Ingresos, comisiones y planes</div>
+          <div style={{fontSize:asPage?22:17,fontWeight:800,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>Panel de Administrador</div>
+          <div style={{fontSize:12,color:"#64748b"}}>Torre de control del negocio</div>
         </div>
-        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
+        {!asPage && <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>}
       </div>
 
-      <div style={{display:"flex",gap:6,padding:"12px 22px 0",borderBottom:"1px solid #e2e8f0"}}>
-        {[{k:"pedidos",l:"Pedidos → Tiendas"},{k:"pendientes",l:"Pagos pendientes"},{k:"ingresos",l:"Ingresos"},{k:"tiendas",l:"Comisiones por tienda"},{k:"planes",l:"Planes"}].map(t=>(
-          <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"8px 14px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,color:tab===t.k?"#2563eb":"#64748b",borderBottom:tab===t.k?"2px solid #2563eb":"2px solid transparent",marginBottom:-1}}>{t.l}</button>
+      <div style={{display:"flex",gap:6,padding:asPage?"0 0 0":"12px 22px 0",borderBottom:"1px solid #e2e8f0",overflowX:"auto"}}>
+        {TABS.map(t=>(
+          <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"8px 14px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,color:tab===t.k?"#2563eb":"#64748b",borderBottom:tab===t.k?"2px solid #2563eb":"2px solid transparent",marginBottom:-1,whiteSpace:"nowrap"}}>{t.l}</button>
         ))}
       </div>
 
-      <div style={{padding:22,overflowY:"auto"}}>
-        {/* INGRESOS */}
+      {msg && <div style={{margin:asPage?"14px 0 0":"14px 22px 0",fontSize:13,color:"#16a34a",background:"#f0fdf4",padding:"8px 12px",borderRadius:8}}>{msg}</div>}
+
+      <div style={{padding:asPage?"20px 0":22,overflowY:"auto"}}>
+        {/* RESUMEN — pulso del negocio */}
+        {tab==="resumen"&&(
+          <div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
+              {[
+                {v:totalUsers, l:"Usuarios totales", sub:newThisMonth>0?`+${newThisMonth} este mes`:"", hl:true},
+                {v:usersByRole.owner, l:"Dueños / gestores"},
+                {v:usersByRole.store, l:"Tiendas"},
+                {v:usersByRole.crew, l:"Capitanes / tripulantes"},
+                {v:vessels.length, l:"Embarcaciones"},
+                {v:paidVessels.length, l:"Planes de pago activos", c:"#16a34a"},
+                {v:`$${totalCommission.toFixed(0)}`, l:"Comisiones generadas", c:"#2563eb"},
+                {v:disabledUsers, l:"Cuentas deshabilitadas", c:disabledUsers>0?"#dc2626":"#0a2540"},
+              ].map((m,i)=>(
+                <div key={i} style={{background:m.hl?"linear-gradient(120deg,#eff6ff,#e0f2fe)":"#fff",border:`1px solid ${m.hl?"#bae6fd":"#e2e8f0"}`,borderRadius:14,padding:16}}>
+                  <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:26,fontWeight:800,color:m.c||(m.hl?"#2563eb":"#0a2540")}}>{m.v}</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2,fontWeight:500}}>{m.l}</div>
+                  {m.sub&&<div style={{fontSize:11,color:"#16a34a",fontWeight:700,marginTop:6}}>{m.sub}</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* Distribución de planes */}
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:18}}>
+              <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Distribución de planes</div>
+              {Object.entries(planCounts).sort((a,b)=>b[1]-a[1]).map(([plan,count])=>(
+                <div key={plan} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"1px solid #f1f5f9"}}>
+                  <span style={{fontSize:13,color:"#475569",textTransform:"capitalize"}}>{plan==="free"?"Gratis / Founder":plan}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:"#0a2540"}}>{count} barco{count!==1?"s":""}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CUENTAS — control de usuarios */}
+        {tab==="usuarios"&&(
+          <div>
+            <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Todas las cuentas ({allUsers.length})</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {allUsers.map(u=>{
+                const roleLabel = {owner:"Dueño/Gestor",store:"Tienda",crew:"Tripulante"}[u.role]||u.role;
+                const roleColor = {owner:"#2563eb",store:"#16a34a",crew:"#d97706"}[u.role]||"#64748b";
+                const isMe = u.id===user.id;
+                return (
+                  <div key={u.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"12px 14px",background:u.disabled?"#fef2f2":"#fff",border:`1px solid ${u.disabled?"#fecaca":"#e2e8f0"}`,borderRadius:10}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#0f172a",display:"flex",alignItems:"center",gap:8}}>
+                        {u.full_name||u.email}
+                        {u.disabled&&<span style={{fontSize:9,background:"#fee2e2",color:"#dc2626",padding:"2px 7px",borderRadius:10,fontWeight:800}}>DESHABILITADA</span>}
+                      </div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{u.email} · <span style={{color:roleColor,fontWeight:600}}>{roleLabel}</span>{u.created_at?` · desde ${new Date(u.created_at).toLocaleDateString("es")}`:""}</div>
+                    </div>
+                    {!isMe && (
+                      <button onClick={()=>disableUser(u)} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${u.disabled?"#bbf7d0":"#fecaca"}`,background:"#fff",color:u.disabled?"#16a34a":"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                        {u.disabled?"Habilitar":"Deshabilitar"}
+                      </button>
+                    )}
+                    {isMe&&<span style={{fontSize:11,color:"#94a3b8"}}>Tú</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {tab==="pedidos"&&(
           <div>
             <div style={{background:"#eff6ff",border:"1px solid #bae6fd",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#0369a1",lineHeight:1.5}}>
@@ -327,9 +436,7 @@ export default function AdminPanel({ user, onClose }) {
           </div>
         )}
       </div>
-
-      {msg&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:4000}}>{msg}</div>}
-    </Overlay>
+    </>
   );
 }
 
