@@ -13,11 +13,12 @@ export default function StoreView({ user, onLogout }) {
   const [profile, setProfile] = useState(null);
   const [requests, setRequests] = useState([]);
   const [myResponses, setMyResponses] = useState([]);
+  const [commissionTiers, setCommissionTiers] = useState(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [respondTo, setRespondTo] = useState(null);
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => { loadProfile(); loadTiers().then(setCommissionTiers); }, []);
   useEffect(() => { if (profile) { loadRequests(); loadResponses(); } }, [profile]);
 
   const loadProfile = async () => {
@@ -306,6 +307,77 @@ export default function StoreView({ user, onLogout }) {
                 </div>
               </div>
               <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Guardar tienda</button>
+            </div>
+
+            {/* ── COMISIONES Y TRANSACCIONES ── */}
+            <div style={{fontSize:16,fontWeight:800,color:"#0a2540",margin:"28px 0 12px",fontFamily:"'Sora',system-ui,sans-serif"}}>Comisiones y transacciones</div>
+
+            {/* Resumen */}
+            {(() => {
+              const wins = myResponses.filter(r=>r.is_winner);
+              const totalSold = wins.reduce((s,r)=>s+(Number(r.sale_amount)||0),0);
+              const totalComm = wins.reduce((s,r)=>s+(Number(r.commission_amount)||0),0);
+              const totalNet = totalSold - totalComm;
+              return (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+                  {[
+                    {v:`$${totalSold.toFixed(0)}`, l:"Total vendido"},
+                    {v:`$${totalComm.toFixed(0)}`, l:"Comisiones pagadas", c:"#dc2626"},
+                    {v:`$${totalNet.toFixed(0)}`, l:"Neto recibido", c:"#16a34a"},
+                  ].map((m,i)=>(
+                    <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
+                      <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,color:m.c||"#0a2540"}}>{m.v}</div>
+                      <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{m.l}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Tabla de rangos de comisión (transparencia total) */}
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16,marginBottom:16}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:4}}>Así calculamos tu comisión</div>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>La comisión se descuenta solo cuando ganas una venta. A mayor monto, menor porcentaje.</div>
+              {commissionTiers && (() => {
+                const region = (profile.store_country==="us"||(profile.store_city||"").toLowerCase().match(/miami|lauderdale|florida|beach|gables|grove/)) ? "US" : "VE";
+                const list = commissionTiers[region] || commissionTiers.VE || [];
+                return (
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {list.map((t,i)=>(
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",background:"#f8fafc",borderRadius:8}}>
+                        <span style={{fontSize:12,color:"#475569"}}>
+                          {t.max==null ? `Ventas de $${t.min.toLocaleString()} en adelante` : `Ventas de $${t.min.toLocaleString()} a $${t.max.toLocaleString()}`}
+                        </span>
+                        <span style={{fontSize:14,fontWeight:800,color:"#2563eb"}}>{t.rate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <div style={{fontSize:10,color:"#94a3b8",marginTop:10}}>Ejemplo: si vendes un repuesto en $300, y tu rango es 6%, la comisión es $18 y recibes $282.</div>
+            </div>
+
+            {/* Historial de transacciones ganadas */}
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:12}}>Historial de ventas</div>
+              {myResponses.filter(r=>r.is_winner).length===0 ? (
+                <div style={{fontSize:12,color:"#94a3b8",textAlign:"center",padding:"20px 0"}}>Aún no tienes ventas registradas.</div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {myResponses.filter(r=>r.is_winner).map(r=>(
+                    <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"10px 12px",background:"#f8fafc",borderRadius:9}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{r.request?.item_name||"Repuesto"}</div>
+                        <div style={{fontSize:11,color:"#94a3b8"}}>{r.confirmed_at?new Date(r.confirmed_at).toLocaleDateString("es"):""}</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#16a34a"}}>${r.sale_amount||"—"}</div>
+                        {r.commission_amount!=null&&<div style={{fontSize:10,color:"#94a3b8"}}>comisión {r.commission_rate}% · recibes ${(Number(r.sale_amount)-Number(r.commission_amount)).toFixed(0)}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
