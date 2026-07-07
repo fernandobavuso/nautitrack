@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { activateSubscription } from "./subscriptions.jsx";
 import { notify } from "./notifications.js";
+import { distanceKm, kmToMi } from "./geo.js";
 
 // Panel de administrador (solo visible para los correos en ADMIN_EMAILS)
 // Tablero de ingresos: comisiones por venta + activación de planes
@@ -15,11 +16,12 @@ export function isAdmin(user) {
 }
 
 export default function AdminPanel({ user, onClose }) {
-  const [tab, setTab] = useState("pendientes");
+  const [tab, setTab] = useState("pedidos");
   const [sales, setSales] = useState([]);
   const [stores, setStores] = useState([]);
   const [vessels, setVessels] = useState([]);
   const [pending, setPending] = useState([]);
+  const [openRequests, setOpenRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
@@ -42,7 +44,34 @@ export default function AdminPanel({ user, onClose }) {
       .select("*, owner:owner_id(full_name,email), vessel:vessel_id(name,details,owner_id)")
       .eq("status","pending").order("created_at",{ascending:false});
     setPending(pr||[]);
+    // Pedidos de repuestos abiertos (para notificar a tiendas)
+    const { data: reqs } = await supabase.from("part_requests")
+      .select("*, owner:owner_id(full_name)")
+      .eq("status","open").order("created_at",{ascending:false});
+    setOpenRequests(reqs||[]);
     setLoading(false);
+  };
+
+  // Tiendas que califican para un pedido (por categoría y distancia/nacional)
+  const matchingStores = (req) => {
+    return stores.filter(st => {
+      const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
+      const catMatch = cats.length===0 || cats.includes((req.category||"").toLowerCase());
+      if (!catMatch) return false;
+      if (st.store_ships_nationwide) return true;
+      if (st.store_lat!=null && req.req_lat!=null) {
+        const d = distanceKm(st.store_lat, st.store_lng, req.req_lat, req.req_lng);
+        return d!=null && d <= (st.store_radius_km||50);
+      }
+      return true; // sin coordenadas, no filtramos
+    });
+  };
+
+  // Generar link de WhatsApp para notificar a una tienda de un pedido
+  const waLink = (store, req) => {
+    const phone = (store.store_phone||"").replace(/[^0-9]/g,"");
+    const msg = `Hola ${store.store_name}, tienes un nuevo pedido en Carive:\n\n📦 ${req.item_name}\n📍 ${req.city||"—"}\n${req.category?`Categoría: ${req.category}\n`:""}${req.part_num?`Ref: ${req.part_num}\n`:""}\nEntra a la app para cotizar: ${window.location.origin}`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   };
 
   // Ver el comprobante (link temporal firmado, bucket privado)
@@ -111,13 +140,76 @@ export default function AdminPanel({ user, onClose }) {
       </div>
 
       <div style={{display:"flex",gap:6,padding:"12px 22px 0",borderBottom:"1px solid #e2e8f0"}}>
-        {[{k:"pendientes",l:"Pagos pendientes"},{k:"ingresos",l:"Ingresos"},{k:"tiendas",l:"Comisiones por tienda"},{k:"planes",l:"Planes"}].map(t=>(
+        {[{k:"pedidos",l:"Pedidos → Tiendas"},{k:"pendientes",l:"Pagos pendientes"},{k:"ingresos",l:"Ingresos"},{k:"tiendas",l:"Comisiones por tienda"},{k:"planes",l:"Planes"}].map(t=>(
           <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"8px 14px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,color:tab===t.k?"#2563eb":"#64748b",borderBottom:tab===t.k?"2px solid #2563eb":"2px solid transparent",marginBottom:-1}}>{t.l}</button>
         ))}
       </div>
 
       <div style={{padding:22,overflowY:"auto"}}>
         {/* INGRESOS */}
+        {tab==="pedidos"&&(
+          <div>
+            <div style={{background:"#eff6ff",border:"1px solid #bae6fd",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#0369a1",lineHeight:1.5}}>
+              Cuando un dueño publica un pedido, notifica por WhatsApp a las tiendas que califican (por categoría y cercanía). Un clic abre el WhatsApp con el mensaje listo.
+            </div>
+            {openRequests.length===0 ? (
+              <div style={{textAlign:"center",padding:"40px 20px",color:"#94a3b8"}}>
+                <div style={{fontWeight:600}}>No hay pedidos abiertos</div>
+                <div style={{fontSize:12,marginTop:4}}>Cuando un dueño pida un repuesto, aparecerá aquí para notificar a las tiendas.</div>
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                {openRequests.map(req=>{
+                  const matches = matchingStores(req);
+                  return (
+                    <div key={req.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap",marginBottom:12}}>
+                        <div>
+                          <div style={{fontSize:15,fontWeight:700,color:"#0a2540"}}>{req.item_name}</div>
+                          <div style={{fontSize:12,color:"#64748b",marginTop:2}}>
+                            {req.category} · {req.city||"sin ubicación"} · pedido por {req.owner?.full_name||"—"}
+                            {req.urgent&&<span style={{marginLeft:6,background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20}}>URGENTE</span>}
+                          </div>
+                        </div>
+                        <div style={{fontSize:12,color:"#94a3b8"}}>{new Date(req.created_at).toLocaleDateString("es")}</div>
+                      </div>
+                      <div style={{fontSize:11,fontWeight:700,color:"#475569",marginBottom:8}}>{matches.length} tienda{matches.length!==1?"s":""} calific{matches.length!==1?"an":"a"}</div>
+                      {matches.length===0 ? (
+                        <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>Ninguna tienda registrada califica para este pedido (por categoría o distancia).</div>
+                      ) : (
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          {matches.map(st=>{
+                            const dist = (st.store_lat!=null&&req.req_lat!=null)?distanceKm(st.store_lat,st.store_lng,req.req_lat,req.req_lng):null;
+                            const hasPhone = (st.store_phone||"").replace(/[^0-9]/g,"").length>=7;
+                            return (
+                              <div key={st.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"10px 12px",background:"#f8fafc",borderRadius:9}}>
+                                <div>
+                                  <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{st.store_name||"Tienda"}</div>
+                                  <div style={{fontSize:11,color:"#94a3b8"}}>
+                                    {st.store_city||"—"}
+                                    {dist!=null&&` · a ${Math.round(kmToMi(dist))} mi`}
+                                    {st.store_ships_nationwide&&" · envío nacional"}
+                                    {!hasPhone&&" · ⚠ sin WhatsApp"}
+                                  </div>
+                                </div>
+                                {hasPhone ? (
+                                  <a href={waLink(st,req)} target="_blank" rel="noreferrer" style={{padding:"7px 14px",background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}}>Notificar por WhatsApp</a>
+                                ) : (
+                                  <span style={{fontSize:11,color:"#94a3b8"}}>Sin número</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab==="pendientes"&&(
           <div>
             {pending.length===0 ? (

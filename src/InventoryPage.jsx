@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { hasFeature, PremiumLock } from "./plans.jsx";
-import { findCityCoords } from "./geo.js";
+import { findCityCoords, distanceKm } from "./geo.js";
 import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
 
@@ -480,21 +480,32 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
         // Pedir aprobación al dueño — no se publica a tiendas todavía
         notify(vessel.owner_id, { type:"parts_approval", title:"Aprobación de repuesto", body:`${authorName} quiere pedir ${form.item_name} (~$${estAmount}). Supera el tope de $${limit}.`, link:"inventory" });
       } else {
-        // Publicar a tiendas que calzan
+        // Publicar a tiendas que calzan (por categoría y distancia)
         const { data: stores } = await supabase.from("profiles")
-          .select("id,store_categories,store_city,store_ships_nationwide,store_phone")
+          .select("id,store_categories,store_city,store_ships_nationwide,store_phone,store_lat,store_lng,store_radius_km")
           .eq("role","store");
-        const cityL = city.toLowerCase();
         const nationalSearch = form.scope === "national";
+        let notifiedCount = 0;
         (stores||[]).forEach(st => {
           const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
           const catMatch = cats.includes(form.category.toLowerCase());
-          const stCity = (st.store_city||"").toLowerCase();
-          const cityMatch = nationalSearch || st.store_ships_nationwide || !stCity || !cityL || stCity.includes(cityL) || cityL.includes(stCity);
-          if (catMatch && cityMatch) {
+          if (!catMatch) return;
+          let geoMatch;
+          if (nationalSearch || st.store_ships_nationwide) geoMatch = true;
+          else if (st.store_lat!=null && reqLat!=null) {
+            const d = distanceKm(st.store_lat,st.store_lng,reqLat,reqLng);
+            geoMatch = d!=null ? d <= (st.store_radius_km||50) : true;
+          } else geoMatch = true;
+          if (geoMatch) {
             notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${form.item_name} (${form.category})${city?` en ${city}`:""}`, link:"solicitudes" });
+            notifiedCount++;
           }
         });
+        // Avisar al admin (Fernando) para reforzar por WhatsApp si quiere
+        try {
+          const { data: admin } = await supabase.from("profiles").select("id").eq("email","fernandobavuso@gmail.com").maybeSingle();
+          if (admin) notify(admin.id, { type:"admin_new_request", title:"Nuevo pedido para tiendas", body:`${form.item_name} en ${city||"—"}. ${notifiedCount} tienda(s) notificada(s). Refuérzalo por WhatsApp desde el Panel.`, link:"" });
+        } catch(e){}
       }
     }
     setSaving(false);
