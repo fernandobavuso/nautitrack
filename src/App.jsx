@@ -2045,6 +2045,7 @@ function ReportModal({ vessel, onClose }) {
   const [sel,setSel]   = useState([]);
   const [from,setFrom] = useState("");
   const [to,setTo]     = useState("");
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [gen,setGen]   = useState(false);
 
   const REPORT_TYPES = [
@@ -2463,9 +2464,9 @@ function ReportModal({ vessel, onClose }) {
         </div>
 
         {/* Fixed footer — always visible */}
-        <div style={{...s.modalFooter,background:"#fff",borderTop:"1px solid #e2e8f0"}}>
+        <div style={{...s.modalFooter,background:"#fff",borderTop:"1px solid #e2e8f0",flexWrap:"wrap",gap:8}}>
           <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
-          <div style={{display:"flex",gap:8}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button style={{...s.btnOutline,fontSize:11}} onClick={()=>setSel(REPORT_TYPES.map(r=>r.key))}>
               Seleccionar todo
             </button>
@@ -2475,8 +2476,53 @@ function ReportModal({ vessel, onClose }) {
             >
               Generar ({sel.length})
             </button>
+            <button
+              style={{...s.btnPrimary,opacity:sel.length===0?0.4:1,background:"linear-gradient(135deg,#16a34a,#22c55e)"}}
+              onClick={()=>{ if(sel.length>0) setShowSendConfirm(true); }}
+            >
+              Enviar al dueño
+            </button>
           </div>
         </div>
+
+        {/* Confirmación de envío al dueño */}
+        {showSendConfirm && (() => {
+          const ownerName = vessel.details?.boatOwnerName || "";
+          const ownerEmail = vessel.details?.boatOwnerEmail || "";
+          if (!ownerEmail) {
+            return (
+              <div style={s.modalOverlay} onClick={()=>setShowSendConfirm(false)}>
+                <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:400,width:"90%"}} onClick={e=>e.stopPropagation()}>
+                  <div style={{fontSize:16,fontWeight:800,color:"#0a2540",marginBottom:8,fontFamily:"'Sora',system-ui,sans-serif"}}>Falta el email del dueño</div>
+                  <div style={{fontSize:13,color:"#64748b",lineHeight:1.5,marginBottom:16}}>Para enviar el reporte, primero agrega el nombre y email del dueño del barco en "Mi Embarcación" → sección general.</div>
+                  <button onClick={()=>setShowSendConfirm(false)} style={{...s.btnPrimary,width:"100%"}}>Entendido</button>
+                </div>
+              </div>
+            );
+          }
+          const period = from&&to?`del ${from} al ${to}`:"actual";
+          const subject = `Reporte de ${vessel.name} — ${new Date().toLocaleDateString("es")}`;
+          const body = `Estimado/a ${ownerName||"propietario"},\n\nAdjunto el reporte de gestión de su embarcación ${vessel.name} correspondiente al período ${period}.\n\nEl reporte incluye el estado general, mantenimientos realizados y demás información relevante de la gestión.\n\nQuedo a su disposición para cualquier consulta.\n\nSaludos cordiales,\nThe Boating Zone`;
+          const mailto = `mailto:${ownerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          return (
+            <div style={s.modalOverlay} onClick={()=>setShowSendConfirm(false)}>
+              <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:420,width:"90%"}} onClick={e=>e.stopPropagation()}>
+                <div style={{fontSize:16,fontWeight:800,color:"#0a2540",marginBottom:6,fontFamily:"'Sora',system-ui,sans-serif"}}>Enviar reporte al dueño</div>
+                <div style={{fontSize:13,color:"#64748b",lineHeight:1.6,marginBottom:16}}>
+                  Vas a enviar el reporte de <strong>{vessel.name}</strong> a:<br/>
+                  <span style={{color:"#0a2540",fontWeight:600}}>{ownerName} · {ownerEmail}</span>
+                </div>
+                <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 12px",fontSize:11,color:"#92400e",marginBottom:16,lineHeight:1.5}}>
+                  Primero se abrirá el reporte para que lo revises y lo guardes como PDF. Luego se abrirá tu correo con el mensaje listo — adjunta el PDF antes de enviar. <strong>Nada se envía sin tu confirmación.</strong>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>setShowSendConfirm(false)} style={{...s.btnOutline,flex:1}}>Cancelar</button>
+                  <button onClick={()=>{ openReport(); window.location.href = mailto; setShowSendConfirm(false); onClose&&onClose(); }} style={{...s.btnPrimary,flex:1,background:"linear-gradient(135deg,#16a34a,#22c55e)"}}>Generar y abrir correo</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -3263,6 +3309,8 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
     uscg:         d.uscg         || "",
     built:        d.built        || "",
     hin:          d.hin          || "",
+    boatOwnerName:  d.boatOwnerName  || "",
+    boatOwnerEmail: d.boatOwnerEmail || "",
   });
 
   // Dimensions
@@ -3422,6 +3470,8 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
             <VesselField key="country" editMode={editMode} label="País"       value={gen.country} onChange={v=>setGen(g=>({...g,country:v}))} placeholder="Ej: Venezuela, USA"/>
             <VesselField key="notifyPhone" editMode={editMode} label="📲 WhatsApp Alertas" value={gen.notifyPhone} onChange={v=>setGen(g=>({...g,notifyPhone:v}))} placeholder="Ej: +584141234567 o +13051234567"/>
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
+            <VesselField key="boatOwnerName" editMode={editMode} label="Dueño del barco" value={gen.boatOwnerName} onChange={v=>setGen(g=>({...g,boatOwnerName:v}))} placeholder="A quién se le envían los reportes"/>
+            <VesselField key="boatOwnerEmail" editMode={editMode} label="Email del dueño" value={gen.boatOwnerEmail} onChange={v=>setGen(g=>({...g,boatOwnerEmail:v}))} placeholder="correo@ejemplo.com"/>
             <VesselField key="manuf" editMode={editMode} label="Fabricante" value={gen.manufacturer} onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
             <VesselField key="model" editMode={editMode} label="Modelo" value={gen.model} onChange={v=>setGen(g=>({...g,model:v}))}/>
             <VesselField key="year" editMode={editMode} label="Año" value={gen.year} onChange={v=>setGen(g=>({...g,year:v}))}/>
