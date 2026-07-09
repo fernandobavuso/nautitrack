@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 // Mini "drive" de documentos por embarcación: carpetas + subir archivos reales
 // o guardar links. Persiste en la tabla vessel_documents + Storage bucket "documentos".
 
-export default function DocsManager({ vessel }) {
+export default function DocsManager({ vessel, user }) {
   const [docs, setDocs] = useState([]);
   const [folders, setFolders] = useState([]); // nombres de carpetas
   const [currentFolder, setCurrentFolder] = useState(""); // "" = raíz
@@ -45,7 +45,7 @@ export default function DocsManager({ vessel }) {
       const { error: upErr } = await supabase.storage.from("documentos").upload(path, file);
       if (upErr) throw upErr;
       const { error: insErr } = await supabase.from("vessel_documents").insert({
-        vessel_id: vessel.id, owner_id: vessel.owner_id, folder: currentFolder,
+        vessel_id: vessel.id, owner_id: vessel.owner_id || user?.id, folder: currentFolder,
         title: newTitle.trim() || file.name, kind: "file",
         file_path: path, file_size: file.size, mime_type: file.type,
       });
@@ -64,7 +64,7 @@ export default function DocsManager({ vessel }) {
     if (!newTitle.trim() || !newUrl.trim()) { flash("Completa título y URL"); return; }
     const url = newUrl.startsWith("http") ? newUrl : "https://" + newUrl;
     await supabase.from("vessel_documents").insert({
-      vessel_id: vessel.id, owner_id: vessel.owner_id, folder: currentFolder,
+      vessel_id: vessel.id, owner_id: vessel.owner_id || user?.id, folder: currentFolder,
       title: newTitle.trim(), kind: "link", url,
     });
     flash("Link agregado");
@@ -77,7 +77,7 @@ export default function DocsManager({ vessel }) {
     if (!newFolder.trim()) { flash("Escribe un nombre de carpeta"); return; }
     if (folders.includes(newFolder.trim())) { flash("Ya existe esa carpeta"); return; }
     await supabase.from("vessel_documents").insert({
-      vessel_id: vessel.id, owner_id: vessel.owner_id, folder: "",
+      vessel_id: vessel.id, owner_id: vessel.owner_id || user?.id, folder: "",
       title: newFolder.trim(), kind: "folder",
     });
     flash("Carpeta creada");

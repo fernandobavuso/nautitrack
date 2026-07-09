@@ -781,9 +781,9 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:200}} onClick={()=>setMobileMenuOpen(false)}>
             <div style={{position:"absolute",left:0,top:0,bottom:0,width:280,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
               {/* Header del panel */}
-              <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{padding:"18px 20px",paddingTop:"calc(18px + env(safe-area-inset-top, 0px))",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={s.navBrand}>Carive</div>
-                <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
+                <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8",padding:8,margin:-8}}>✕</button>
               </div>
 
               {/* Perfil del usuario */}
@@ -2897,7 +2897,7 @@ function DocsPage({ vessel, user }) {
 
       {/* ── DOCS TAB ── */}
       {activeTab==="docs"&&(
-        <DocsManager vessel={vessel} />
+        <DocsManager vessel={vessel} user={user} />
       )}
 
       {/* ── LINKS TAB ── */}
