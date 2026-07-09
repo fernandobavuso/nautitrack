@@ -6,7 +6,7 @@ const VESSEL_TYPES = [
   "Barco de Trabajo","Yate de Vela","Otro"
 ];
 
-export default function AddVessel({ onAdd, onSkip }) {
+export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
   const [step, setStep]     = useState(1);
   const [loading, setLoading] = useState(false);
   const [form, setForm]     = useState({
@@ -67,8 +67,8 @@ export default function AddVessel({ onAdd, onSkip }) {
         <div style={s.header}>
           <CariveLogo size={44} />
           <div style={s.headerText}>
-            <div style={s.title}>Agrega tu primera embarcación</div>
-            <div style={s.subtitle}>Puedes editar todos los detalles después</div>
+            <div style={s.title}>{isOnboarding ? "Configura tu embarcación" : "Agrega tu primera embarcación"}</div>
+            <div style={s.subtitle}>{isOnboarding ? "Un último paso y tu panel estará listo. Puedes editar todo después." : "Puedes editar todos los detalles después"}</div>
           </div>
         </div>
 
@@ -186,7 +186,7 @@ export default function AddVessel({ onAdd, onSkip }) {
         )}
 
         {/* Skip */}
-        <button onClick={onSkip} style={s.skipBtn}>Saltar por ahora</button>
+        <button onClick={onSkip} style={s.skipBtn}>{isOnboarding ? "Explorar la app primero (agregar barco después)" : "Saltar por ahora"}</button>
       </div>
     </div>
   );

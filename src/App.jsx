@@ -594,7 +594,7 @@ export default function App() {
   );
 
   if (!vesselsLoading && vessels.length === 0 && !skippedSetup) return (
-    <AddVessel onAdd={handleAddVessel} onSkip={() => {
+    <AddVessel isOnboarding onAdd={handleAddVessel} onSkip={() => {
       // Omitir deja la app en blanco (sin barcos demo). El usuario puede agregar su barco cuando quiera.
       setSkippedSetup(true);
     }}/>
