@@ -632,7 +632,7 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",gap:16}}>
               <CariveLogo size={44} />
               <div>
-                <div style={{fontSize:17,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>¡Bienvenido a Carive, {(user?.full_name||"").split(" ")[0]||""}!</div>
+                <div style={{fontSize:17,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>¡Bienvenido a Carive{(user?.full_name||"").split(" ")[0]?`, ${(user?.full_name||"").split(" ")[0]}`:""}!</div>
                 <div style={{fontSize:13,color:"#475569",marginTop:2}}>Agrega tu primera embarcación para empezar a gestionar tareas, bitácora, costos y más.</div>
               </div>
             </div>
