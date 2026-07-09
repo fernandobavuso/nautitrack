@@ -3737,7 +3737,7 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
 }
 const s = {
   root:       { minHeight:"100vh", background:"linear-gradient(180deg,#f4f9ff 0%,#eaf2fb 100%)", fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", color:"#1e293b", fontSize:13 },
-  nav:        { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", height:56, background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box" },
+  nav:        { display:"flex", alignItems:"flex-end", justifyContent:"space-between", padding:"0 20px 8px", paddingTop:"env(safe-area-inset-top, 0px)", height:"calc(56px + env(safe-area-inset-top, 0px))", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box" },
   navLogo:    { display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 },
   navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
   navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center" },
