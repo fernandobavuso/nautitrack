@@ -236,7 +236,7 @@ export default function App() {
   const [showExpenseRouter, setShowExpenseRouter] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
-  const [skippedSetup, setSkippedSetup] = useState(false);
+  const [skippedSetup, setSkippedSetup] = useState(() => localStorage.getItem("nt_skipped_setup") === "1");
   const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
@@ -529,6 +529,7 @@ export default function App() {
       setVessels(v => [...v, mapped]);
       setVesselId(mapped.id);
       setAddingVessel(false);
+      localStorage.removeItem("nt_skipped_setup");
     }
   };
 
@@ -593,9 +594,10 @@ export default function App() {
     <Onboarding onStart={() => { localStorage.setItem("nt_welcomed","1"); setShowWelcome(false); }} />
   );
 
-  if (!vesselsLoading && vessels.length === 0 && !skippedSetup) return (
+  if (!vesselsLoading && vessels.length === 0 && !skippedSetup && !isAdmin(user)) return (
     <AddVessel isOnboarding onAdd={handleAddVessel} onSkip={() => {
-      // Omitir deja la app en blanco (sin barcos demo). El usuario puede agregar su barco cuando quiera.
+      // Omitir deja la app en blanco (sin barcos demo). Se recuerda entre recargas.
+      localStorage.setItem("nt_skipped_setup", "1");
       setSkippedSetup(true);
     }}/>
   );
