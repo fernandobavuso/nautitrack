@@ -5,6 +5,7 @@ import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
 import LocationPicker from "./LocationPicker.jsx";
 import { distanceKm, kmToMi } from "./geo.js";
+import StoreOnboarding from "./StoreOnboarding.jsx";
 
 const STORE_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
 
@@ -17,6 +18,7 @@ export default function StoreView({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [respondTo, setRespondTo] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem("nt_store_welcomed") !== "1");
 
   useEffect(() => { loadProfile(); loadTiers().then(setCommissionTiers); }, []);
   useEffect(() => { if (profile) { loadRequests(); loadResponses(); } }, [profile]);
@@ -105,6 +107,11 @@ export default function StoreView({ user, onLogout }) {
   const responseRate = requests.length>0 ? Math.round((myResponses.length/(requests.length+myResponses.length))*100) : 0;
 
   if (loading) return <div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando...</div>;
+
+  // Bienvenida la primera vez (tienda nueva)
+  if (showWelcome && !profileComplete) return (
+    <StoreOnboarding onStart={() => { localStorage.setItem("nt_store_welcomed","1"); setShowWelcome(false); setTab("perfil"); }} />
+  );
 
   return (
     <div style={{minHeight:"100vh",background:"#f1f5f9"}}>
