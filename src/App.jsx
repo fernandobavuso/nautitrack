@@ -14,6 +14,7 @@ import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
+import { useLang } from "./i18n.jsx";
 import CariveLogo from "./CariveLogo";
 import FleetManagers from "./FleetManagers";
 import CalendarPage from "./CalendarPage";
@@ -213,6 +214,7 @@ function getEquipmentList(vessel, systemId) {
 }
 export default function App() {
   const { isMobile } = useResponsive();
+  const { t, lang, setLang } = useLang();
   const [user, setUser]               = useState(null);
   const [inviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
   const [pendingInvite, setPendingInvite] = useState(null);
@@ -634,12 +636,12 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",gap:16}}>
               <CariveLogo size={44} />
               <div>
-                <div style={{fontSize:17,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>¡Bienvenido a Carive{(user?.full_name||"").split(" ")[0]?`, ${(user?.full_name||"").split(" ")[0]}`:""}!</div>
-                <div style={{fontSize:13,color:"#475569",marginTop:2}}>Agrega tu primera embarcación para empezar a gestionar tareas, bitácora, costos y más.</div>
+                <div style={{fontSize:17,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>{t("dash.welcome")}{(user?.full_name||"").split(" ")[0]?`, ${(user?.full_name||"").split(" ")[0]}`:""}!</div>
+                <div style={{fontSize:13,color:"#475569",marginTop:2}}>{t("dash.addFirst")}</div>
               </div>
             </div>
             <button onClick={()=>setAddingVessel(true)} style={{padding:"11px 22px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 3px 12px rgba(37,99,235,0.28)"}}>
-              Agregar embarcación
+              {t("dash.addVessel")}
             </button>
           </div>
         )}
@@ -713,8 +715,18 @@ const NAV_GROUPS = [
 
 function NavGroups({ page, setPage, showFleet, isAdminUser }) {
   const [open, setOpen] = useState(null);
-  const adminGroup = isAdminUser ? [{ key:"admin", label:"Panel", single:true }] : [];
-  const groups = [...(showFleet ? [{ key:"fleet", label:"Mi Flota", single:true }] : []), ...NAV_GROUPS, ...adminGroup];
+  const { t } = useLang();
+  const L = {
+    home:t("nav.home"), fleet:t("nav.fleet"), op:t("nav.operation"), tasks:t("nav.tasks"),
+    calendar:t("nav.calendar"), log:t("nav.log"), fin:t("nav.finance"), costs:t("nav.expenses"),
+    inventory:t("nav.parts"), reg:t("nav.registries"), records:t("nav.records"), docs:t("nav.docs"),
+    gest:t("nav.management"), providers:t("nav.providers"), admin:t("nav.panel"),
+  };
+  const adminGroup = isAdminUser ? [{ key:"admin", label:L.admin, single:true }] : [];
+  const groups = [...(showFleet ? [{ key:"fleet", label:L.fleet, single:true }] : []), ...NAV_GROUPS.map(g=>({
+    ...g, label: L[g.key]||g.label,
+    items: g.items?.map(it=>({ ...it, label: L[it.key]||it.label })),
+  })), ...adminGroup];
 
   return (
     <div style={{display:"flex",alignItems:"center",gap:4}} onMouseLeave={()=>setOpen(null)}>
@@ -751,6 +763,7 @@ function NavGroups({ page, setPage, showFleet, isAdminUser }) {
 const iconBtn = { width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer" };
 
 function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,canManageFleet,page,setPage,onLogout }) {
+  const { t, lang, setLang } = useLang();
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const totalAlerts = vessels.reduce((a,v) => a+v.alerts, 0);
@@ -837,7 +850,15 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>Planes y Suscripción</button>
                 {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Equipo de gestión</button>}
                 {isAdminUser && <button onClick={()=>{setPage("admin");setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>Panel de Administrador</button>}
-                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}><IconLogout size={17} color="#dc2626"/>Cerrar Sesión</button>
+                {/* Selector de idioma */}
+                <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 14px"}}>
+                  <span style={{fontSize:14,color:"#1e293b",fontWeight:500,flex:1}}>{lang==="es"?"Idioma":"Language"}</span>
+                  <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:8,padding:3}}>
+                    <button onClick={()=>setLang("es")} style={{padding:"5px 12px",border:"none",borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
+                    <button onClick={()=>setLang("en")} style={{padding:"5px 12px",border:"none",borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
+                  </div>
+                </div>
+                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{...mobileItemStyle,color:"#dc2626"}}><IconLogout size={17} color="#dc2626"/>{t("nav.logout")}</button>
               </div>
             </div>
           </div>
@@ -940,6 +961,7 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
 }
 
 function FleetCard({ vessels, vessel, updateVessel }) {
+  const { t: tr } = useLang();
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName]   = useState("");
 
@@ -953,7 +975,7 @@ function FleetCard({ vessels, vessel, updateVessel }) {
 
   return (
     <div style={{...s.card,flex:1.2}}>
-      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBoat size={17} color="#2563eb"/> Estado de la Flota</span><span style={s.cardSub}>{vessels.length} embarcaciones</span></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBoat size={17} color="#2563eb"/> {tr("dash.fleetStatus")}</span><span style={s.cardSub}>{vessels.length} {tr("dash.vessels")}</span></div>
       {vessels.map(v => {
         const od=v.tasks.filter(t=>t.status==="overdue").length, du=v.tasks.filter(t=>t.status==="due").length;
         return (
@@ -984,12 +1006,13 @@ function FleetCard({ vessels, vessel, updateVessel }) {
 }
 
 function AlertsCard({ vessel, setPage }) {
+  const { t: tr } = useLang();
   const od = (vessel.tasks||[]).filter(t => t.status==="overdue");
   return (
     <div style={{...s.card,flex:1}}>
-      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconAlert size={17} color="#dc2626"/> Alertas</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>Ver →</button></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconAlert size={17} color="#dc2626"/> {tr("dash.alerts")}</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>{tr("dash.see")} →</button></div>
       {od.length===0
-        ? <div style={s.empty}><div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconCheckCircle size={32} color="#16a34a"/></div><div style={{color:"#16a34a",fontWeight:600,fontSize:13}}>Sin alertas</div></div>
+        ? <div style={s.empty}><div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconCheckCircle size={32} color="#16a34a"/></div><div style={{color:"#16a34a",fontWeight:600,fontSize:13}}>{tr("dash.noAlerts")}</div></div>
         : od.map(t => (
           <div key={t.id} style={s.alertRow}>
             <div style={s.alertDot} />
@@ -1002,6 +1025,7 @@ function AlertsCard({ vessel, setPage }) {
 }
 
 function IndicatorsCard({ vessel }) {
+  const { t: tr } = useLang();
   const fc = vessel.fuel>50?"#16a34a":vessel.fuel>25?"#d97706":"#dc2626";
   // Calcular próximo servicio real de las tareas pendientes
   const pendingTasks = (vessel.tasks||[]).filter(t=>t.status!=="done"&&t.nextDue).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
@@ -1011,11 +1035,11 @@ function IndicatorsCard({ vessel }) {
     : "Ninguno";
   return (
     <div style={{...s.card,flex:1}}>
-      <div style={s.cardHdr}><span style={s.cardTitle}>Indicadores</span><span style={s.cardSub}>{vessel.name}</span></div>
+      <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {[
-          {Icon:IconFuel,val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:"Combustible",color:fc,bar:true},
-          {Icon:IconEngine,val:`${vessel.engineHours}h`,lbl:"Horas Motor",color:"#2563eb",bar:false},
+          {Icon:IconFuel,val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:tr("dash.fuel"),color:fc,bar:true},
+          {Icon:IconEngine,val:`${vessel.engineHours}h`,lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (

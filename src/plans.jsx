@@ -1,5 +1,6 @@
 // Sistema central de planes de Carive
 // El plan del dueño se guarda en details._subscription.plan ("free" | "pro")
+import { useLang } from "./i18n.jsx";
 
 // ─────────────────────────────────────────────────────────────
 // ACCESO DE FUNDADOR (modo lanzamiento)
@@ -81,6 +82,7 @@ export function hasFeature(vessel, featureKey) {
 // Banner discreto de Acceso de Fundador para el dashboard
 export function FounderBanner() {
   if (!FOUNDER_ACCESS) return null;
+  const { t } = useLang();
   return (
     <div style={{
       background:"linear-gradient(120deg,#0a2540,#1e3a8a)",
@@ -96,9 +98,9 @@ export function FounderBanner() {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21l2.3-7.4-6-4.6h7.6z"/></svg>
       </div>
       <div style={{flex:1, minWidth:220}}>
-        <div style={{fontSize:14, fontWeight:800, color:"#fff", fontFamily:"'Sora',system-ui,sans-serif"}}>Acceso de Fundador</div>
+        <div style={{fontSize:14, fontWeight:800, color:"#fff", fontFamily:"'Sora',system-ui,sans-serif"}}>{t("founder.title")}</div>
         <div style={{fontSize:12, color:"#bfdbfe", lineHeight:1.4, marginTop:2}}>
-          Disfrutas todas las funciones gratis durante el lanzamiento. Gracias por estar entre los primeros — tendrás condiciones especiales cuando lancemos los planes.
+          {t("founder.body")}
         </div>
       </div>
     </div>
