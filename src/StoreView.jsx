@@ -6,10 +6,12 @@ import { loadTiers, computeCommission } from "./commission.jsx";
 import LocationPicker from "./LocationPicker.jsx";
 import { distanceKm, kmToMi } from "./geo.js";
 import StoreOnboarding from "./StoreOnboarding.jsx";
+import { useLang } from "./i18n.jsx";
 
 const STORE_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
 
 export default function StoreView({ user, onLogout }) {
+  const { t } = useLang();
   const [tab, setTab] = useState("solicitudes");
   const [profile, setProfile] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -121,13 +123,13 @@ export default function StoreView({ user, onLogout }) {
           <CariveLogo size={30} />
           <div>
             <div style={{fontSize:15,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Carive</div>
-            <div style={{fontSize:10,color:"#64748b"}}>Portal de Tiendas</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{t("store.portal")}</div>
           </div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:10,padding:4}}>
-            {[{k:"solicitudes",l:"Solicitudes"},{k:"respuestas",l:"Mis cotizaciones"},{k:"perfil",l:"Mi tienda"}].map(t=>(
-              <button key={t.k} onClick={()=>setTab(t.k)} style={{padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===t.k?700:500,background:tab===t.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"transparent",color:tab===t.k?"#fff":"#64748b"}}>{t.l}</button>
+            {[{k:"solicitudes",l:t("store.requests")},{k:"respuestas",l:t("store.quotes")},{k:"perfil",l:t("store.myStore")}].map(tb=>(
+              <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===tb.k?700:500,background:tab===tb.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"transparent",color:tab===tb.k?"#fff":"#64748b"}}>{tb.l}</button>
             ))}
           </div>
           <button onClick={onLogout} style={{padding:"7px 12px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#94a3b8",marginLeft:4}}>Salir</button>
@@ -141,7 +143,7 @@ export default function StoreView({ user, onLogout }) {
             <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:"radial-gradient(circle,rgba(56,189,248,.22),transparent 70%)"}}/>
             <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,marginBottom:4}}>{profile.store_name}</div>
             <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?" · Envío nacional":profile.store_radius_km?` · Cobertura ${Math.round(kmToMi(profile.store_radius_km))} mi`:""}</div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(56,189,248,.2)",color:"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>✓ Tienda activa</div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(56,189,248,.2)",color:"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>✓ {t("store.active")}</div>
           </div>
         )}
 
@@ -149,10 +151,10 @@ export default function StoreView({ user, onLogout }) {
         {profileComplete && (
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
             {[
-              {v:newRequests, l:"Pedidos nuevos", sub:"para ti", hl:true},
-              {v:thisMonthWon, l:"Ventas del mes", sub:wonSales>0?`${wonSales} en total`:""},
-              {v:quotesSent, l:"Cotizaciones enviadas", sub:""},
-              {v:responseRate+"%", l:"Tasa de respuesta", sub:""},
+              {v:newRequests, l:t("store.newOrders"), sub:t("store.forYou"), hl:true},
+              {v:thisMonthWon, l:t("store.monthSales"), sub:""},
+              {v:quotesSent, l:t("store.quotesSent"), sub:""},
+              {v:responseRate+"%", l:t("store.responseRate"), sub:""},
             ].map((m,i)=>(
               <div key={i} style={{background:m.hl?"linear-gradient(120deg,#eff6ff,#e0f2fe)":"#fff",border:`1px solid ${m.hl?"#bae6fd":"#e2e8f0"}`,borderRadius:14,padding:16}}>
                 <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:26,fontWeight:800,color:m.hl?"#2563eb":"#0a2540"}}>{m.v}</div>
@@ -166,9 +168,9 @@ export default function StoreView({ user, onLogout }) {
         {/* Aviso de perfil incompleto */}
         {!profileComplete && tab!=="perfil" && (
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:16,marginBottom:16}}>
-            <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>Completa tu perfil de tienda</div>
-            <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Indica tu nombre, ciudad y categorías para empezar a recibir solicitudes de repuestos.</div>
-            <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Completar perfil</button>
+            <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>{t("store.completeProfile")}</div>
+            <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>{t("store.completeProfileSub")}</div>
+            <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{t("store.completeBtn")}</button>
           </div>
         )}
 
@@ -178,8 +180,8 @@ export default function StoreView({ user, onLogout }) {
             <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Solicitudes para ti{profile.store_city?` · ${profile.store_city}`:""}</div>
             {requests.length===0&&(
               <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                <div style={{fontWeight:600}}>Sin solicitudes por ahora</div>
-                <div style={{fontSize:12,marginTop:4}}>Te avisaremos cuando llegue un pedido de tu categoría</div>
+                <div style={{fontWeight:600}}>{t("store.noRequests")}</div>
+                <div style={{fontSize:12,marginTop:4}}>{t("store.noRequestsSub")}</div>
               </div>
             )}
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -195,8 +197,8 @@ export default function StoreView({ user, onLogout }) {
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:10}}>
                       <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20}}>{r.category||"Repuesto"}</span>
                       <div style={{display:"flex",gap:6}}>
-                        {r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>URGENTE</span>}
-                        {isNew&&!r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>NUEVO</span>}
+                        {r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>{t("store.urgent")}</span>}
+                        {isNew&&!r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>{t("store.new")}</span>}
                       </div>
                     </div>
                     <div style={{display:"flex",gap:14,marginBottom:14}}>
@@ -213,8 +215,8 @@ export default function StoreView({ user, onLogout }) {
                       </div>
                     </div>
                     {responded
-                      ? <div style={{fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center",background:"#f0fdf4",borderRadius:9,padding:"9px"}}>✓ Ya enviaste tu cotización</div>
-                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar cotización</button>
+                      ? <div style={{fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center",background:"#f0fdf4",borderRadius:9,padding:"9px"}}>✓ {t("store.alreadyQuoted")}</div>
+                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{t("store.sendQuote")}</button>
                     }
                   </div>
                 );
@@ -227,12 +229,12 @@ export default function StoreView({ user, onLogout }) {
         {tab==="respuestas"&&(
           <div>
             <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Mis cotizaciones</div>
-            {myResponses.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>Aún no has enviado ninguna cotización</div>}
+            {myResponses.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>{t("store.noQuotes")}</div>}
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {myResponses.map(r=>{
                 const won = r.is_winner;
                 const resolved = r.request?.status==="resolved";
-                const st = won ? {bg:"#f0fdf4",c:"#16a34a",l:"✓ GANADA"} : resolved ? {bg:"#f8fafc",c:"#94a3b8",l:"No seleccionada"} : {bg:"#fffbeb",c:"#d97706",l:"⏳ PENDIENTE"};
+                const st = won ? {bg:"#f0fdf4",c:"#16a34a",l:`✓ ${t("store.won")}`} : resolved ? {bg:"#f8fafc",c:"#94a3b8",l:t("store.notChosen")} : {bg:"#fffbeb",c:"#d97706",l:`⏳ ${t("store.pending")}`};
                 return (
                   <div key={r.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,padding:18}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
@@ -313,11 +315,11 @@ export default function StoreView({ user, onLogout }) {
                   ))}
                 </div>
               </div>
-              <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Guardar tienda</button>
+              <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>{t("store.saveStore")}</button>
             </div>
 
             {/* ── COMISIONES Y TRANSACCIONES ── */}
-            <div style={{fontSize:16,fontWeight:800,color:"#0a2540",margin:"28px 0 12px",fontFamily:"'Sora',system-ui,sans-serif"}}>Comisiones y transacciones</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#0a2540",margin:"28px 0 12px",fontFamily:"'Sora',system-ui,sans-serif"}}>{t("store.commissions")}</div>
 
             {/* Resumen */}
             {(() => {
@@ -328,9 +330,9 @@ export default function StoreView({ user, onLogout }) {
               return (
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
                   {[
-                    {v:`$${totalSold.toFixed(0)}`, l:"Total vendido"},
-                    {v:`$${totalComm.toFixed(0)}`, l:"Comisiones pagadas", c:"#dc2626"},
-                    {v:`$${totalNet.toFixed(0)}`, l:"Neto recibido", c:"#16a34a"},
+                    {v:`$${totalSold.toFixed(0)}`, l:t("store.totalSold")},
+                    {v:`$${totalComm.toFixed(0)}`, l:t("store.commPaid"), c:"#dc2626"},
+                    {v:`$${totalNet.toFixed(0)}`, l:t("store.netReceived"), c:"#16a34a"},
                   ].map((m,i)=>(
                     <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
                       <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,color:m.c||"#0a2540"}}>{m.v}</div>
@@ -343,7 +345,7 @@ export default function StoreView({ user, onLogout }) {
 
             {/* Tabla de rangos de comisión (transparencia total) */}
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16,marginBottom:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:4}}>Así calculamos tu comisión</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:4}}>{t("store.howComm")}</div>
               <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>La comisión se descuenta solo cuando ganas una venta. A mayor monto, menor porcentaje.</div>
               {commissionTiers && (() => {
                 const region = (profile.store_country==="us"||(profile.store_city||"").toLowerCase().match(/miami|lauderdale|florida|beach|gables|grove/)) ? "US" : "VE";
@@ -366,9 +368,9 @@ export default function StoreView({ user, onLogout }) {
 
             {/* Historial de transacciones ganadas */}
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:12}}>Historial de ventas</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:12}}>{t("store.salesHistory")}</div>
               {myResponses.filter(r=>r.is_winner).length===0 ? (
-                <div style={{fontSize:12,color:"#94a3b8",textAlign:"center",padding:"20px 0"}}>Aún no tienes ventas registradas.</div>
+                <div style={{fontSize:12,color:"#94a3b8",textAlign:"center",padding:"20px 0"}}>{t("store.noSales")}</div>
               ) : (
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {myResponses.filter(r=>r.is_winner).map(r=>(
