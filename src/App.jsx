@@ -839,17 +839,17 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
 
               {/* Acciones */}
               <div style={{padding:"12px 12px",borderBottom:"1px solid #f1f5f9"}}>
-                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Tripulación</button>
+                <button onClick={()=>{setShowCrewMarket(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.crew")}</button>
                 <button onClick={()=>{setShowQRPanel(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconClipboard size={17} color="#64748b"/>QR Check-in</button>
               </div>
 
               {/* Cuenta */}
               <div style={{padding:"12px 12px"}}>
-                <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Mi Perfil</button>
-                <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconBoat size={17} color="#64748b"/>Mi Embarcación</button>
-                <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>Planes y Suscripción</button>
-                {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>Equipo de gestión</button>}
-                {isAdminUser && <button onClick={()=>{setPage("admin");setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>Panel de Administrador</button>}
+                <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.profile")}</button>
+                <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconBoat size={17} color="#64748b"/>{t("nav.vessel")}</button>
+                <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>{t("nav.plans")}</button>
+                {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.team")}</button>}
+                {isAdminUser && <button onClick={()=>{setPage("admin");setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>{t("nav.admin")}</button>}
                 {/* Selector de idioma */}
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 14px"}}>
                   <span style={{fontSize:14,color:"#1e293b",fontWeight:500,flex:1}}>{lang==="es"?"Idioma":"Language"}</span>
@@ -918,18 +918,28 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
             <>
               <div onClick={(e)=>{e.stopPropagation(); setShowUserMenu(false);}} style={{position:"fixed",inset:0,zIndex:25}}/>
               <div style={{...s.drop,minWidth:210,zIndex:30}} onClick={e=>e.stopPropagation()}>
-              <div style={{padding:"10px 14px 4px",fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em"}}>MI CUENTA</div>
+              <div style={{padding:"10px 14px 4px",fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em"}}>{lang==="es"?"MI CUENTA":"MY ACCOUNT"}</div>
               {[
-                {Icon:IconUser,  label:"Mi Perfil",       action:() => { setShowProfile(true); setShowUserMenu(false); }},
-                {Icon:IconBoat,  label:"Mi Embarcación",  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
-                {Icon:IconCard,  label:"Planes y Suscripción", action:() => { setShowPlans(true); setShowUserMenu(false); }},
-                ...(canManageFleet?[{Icon:IconUser,  label:"Equipo de gestión",    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }}]:[]),
-                {Icon:IconLogout,label:"Cerrar Sesión",    action:() => { onLogout(); setShowUserMenu(false); }},
+                {Icon:IconUser,  label:t("nav.profile"),       action:() => { setShowProfile(true); setShowUserMenu(false); }},
+                {Icon:IconBoat,  label:t("nav.vessel"),  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
+                {Icon:IconCard,  label:t("nav.plans"), action:() => { setShowPlans(true); setShowUserMenu(false); }},
+                ...(canManageFleet?[{Icon:IconUser,  label:t("nav.team"),    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }}]:[]),
               ].map(item => (
                 <button key={item.label} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>
                   <span style={{display:"flex",color:"#64748b"}}><item.Icon size={16} color="#64748b"/></span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>
                 </button>
               ))}
+              {/* Selector de idioma */}
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",borderTop:"1px solid #f1f5f9",marginTop:4}}>
+                <span style={{fontSize:13,color:"#1e293b",flex:1}}>{lang==="es"?"Idioma":"Language"}</span>
+                <div style={{display:"flex",gap:3,background:"#f1f5f9",borderRadius:7,padding:2}}>
+                  <button onMouseDown={(e)=>{e.preventDefault();e.stopPropagation();setLang("es");}} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
+                  <button onMouseDown={(e)=>{e.preventDefault();e.stopPropagation();setLang("en");}} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
+                </div>
+              </div>
+              <button onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onLogout(); setShowUserMenu(false); }} style={{...s.dropItem,gap:10,borderTop:"1px solid #f1f5f9"}}>
+                <span style={{display:"flex"}}><IconLogout size={16} color="#dc2626"/></span><span style={{fontSize:13,color:"#dc2626"}}>{t("nav.logout")}</span>
+              </button>
               </div>
             </>
           )}
