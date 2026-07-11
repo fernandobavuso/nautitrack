@@ -1230,6 +1230,7 @@ function WeatherBar({ vessel }) {
   );
 }
 function TasksPage({ vessel, updateVessel, addTask }) {
+  const { t: tr } = useLang();
   const [filter, setFilter]     = useState("Todas");
   const [expanded, setExpanded] = useState(null);
   const [showAdd, setShowAdd]   = useState(false);
@@ -1240,7 +1241,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
     if (filter==="Completadas") return t.status==="done";
     return true;
   });
-  const PILL = { overdue:{bg:"#ef4444",c:"#fff",l:"Vencido"}, due:{bg:"#f59e0b",c:"#fff",l:"Por vencer"}, ok:{bg:"#22c55e",c:"#fff",l:"Al día"}, done:{bg:"#64748b",c:"#fff",l:"Completado"} };
+  const PILL = { overdue:{bg:"#ef4444",c:"#fff",l:tr("tasks.overdue")}, due:{bg:"#f59e0b",c:"#fff",l:tr("tasks.due")}, ok:{bg:"#22c55e",c:"#fff",l:tr("tasks.onTrack")}, done:{bg:"#64748b",c:"#fff",l:tr("tasks.done")} };
   const allSystems = getAllSystems(vessel);
   const handleAddTask = (task) => { addTask(task); setShowAdd(false); };
   return (
@@ -1250,19 +1251,19 @@ function TasksPage({ vessel, updateVessel, addTask }) {
         <div style={{display:"flex",gap:6,flex:1,alignItems:"center",flexWrap:"wrap"}}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0"}}>
-              {f}
+              {({"Todas":tr("tasks.all"),"Por vencer":tr("tasks.due"),"Vencidas":tr("tasks.overdue"),"Completadas":tr("tasks.completed")})[f]||f}
               <span style={{marginLeft:4,fontSize:10,background:filter===f?"rgba(255,255,255,0.2)":"#e2e8f0",color:filter===f?"#fff":"#64748b",padding:"1px 6px",borderRadius:10}}>
                 {f==="Todas"?(vessel.tasks||[]).length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
               </span>
             </button>
           ))}
           <div style={{flex:1}} />
-          <button style={s.btnPrimary} onClick={() => setShowAdd(true)}>＋ Agregar Tarea</button>
+          <button style={s.btnPrimary} onClick={() => setShowAdd(true)}>＋ {tr("tasks.new")}</button>
         </div>
       </div>
       <div style={{overflowX:"auto"}}>
         <table style={s.table}>
-          <thead><tr style={{background:"#1e3a5f"}}>{["Sistema","Equipo","Tarea","Asignado","Intervalo","Próximo Venc.","Estado","Notas"].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:"#1e3a5f"}}>{[tr("tasks.system"),tr("tasks.equipment"),tr("tasks.task"),tr("tasks.assigned"),tr("tasks.interval"),tr("tasks.nextDue"),tr("tasks.status"),tr("tasks.notes")].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
           <tbody>
             {filtered.length===0 && <tr><td colSpan={8} style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>Sin tareas en esta categoría</td></tr>}
             {filtered.map(task => {
@@ -1405,7 +1406,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:580}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>Nueva Tarea</div>
+          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>{tr("tasks.new")}</div>
           <button onClick={onClose} style={s.modalClose}>✕</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:14}}>
@@ -1526,6 +1527,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   );
 }
 function LogPage({ vessel, updateVessel, addLogEntry }) {
+  const { t: tr } = useLang();
   const [showModal, setShowModal]       = useState(false);
   const [editEntry, setEditEntry]       = useState(null);
   const [filter, setFilter]             = useState("Todos");
@@ -1587,17 +1589,17 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
         <h2 style={s.toolbarTitle}>Bitácora — {vessel.name}</h2>
         <div style={{display:"flex",gap:6,flex:1,alignItems:"center",flexWrap:"wrap"}}>
           {["Todos",...LOG_TYPES].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0",fontSize:11}}>{f}</button>
+            <button key={f} onClick={()=>setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0",fontSize:11}}>{({"Todos":tr("tasks.all"),"Combustible":tr("log.fuel"),"Compra":tr("log.purchase"),"Inspección":tr("log.inspection"),"Salida":tr("log.departure"),"Servicio":tr("log.service")})[f]||f}</button>
           ))}
           <div style={{flex:1}}/>
-          <button style={s.btnPrimary} onClick={()=>{setEditEntry(null);setShowModal(true);}}>＋ Nueva Entrada</button>
+          <button style={s.btnPrimary} onClick={()=>{setEditEntry(null);setShowModal(true);}}>＋ {tr("log.new")}</button>
         </div>
       </div>
       <div style={{overflowX:"auto"}}>
         <table style={s.table}>
-          <thead><tr style={{background:"#1e3a5f"}}>{["Fecha","Tipo","Descripción / Detalle","Fotos","Realizado por",""].map(h=><th key={h} style={s.th}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:"#1e3a5f"}}>{[tr("log.date"),tr("log.type"),tr("log.desc"),tr("tasks.photos"),tr("log.by"),""].map(h=><th key={h} style={s.th}>{h}</th>)}</tr></thead>
           <tbody>
-            {filtered.length===0&&<tr><td colSpan={6} style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>Sin entradas</td></tr>}
+            {filtered.length===0&&<tr><td colSpan={6} style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>{tr("log.empty")}</td></tr>}
             {filtered.map((e,i)=>(
               <tr key={i} style={{...s.trow,":hover":{background:"#f8fafc"}}}>
                 <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>

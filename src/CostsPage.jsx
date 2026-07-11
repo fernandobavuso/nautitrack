@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 import { hasFeature, PremiumLock } from "./plans.jsx";
 
 const CATEGORIES = ["Combustible","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
@@ -10,6 +11,7 @@ const CAT_COLORS = {
 };
 
 export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpense }) {
+  const { t } = useLang();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -82,11 +84,11 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
     <div style={{maxWidth:900,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div>
-          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Finanzas de {vessel.name}</div>
-          <div style={{fontSize:13,color:"#64748b"}}>El resumen de todo lo que cuesta tu embarcación.</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>{t("fin.title")} — {vessel.name}</div>
+          <div style={{fontSize:13,color:"#64748b"}}>{t("fin.subtitle")}</div>
         </div>
         <button onClick={()=>onRegisterExpense?onRegisterExpense():setCreating(true)} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-          Registrar gasto
+          {t("fin.register")}
         </button>
       </div>
 
@@ -113,7 +115,7 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
 
       {/* Selector de periodo */}
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {[{k:"month",l:"Este mes"},{k:"year",l:"Este año"},{k:"all",l:"Todo"}].map(p=>(
+        {[{k:"month",l:t("fin.thisMonth")},{k:"year",l:t("fin.thisYear")},{k:"all",l:t("tasks.all")}].map(p=>(
           <button key={p.k} onClick={()=>setPeriod(p.k)} style={{
             padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",
             background:period===p.k?"#eff6ff":"#fff", borderColor:period===p.k?"#2563eb":"#e2e8f0",
@@ -159,7 +161,7 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
       {loading&&<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando...</div>}
       {!loading&&filtered.length===0&&(
         <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-          <div style={{fontWeight:600}}>Sin gastos en este periodo</div>
+          <div style={{fontWeight:600}}>{t("fin.empty")}</div>
           <div style={{fontSize:12,marginTop:4}}>Registra el primer gasto de tu barco</div>
         </div>
       )}
