@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import CariveLogo from "./CariveLogo";
 import { invitationCopy } from "./invitations.jsx";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 
 export default function Auth({ onLogin, invite }) {
+  const { t, lang, setLang } = useLang();
   const [mode, setMode]           = useState("login");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -28,21 +30,21 @@ export default function Auth({ onLogin, invite }) {
   }, []);
 
   const handleLogin = async () => {
-    if (!email || !password) { setError("Completa todos los campos"); return; }
+    if (!email || !password) { setError(t("auth.fillAll")); return; }
     setLoading(true); setError("");
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) { setError("Email o contraseña incorrectos"); setLoading(false); return; }
+    if (err) { setError(t("auth.wrongCreds")); setLoading(false); return; }
     // Chequear si la cuenta está deshabilitada o eliminada
     const { data: prof } = await supabase.from("profiles").select("disabled,deleted_at").eq("id", data.user.id).maybeSingle();
     if (prof?.deleted_at) {
       await supabase.auth.signOut();
-      setError("Esta cuenta ya no está disponible. Contacta al administrador.");
+      setError(t("auth.deleted"));
       setLoading(false);
       return;
     }
     if (prof?.disabled) {
       await supabase.auth.signOut();
-      setError("Esta cuenta está deshabilitada. Contacta al administrador.");
+      setError(t("auth.disabled"));
       setLoading(false);
       return;
     }
@@ -50,7 +52,7 @@ export default function Auth({ onLogin, invite }) {
   };
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPwd || !firstName || !lastName) { setError("Completa todos los campos"); return; }
+    if (!email || !password || !confirmPwd || !firstName || !lastName) { setError(t("auth.fillAll")); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     if (password !== confirmPwd) { setError("Las contraseñas no coinciden"); return; }
     setLoading(true); setError("");
@@ -84,6 +86,13 @@ export default function Auth({ onLogin, invite }) {
   return (
     <div style={s.root}>
       <div style={s.card}>
+        {/* Selector de idioma */}
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:4}}>
+          <div style={{display:"flex",gap:3,background:"#f1f5f9",borderRadius:7,padding:2}}>
+            <button onClick={()=>setLang("es")} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
+            <button onClick={()=>setLang("en")} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
+          </div>
+        </div>
         {/* Logo */}
         <div style={s.logoWrap}>
           <CariveLogo size={56} />
@@ -95,16 +104,16 @@ export default function Auth({ onLogin, invite }) {
               <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>Crea tu cuenta abajo para aceptar la invitación.</div>
             </div>
           ); })()}
-          <div style={s.tagline}>Gestión inteligente de embarcaciones</div>
+          <div style={s.tagline}>{lang==="es"?"Gestión inteligente de embarcaciones":"Smart vessel management"}</div>
         </div>
 
         {/* Tabs */}
         <div style={s.tabs}>
           <button onClick={()=>{setMode("login");setError("");setSuccess("");}} style={{...s.tab,borderBottom:mode==="login"?"2px solid #0ea5e9":"2px solid transparent",color:mode==="login"?"#0ea5e9":"#64748b",fontWeight:mode==="login"?600:400}}>
-            Iniciar Sesión
+            {t("auth.login")}
           </button>
           <button onClick={()=>{setMode("register");setError("");setSuccess("");}} style={{...s.tab,borderBottom:mode==="register"?"2px solid #0ea5e9":"2px solid transparent",color:mode==="register"?"#0ea5e9":"#64748b",fontWeight:mode==="register"?600:400}}>
-            Crear Cuenta
+            {t("auth.createBtn")}
           </button>
         </div>
 
@@ -114,11 +123,11 @@ export default function Auth({ onLogin, invite }) {
             <div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
-                  <label style={s.label}>Nombre *</label>
+                  <label style={s.label}>{t("auth.firstName")} *</label>
                   <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="Carlos" style={s.input}/>
                 </div>
                 <div>
-                  <label style={s.label}>Apellido *</label>
+                  <label style={s.label}>{t("auth.lastName")} *</label>
                   <input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="Mendoza" style={s.input}/>
                 </div>
               </div>
@@ -196,11 +205,11 @@ export default function Auth({ onLogin, invite }) {
           )}
           <div>
             <label style={s.label}>Email</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@email.com" style={s.input}
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={t("auth.emailPh")} style={s.input}
               onKeyDown={e=>e.key==="Enter"&&(mode==="login"?handleLogin():handleRegister())}/>
           </div>
           <div>
-            <label style={s.label}>Contraseña</label>
+            <label style={s.label}>{t("auth.password")}</label>
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={s.input}
               onKeyDown={e=>e.key==="Enter"&&(mode==="login"?handleLogin():handleRegister())}/>
           </div>
@@ -217,7 +226,7 @@ export default function Auth({ onLogin, invite }) {
 
           <button onClick={mode==="login"?handleLogin:handleRegister} disabled={loading}
             style={{...s.btn,opacity:loading?0.7:1}}>
-            {loading?"⏳ Cargando...":mode==="login"?"Entrar →":"Crear cuenta →"}
+            {loading?t("common.loading"):mode==="login"?`${t("auth.enter")} →`:`${t("auth.createBtn")} →`}
           </button>
 
           {mode==="login"&&(

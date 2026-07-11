@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 
 // Modal "Registrar gasto": hace UNA pregunta simple (¿compra del día o gasto fijo?)
 // y enruta al lugar correcto. El usuario no tiene que saber la teoría de
 // Bitácora vs Costos — solo responde qué tipo de gasto es.
 export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, onDirectExpense }) {
+  const { t } = useLang();
   const [step, setStep] = useState("choose"); // choose | operational | admin
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -46,24 +48,24 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
     <div style={ov} onClick={onClose}>
       <div style={box} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-          <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>Registrar gasto</div>
+          <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>{t("exp.title")}</div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:20}}>×</button>
         </div>
 
         {step==="choose" && (
           <>
-            <div style={{fontSize:13,color:"#64748b",marginBottom:18,lineHeight:1.5}}>¿Qué tipo de gasto es? Elige y lo registramos en el lugar correcto.</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:18,lineHeight:1.5}}>{t("exp.question")}</div>
             <button onClick={()=>{setStep("operational");setMsg("");}} style={choiceBtn}>
               <div style={{fontSize:22,marginBottom:6}}>🛒</div>
-              <div style={{fontSize:15,fontWeight:700,color:"#0a2540"}}>Una compra o gasto del barco</div>
-              <div style={{fontSize:12,color:"#64748b",marginTop:4,lineHeight:1.4}}>Algo que se compró o se pagó durante la operación: repuestos, combustible, un servicio, reparaciones.</div>
-              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>Se registra en la Bitácora →</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0a2540"}}>{t("exp.opTitle")}</div>
+              <div style={{fontSize:12,color:"#64748b",marginTop:4,lineHeight:1.4}}>{t("exp.opBody")}</div>
+              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>{t("exp.opGoes")}</div>
             </button>
             <button onClick={()=>{setStep("admin");setMsg("");}} style={{...choiceBtn,marginTop:12}}>
               <div style={{fontSize:22,marginBottom:6}}>📋</div>
-              <div style={{fontSize:15,fontWeight:700,color:"#0a2540"}}>Un gasto fijo o administrativo</div>
-              <div style={{fontSize:12,color:"#64748b",marginTop:4,lineHeight:1.4}}>Gastos que no son compras del día: seguro, marina, sueldos, matrícula, impuestos.</div>
-              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>Se registra directo en Finanzas →</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0a2540"}}>{t("exp.admTitle")}</div>
+              <div style={{fontSize:12,color:"#64748b",marginTop:4,lineHeight:1.4}}>{t("exp.admBody")}</div>
+              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>{t("exp.admGoes")}</div>
             </button>
           </>
         )}

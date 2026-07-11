@@ -63,6 +63,46 @@ export const DICT = {
   "auth.disabled":   { es: "Esta cuenta está deshabilitada. Contacta al administrador.", en: "This account is disabled. Contact the administrator." },
   "auth.deleted":    { es: "Esta cuenta ya no está disponible. Contacta al administrador.", en: "This account is no longer available. Contact the administrator." },
   "auth.fillAll":    { es: "Completa todos los campos", en: "Fill in all fields" },
+  "auth.enter":      { es: "Entrar",         en: "Sign in" },
+  "auth.createBtn":  { es: "Crear cuenta",   en: "Create account" },
+  "auth.confirmPwd": { es: "Confirmar contraseña", en: "Confirm password" },
+  "auth.emailPh":    { es: "tu@email.com",   en: "you@email.com" },
+  "auth.tagline":    { es: "Tu flota. Tu mar.", en: "Your fleet. Your sea." },
+
+  // ─── Tareas ───
+  "tasks.title":     { es: "Tareas",         en: "Tasks" },
+  "tasks.new":       { es: "Nueva tarea",    en: "New task" },
+  "tasks.pending":   { es: "Pendiente",      en: "Pending" },
+  "tasks.due":       { es: "Por vencer",     en: "Due soon" },
+  "tasks.overdue":   { es: "Vencida",        en: "Overdue" },
+  "tasks.done":      { es: "Completada",     en: "Completed" },
+  "tasks.empty":     { es: "Sin tareas",     en: "No tasks" },
+
+  // ─── Bitácora ───
+  "log.title":       { es: "Bitácora",       en: "Logbook" },
+  "log.new":         { es: "Nueva entrada",  en: "New entry" },
+  "log.empty":       { es: "Sin entradas en la bitácora", en: "No logbook entries" },
+  "log.type":        { es: "Tipo",           en: "Type" },
+  "log.date":        { es: "Fecha",          en: "Date" },
+  "log.desc":        { es: "Descripción",    en: "Description" },
+  "log.by":          { es: "Realizado por",  en: "Performed by" },
+
+  // ─── Finanzas ───
+  "fin.title":       { es: "Finanzas",       en: "Finance" },
+  "fin.subtitle":    { es: "El resumen de todo lo que cuesta tu embarcación.", en: "The summary of everything your vessel costs." },
+  "fin.register":    { es: "Registrar gasto", en: "Log expense" },
+  "fin.total":       { es: "Total",          en: "Total" },
+  "fin.empty":       { es: "Sin gastos registrados", en: "No expenses recorded" },
+
+  // ─── Registrar gasto (router) ───
+  "exp.title":       { es: "Registrar gasto", en: "Log expense" },
+  "exp.question":    { es: "¿Qué tipo de gasto es? Elige y lo registramos en el lugar correcto.", en: "What kind of expense is it? Choose and we'll record it in the right place." },
+  "exp.opTitle":     { es: "Una compra o gasto del barco", en: "A boat purchase or expense" },
+  "exp.opBody":      { es: "Algo que se compró o se pagó durante la operación: repuestos, combustible, un servicio, reparaciones.", en: "Something bought or paid during operations: parts, fuel, a service, repairs." },
+  "exp.opGoes":      { es: "Se registra en la Bitácora →", en: "Recorded in the Logbook →" },
+  "exp.admTitle":    { es: "Un gasto fijo o administrativo", en: "A fixed or administrative expense" },
+  "exp.admBody":     { es: "Gastos que no son compras del día: seguro, marina, sueldos, matrícula, impuestos.", en: "Expenses that aren't daily purchases: insurance, marina, salaries, registration, taxes." },
+  "exp.admGoes":     { es: "Se registra directo en Finanzas →", en: "Recorded directly in Finance →" },
 
   // ─── Dashboard ───
   "dash.welcome":    { es: "¡Bienvenido a Carive", en: "Welcome to Carive" },
