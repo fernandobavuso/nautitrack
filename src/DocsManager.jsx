@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 
 // Mini "drive" de documentos por embarcación: carpetas + subir archivos reales
 // o guardar links. Persiste en la tabla vessel_documents + Storage bucket "documentos".
 
 export default function DocsManager({ vessel, user }) {
+  const { t } = useLang();
   const [docs, setDocs] = useState([]);
   const [folders, setFolders] = useState([]); // nombres de carpetas
   const [currentFolder, setCurrentFolder] = useState(""); // "" = raíz
@@ -129,7 +131,7 @@ export default function DocsManager({ vessel, user }) {
         <div style={{display:"flex",gap:8}}>
           {!currentFolder && <button onClick={()=>setMode(mode==="folder"?null:"folder")} style={btnOutline}>Nueva carpeta</button>}
           <label style={{...btnPrimary,cursor:uploading?"default":"pointer",opacity:uploading?.6:1}}>
-            {uploading ? "Subiendo..." : "Cargar documento"}
+            {uploading ? t("common.loading") : t("docs.upload")}
             <input type="file" style={{display:"none"}} onChange={handleFile} disabled={uploading}/>
           </label>
         </div>
@@ -183,7 +185,7 @@ export default function DocsManager({ vessel, user }) {
           </div>
         )}
         {visibleDocs.length===0 && currentFolder && (
-          <div style={{textAlign:"center",padding:"30px",color:"#94a3b8",fontSize:13}}>Esta carpeta está vacía. Sube un documento o agrega un link.</div>
+          <div style={{textAlign:"center",padding:"30px",color:"#94a3b8",fontSize:13}}>{t("docs.empty")}</div>
         )}
         {visibleDocs.map(doc=>(
           <div key={doc.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>

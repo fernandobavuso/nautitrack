@@ -2568,6 +2568,7 @@ function ReportModal({ vessel, onClose }) {
 }
 
 function DocsPage({ vessel, user }) {
+  const { t: tr } = useLang();
   const [activeTab, setActiveTab]     = useState("docs");
   const [links, setLinks]             = useState([]);
   const [docs, setDocs]               = useState([]);
@@ -2726,15 +2727,15 @@ function DocsPage({ vessel, user }) {
 
   return (
     <div style={{padding:"24px 28px",maxWidth:1100,margin:"0 auto"}}>
-      <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4,fontFamily:"'Sora',system-ui,sans-serif"}}>Documentos y Recursos</h2>
-      <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>Documentos · Links · Manuales técnicos con IA</p>
+      <h2 style={{fontSize:20,fontWeight:700,color:"#0f172a",marginBottom:4,fontFamily:"'Sora',system-ui,sans-serif"}}>{tr("docs.title")}</h2>
+      <p style={{color:"#64748b",fontSize:13,marginBottom:20}}>{tr("nav.docs")} · {tr("docs.links")} · {tr("docs.manuals")}</p>
 
       {/* Tabs */}
       <div style={{display:"flex",gap:0,marginBottom:24,borderBottom:"1px solid #e2e8f0",overflowX:"auto"}}>
         {[
           {key:"docs",    label:"Documentos"},
           {key:"links",   label:"Links"},
-          {key:"manuals", label:"Manuales de Equipos"},
+          {key:"manuals", label:tr("docs.manuals")},
           {key:"ai",      label:"Asistente IA"},
         ].map(t=>(
           <button key={t.key} onClick={()=>setActiveTab(t.key)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:activeTab===t.key?"2px solid #0ea5e9":"2px solid transparent",cursor:"pointer",fontSize:13,color:activeTab===t.key?"#0ea5e9":"#64748b",fontWeight:activeTab===t.key?600:400,whiteSpace:"nowrap"}}>{t.label}</button>

@@ -1,25 +1,27 @@
 import { useState } from "react";
 import CariveLogo from "./CariveLogo";
+import { useLang } from "./i18n.jsx";
 
 // Guía de bienvenida para dueños nuevos.
 // Aparece la primera vez (3 slides) y luego deja un checklist de primeros pasos.
 
 const SLIDES = [
   {
-    title: "Bienvenido a Carive",
-    body: "La forma simple de mantener tu embarcación organizada: mantenimiento, bitácora, costos, tripulación y repuestos, todo en un solo lugar.",
+    title: { es:"Bienvenido a Carive", en:"Welcome to Carive" },
+    body: { es:"La forma simple de mantener tu embarcación organizada: mantenimiento, bitácora, costos, tripulación y repuestos, todo en un solo lugar.", en:"The simple way to keep your vessel organized: maintenance, logbook, costs, crew and parts, all in one place." },
   },
   {
-    title: "Nunca olvides un servicio",
-    body: "Registra tus tareas de mantenimiento por fecha o por horas de motor. Carive te avisa cuándo toca cada servicio, antes de que sea tarde.",
+    title: { es:"Nunca olvides un servicio", en:"Never miss a service" },
+    body: { es:"Registra tus tareas de mantenimiento por fecha o por horas de motor. Carive te avisa cuándo toca cada servicio, antes de que sea tarde.", en:"Track maintenance tasks by date or engine hours. Carive tells you when each service is due, before it's too late." },
   },
   {
-    title: "Tu tripulación y tus repuestos",
-    body: "Encuentra capitanes y marineros, publica viajes, y pide repuestos a tiendas de tu zona que compiten por darte el mejor precio.",
+    title: { es:"Tu tripulación y tus repuestos", en:"Your crew and your parts" },
+    body: { es:"Encuentra capitanes y marineros, publica viajes, y pide repuestos a tiendas de tu zona que compiten por darte el mejor precio.", en:"Find captains and deckhands, post trips, and request parts from stores near you competing for your best price." },
   },
 ];
 
 export default function Onboarding({ onStart }) {
+  const { lang } = useLang();
   const [i, setI] = useState(0);
   const last = i === SLIDES.length - 1;
   const s = SLIDES[i];
@@ -30,8 +32,8 @@ export default function Onboarding({ onStart }) {
         <div style={{width:84,height:84,margin:"0 auto 24px",borderRadius:"50%",background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <CariveLogo size={44} />
         </div>
-        <div style={{fontSize:24,fontWeight:800,marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{s.title}</div>
-        <div style={{fontSize:15,lineHeight:1.6,color:"#9fb4cc",marginBottom:32}}>{s.body}</div>
+        <div style={{fontSize:24,fontWeight:800,marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{s.title[lang]||s.title.es}</div>
+        <div style={{fontSize:15,lineHeight:1.6,color:"#9fb4cc",marginBottom:32}}>{s.body[lang]||s.body.es}</div>
 
         {/* Puntitos de progreso */}
         <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28}}>
@@ -41,10 +43,10 @@ export default function Onboarding({ onStart }) {
         </div>
 
         <button onClick={()=> last ? onStart() : setI(i+1)} style={{width:"100%",padding:"14px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Sora',system-ui,sans-serif"}}>
-          {last ? "Agregar mi primera embarcación" : "Siguiente"}
+          {last ? (lang==="es"?"Agregar mi primera embarcación":"Add my first vessel") : (lang==="es"?"Siguiente":"Next")}
         </button>
         {!last && (
-          <button onClick={onStart} style={{marginTop:14,background:"none",border:"none",color:"#7f97b3",fontSize:13,cursor:"pointer"}}>Saltar introducción</button>
+          <button onClick={onStart} style={{marginTop:14,background:"none",border:"none",color:"#7f97b3",fontSize:13,cursor:"pointer"}}>{lang==="es"?"Saltar introducción":"Skip intro"}</button>
         )}
       </div>
     </div>

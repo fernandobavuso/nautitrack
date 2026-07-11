@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { hasFeature, PremiumLock } from "./plans.jsx";
 import { findCityCoords, distanceKm } from "./geo.js";
+import { useLang } from "./i18n.jsx";
 import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
 
@@ -10,6 +11,7 @@ const UNITS = ["unidad","litros","galones","metros","kit"];
 const LOCATIONS = ["A bordo","Dock box","Storage","Maletero / pañol","Casa","Otro"];
 
 export default function InventoryPage({ vessel, user, setShowProfile, role="owner", captainLimit }) {
+  const { t, lang } = useLang();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // item en edición o "new"
@@ -182,9 +184,9 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
               const grupos = { pendiente:[], proceso:[], comprado:[] };
               myRequests.forEach(r => { grupos[clasificar(r)].push(r); });
               const secciones = [
-                { key:"pendiente", label:"Pendientes", desc:"Esperando ofertas de tiendas", color:"#2563eb" },
-                { key:"proceso",   label:"En proceso", desc:"Finiquitando detalles con la tienda", color:"#d97706" },
-                { key:"comprado",  label:"Comprados",  desc:"Compras completadas", color:"#16a34a" },
+                { key:"pendiente", label:lang==="es"?"Pendientes":"Pending", desc:lang==="es"?"Esperando ofertas de tiendas":"Awaiting store offers", color:"#2563eb" },
+                { key:"proceso",   label:lang==="es"?"En proceso":"In progress", desc:lang==="es"?"Finiquitando detalles con la tienda":"Finalizing details with the store", color:"#d97706" },
+                { key:"comprado",  label:t("parts.purchased"), desc:lang==="es"?"Compras completadas":"Completed purchases", color:"#16a34a" },
               ];
               return secciones.map(sec => grupos[sec.key].length===0 ? null : (
                 <div key={sec.key}>
@@ -274,7 +276,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
       {!loading&&shown.length===0&&(
         <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
           <div style={{fontWeight:600}}>{filter==="low"?"Nada por reponer":"Sin repuestos registrados"}</div>
-          <div style={{fontSize:12,marginTop:4}}>{filter==="low"?"Todo en stock":"Agrega los repuestos que tienes a bordo"}</div>
+          <div style={{fontSize:12,marginTop:4}}>{filter==="low"?(lang==="es"?"Todo en stock":"All in stock"):t("parts.empty")}</div>
         </div>
       )}
 

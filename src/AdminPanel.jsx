@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { activateSubscription } from "./subscriptions.jsx";
 import { notify } from "./notifications.js";
 import { distanceKm, kmToMi } from "./geo.js";
+import { useLang } from "./i18n.jsx";
 
 // Panel de administrador (solo visible para los correos en ADMIN_EMAILS)
 // Tablero de ingresos: comisiones por venta + activación de planes
@@ -16,6 +17,7 @@ export function isAdmin(user) {
 }
 
 export default function AdminPanel({ user, onClose, asPage }) {
+  const { t: T } = useLang();
   const [tab, setTab] = useState(asPage ? "resumen" : "pedidos");
   const [sales, setSales] = useState([]);
   const [stores, setStores] = useState([]);
@@ -200,13 +202,13 @@ export default function AdminPanel({ user, onClose, asPage }) {
   if (loading) return wrap(<div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando panel...</div>);
 
   const TABS = [
-    {k:"resumen",l:"Resumen"},
-    {k:"usuarios",l:"Cuentas"},
-    {k:"pedidos",l:"Pedidos → Tiendas"},
-    {k:"pendientes",l:"Pagos pendientes"},
-    {k:"ingresos",l:"Ingresos"},
-    {k:"tiendas",l:"Comisiones"},
-    {k:"planes",l:"Planes"},
+    {k:"resumen",l:T("adm.summary")},
+    {k:"usuarios",l:T("adm.accounts")},
+    {k:"pedidos",l:T("adm.orders")},
+    {k:"pendientes",l:T("adm.payments")},
+    {k:"ingresos",l:T("adm.revenue")},
+    {k:"tiendas",l:T("adm.commissions")},
+    {k:"planes",l:T("adm.plans")},
   ];
 
   const disableUser = async (u) => {
@@ -260,8 +262,8 @@ export default function AdminPanel({ user, onClose, asPage }) {
     <>
       <div style={{padding:asPage?"0 0 18px":"18px 22px",borderBottom:asPage?"none":"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div>
-          <div style={{fontSize:asPage?22:17,fontWeight:800,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>Panel de Administrador</div>
-          <div style={{fontSize:12,color:"#64748b"}}>Torre de control del negocio</div>
+          <div style={{fontSize:asPage?22:17,fontWeight:800,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>{T("adm.title")}</div>
+          <div style={{fontSize:12,color:"#64748b"}}>{T("adm.subtitle")}</div>
         </div>
         {!asPage && <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>}
       </div>
@@ -280,14 +282,14 @@ export default function AdminPanel({ user, onClose, asPage }) {
           <div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
               {[
-                {v:totalUsers, l:"Usuarios totales", sub:newThisMonth>0?`+${newThisMonth} este mes`:"", hl:true},
-                {v:usersByRole.owner, l:"Dueños / gestores"},
-                {v:usersByRole.store, l:"Tiendas"},
-                {v:usersByRole.crew, l:"Capitanes / tripulantes"},
-                {v:vessels.length, l:"Embarcaciones"},
-                {v:paidVessels.length, l:"Planes de pago activos", c:"#16a34a"},
-                {v:`$${totalCommission.toFixed(0)}`, l:"Comisiones generadas", c:"#2563eb"},
-                {v:disabledUsers, l:"Cuentas deshabilitadas", c:disabledUsers>0?"#dc2626":"#0a2540"},
+                {v:totalUsers, l:T("adm.totalUsers"), sub:newThisMonth>0?`+${newThisMonth} ${T("adm.thisMonth")}`:"", hl:true},
+                {v:usersByRole.owner, l:T("adm.owners")},
+                {v:usersByRole.store, l:T("adm.stores")},
+                {v:usersByRole.crew, l:T("adm.crew")},
+                {v:vessels.length, l:T("adm.vessels")},
+                {v:paidVessels.length, l:T("adm.paidPlans"), c:"#16a34a"},
+                {v:`$${totalCommission.toFixed(0)}`, l:T("adm.commGen"), c:"#2563eb"},
+                {v:disabledUsers, l:T("adm.disabled"), c:disabledUsers>0?"#dc2626":"#0a2540"},
               ].map((m,i)=>(
                 <div key={i} style={{background:m.hl?"linear-gradient(120deg,#eff6ff,#e0f2fe)":"#fff",border:`1px solid ${m.hl?"#bae6fd":"#e2e8f0"}`,borderRadius:14,padding:16}}>
                   <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:26,fontWeight:800,color:m.c||(m.hl?"#2563eb":"#0a2540")}}>{m.v}</div>
@@ -299,7 +301,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
 
             {/* Distribución de planes */}
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:18}}>
-              <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Distribución de planes</div>
+              <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{T("adm.planDist")}</div>
               {Object.entries(planCounts).sort((a,b)=>b[1]-a[1]).map(([plan,count])=>(
                 <div key={plan} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"1px solid #f1f5f9"}}>
                   <span style={{fontSize:13,color:"#475569",textTransform:"capitalize"}}>{plan==="free"?"Gratis / Founder":plan}</span>
@@ -310,7 +312,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
 
             {/* Crecimiento de usuarios (últimos 6 meses) */}
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:18,marginTop:16}}>
-              <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:16,fontFamily:"'Sora',system-ui,sans-serif"}}>Nuevos usuarios por mes</div>
+              <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:16,fontFamily:"'Sora',system-ui,sans-serif"}}>{T("adm.growth")}</div>
               <div style={{display:"flex",alignItems:"flex-end",gap:10,height:120}}>
                 {growth.map((g,i)=>(
                   <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
@@ -329,11 +331,11 @@ export default function AdminPanel({ user, onClose, asPage }) {
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:14}}>
               <div style={{fontSize:14,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>Cuentas ({filteredUsers.length})</div>
-              <button onClick={exportUsers} style={{padding:"7px 14px",border:"1px solid #e2e8f0",borderRadius:8,background:"#fff",color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>Exportar a Excel</button>
+              <button onClick={exportUsers} style={{padding:"7px 14px",border:"1px solid #e2e8f0",borderRadius:8,background:"#fff",color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>{T("adm.export")}</button>
             </div>
 
             {/* Buscador */}
-            <input value={userSearch} onChange={e=>setUserSearch(e.target.value)} placeholder="Buscar por nombre o email..." style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:9,fontSize:13,boxSizing:"border-box",marginBottom:10}}/>
+            <input value={userSearch} onChange={e=>setUserSearch(e.target.value)} placeholder={T("adm.searchUser")} style={{width:"100%",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:9,fontSize:13,boxSizing:"border-box",marginBottom:10}}/>
 
             {/* Filtros */}
             <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
@@ -358,7 +360,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
                       </div>
                       <div style={{fontSize:11,color:"#94a3b8"}}>{u.email} · <span style={{color:roleColor,fontWeight:600}}>{roleLabel}</span>{boats>0?` · ${boats} barco${boats!==1?"s":""}`:""}</div>
                     </div>
-                    <span style={{fontSize:11,color:"#2563eb",fontWeight:600,whiteSpace:"nowrap"}}>Ver ficha →</span>
+                    <span style={{fontSize:11,color:"#2563eb",fontWeight:600,whiteSpace:"nowrap"}}>{T("adm.viewCard")} →</span>
                   </div>
                 );
               })}
