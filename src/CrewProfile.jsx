@@ -5,7 +5,7 @@ import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
 import DayTripsCrew from "./DayTripsCrew";
-import { IconBell, IconCard, IconInbox } from "./icons.jsx";
+import { IconBell, IconCard, IconInbox, IconCertificate, IconVessel, IconTrash, IconMedal, IconFolder, IconUpload, IconCheckCircle, IconAnchor, IconGlobe, IconShield } from "./icons.jsx";
 import CrewProposals from "./CrewProposals";
 import NotifPanel from "./NotifPanel";
 import { countUnread } from "./notifications";
@@ -50,14 +50,14 @@ const NATIONALITIES = [
 ];
 
 const BADGE_DEFS = [
-  {id:"verified",    icon:"✅", label:"Usuario Certificado",color:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0"},
-  {id:"stcw",        icon:"📜", label:"STCW Certificado",   color:"#1d4ed8", bg:"#eff6ff", border:"#bfdbfe"},
-  {id:"5years",      icon:"⭐", label:"5 Años de Exp.",     color:"#d97706", bg:"#fffbeb", border:"#fde68a"},
-  {id:"10years",     icon:"🏆", label:"10 Años de Exp.",    color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
-  {id:"3boats",      icon:"🚢", label:"3+ Embarcaciones",   color:"#0891b2", bg:"#ecfeff", border:"#a5f3fc"},
-  {id:"captain",     icon:"⚓", label:"Capitán Certificado",color:"#be185d", bg:"#fdf2f8", border:"#fbcfe8"},
-  {id:"bilingual",   icon:"🌐", label:"Bilingüe",           color:"#059669", bg:"#ecfdf5", border:"#a7f3d0"},
-  {id:"passport",    icon:"", label:"Pasaporte Vigente",   color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
+  {id:"verified",    Icon:IconCheckCircle, label:"Usuario Certificado",color:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0"},
+  {id:"stcw",        Icon:IconCertificate, label:"STCW Certificado",   color:"#1d4ed8", bg:"#eff6ff", border:"#bfdbfe"},
+  {id:"5years",      Icon:IconMedal,       label:"5 Años de Exp.",     color:"#d97706", bg:"#fffbeb", border:"#fde68a"},
+  {id:"10years",     Icon:IconMedal,       label:"10 Años de Exp.",    color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
+  {id:"3boats",      Icon:IconVessel,      label:"3+ Embarcaciones",   color:"#0891b2", bg:"#ecfeff", border:"#a5f3fc"},
+  {id:"captain",     Icon:IconAnchor,      label:"Capitán Certificado",color:"#be185d", bg:"#fdf2f8", border:"#fbcfe8"},
+  {id:"bilingual",   Icon:IconGlobe,       label:"Bilingüe",           color:"#059669", bg:"#ecfdf5", border:"#a7f3d0"},
+  {id:"passport",    Icon:IconShield,      label:"Pasaporte Vigente",  color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
 ];
 
 
@@ -609,7 +609,7 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
                 <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{T("cw.myStatus")}</div>
                 <div style={{fontSize:14,fontWeight:700,color:(profile.badges||[]).includes("verified")?"#16a34a":"#d97706"}}>
-                  {(profile.badges||[]).includes("verified")?"Verificado":"Sin verificar"}
+                  {(profile.badges||[]).includes("verified")?L("Verificado","Verified"):L("Sin verificar","Not verified")}
                 </div>
               </div>
             </div>
@@ -738,12 +738,12 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Badges */}
               <div style={s.card}>
-                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:10}}>🏅 Badges</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><IconMedal size={15} color="#2563eb"/> Badges</div>
                 {earnedBadges.length===0&&<div style={{fontSize:11,color:"#94a3b8",textAlign:"center",padding:"10px 0"}}>{T("cw.completeProfile")}</div>}
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {earnedBadges.map(b=>(
                     <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:b.bg,border:`1px solid ${b.border}`,borderRadius:8}}>
-                      <span style={{fontSize:16}}>{b.icon}</span>
+                      <span style={{display:"flex"}}>{b.Icon && <b.Icon size={15} color={b.color}/>}</span>
                       <span style={{fontSize:11,fontWeight:700,color:b.color}}>{cl(b.label, lang)}</span>
                     </div>
                   ))}
@@ -953,13 +953,13 @@ export default function CrewProfile({ user, onLogout }) {
 
               {(profile.certifications||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
-                    <div style={{fontSize:36,marginBottom:8}}>📜</div>
+                    <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconCertificate size={34} color="#cbd5e1"/></div>
                     <div style={{fontWeight:600}}>{T("cw.noCerts")}</div>
                   </div>
                 : <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:8}}>
                     {(profile.certifications||[]).map((cert,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10}}>
-                        <div style={{fontSize:22}}>📜</div>
+                        <IconCertificate size={20} color="#2563eb"/>
                         <div style={{flex:1}}>
                           <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{cert.name==="Otro"?cert.custom_name:cert.name}</div>
                           <div style={{fontSize:11,color:"#64748b"}}>
@@ -967,7 +967,7 @@ export default function CrewProfile({ user, onLogout }) {
                           </div>
                         </div>
                         {cert.doc_url&&<a href={cert.doc_url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",fontWeight:600}}>{T("cw.viewDoc")}</a>}
-                        <button onClick={()=>deleteCertification(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
+                        <button onClick={()=>deleteCertification(i)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",padding:4}}><IconTrash size={16} color="#dc2626"/></button>
                       </div>
                     ))}
                   </div>
@@ -1026,12 +1026,12 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:700,margin:"0 auto"}}>
             {/* Lista de experiencias guardadas */}
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🚢 {L("Historial de Embarcaciones","Vessel History")}</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4,display:"flex",alignItems:"center",gap:7}}><IconVessel size={17} color="#2563eb"/> {L("Historial de Embarcaciones","Vessel History")}</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>{L("Tu experiencia embarcado (el nombre del barco se mantiene privado)","Your onboard experience (boat name stays private)")}</div>
 
               {(profile.experience||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
-                    <div style={{fontSize:36,marginBottom:8}}>🚢</div>
+                    <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconVessel size={34} color="#cbd5e1"/></div>
                     <div style={{fontWeight:600}}>{T("cw.noHistory")}</div>
                   </div>
                 : <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -1154,10 +1154,10 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>{setNewFolderName("");setShowFolderModal(true);}}
                     style={{padding:"7px 12px",background:"#f1f5f9",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#475569",fontWeight:600}}>
-                    ＋ Carpeta
+                    <IconFolder size={14} color="#2563eb"/> {L("Carpeta","Folder")}
                   </button>
                   <label style={{padding:"7px 14px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700}}>
-                    ⬆ Subir
+                    <IconUpload size={14} color="#fff"/> {L("Subir","Upload")}
                     <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
                       const f=e.target.files[0];
                       if(f){ setPendingUpload(f); setShowUploadModal(true); }

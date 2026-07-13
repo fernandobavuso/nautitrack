@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { IconInbox, IconUser, IconCheckCircle, IconCertificate, IconMedal, IconVessel, IconAnchor, IconGlobe, IconShield } from "./icons.jsx";
 import { useLang } from "./i18n.jsx";
 import { supabase } from "./supabase";
 import { createInvitation } from "./invitations.jsx";
@@ -178,7 +179,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   const matches = applications.filter(a => a.status==="matched");
   const possibleCount = possibles.length;
 
-  const BADGE_ICONS = {verified:"✅",stcw:"📜","5years":"⭐","10years":"🏆","3boats":"🚢",captain:"⚓",bilingual:"🌐",passport:"🛂"};
+  const BADGE_ICONS = {verified:IconCheckCircle,stcw:IconCertificate,"5years":IconMedal,"10years":IconMedal,"3boats":IconVessel,captain:IconAnchor,bilingual:IconGlobe,passport:IconShield};
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={onClose}>
@@ -218,7 +219,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {pendingApps.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                  <div style={{fontSize:40,marginBottom:8}}>📥</div>
+                  <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconInbox size={36} color="#cbd5e1"/></div>
                   <div style={{fontWeight:600}}>{L("Sin aplicaciones pendientes","No pending applications")}</div>
                   <div style={{fontSize:12,marginTop:4}}>{L("Cuando un tripulante aplique aparecerá aquí","When a crew member applies, they will appear here")}</div>
                 </div>
@@ -286,7 +287,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {matches.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                  <div style={{fontSize:40,marginBottom:8}}>🤝</div>
+                  <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconUser size={36} color="#cbd5e1"/></div>
                   <div style={{fontWeight:600}}>{L("Sin matches aún","No matches yet")}</div>
                 </div>
               )}
@@ -419,7 +420,7 @@ function CrewCard({ crew, rep, badgeIcons, onView, actions }) {
           {rep&&<div style={{marginTop:3}}><Stars avg={rep.avg} count={rep.count} size={12}/></div>}
           {badges.length>0&&(
             <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
-              {badges.map(b=><span key={b} style={{fontSize:13}} title={b}>{badgeIcons[b]||"🏅"}</span>)}
+              {badges.map(b=>{const BI=badgeIcons[b]; return BI?<span key={b} style={{display:"flex"}} title={b}><BI size={14} color="#2563eb"/></span>:null;})}
             </div>
           )}
         </div>
@@ -447,7 +448,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           <div style={{fontSize:12,color:"#94a3b8",marginTop:2}}>{crew.nationality}</div>
           {(crew.badges||[]).length>0&&(
             <div style={{display:"flex",gap:6,justifyContent:"center",marginTop:10,flexWrap:"wrap"}}>
-              {(crew.badges||[]).map(b=><span key={b} style={{fontSize:18}}>{badgeIcons[b]||"🏅"}</span>)}
+              {(crew.badges||[]).map(b=>{const BI=badgeIcons[b]; return BI?<span key={b} style={{display:"flex"}}><BI size={17} color="#2563eb"/></span>:null;})}
             </div>
           )}
         </div>

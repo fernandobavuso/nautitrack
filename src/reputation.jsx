@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 
 // Calcula la reputación (estrellas promedio + total de reseñas) de un usuario
 // a partir de las reseñas que ha RECIBIDO (reviewee_id)
@@ -43,8 +44,9 @@ export async function getCompletedTrips(userId) {
 
 // Componente visual de estrellas (★ tipográfico, sin emoji)
 export function Stars({ avg, count, size = 13 }) {
+  const { lang } = useLang();
   if (avg == null) {
-    return <span style={{ fontSize: size - 1, color: "#94a3b8" }}>Sin reseñas aún</span>;
+    return <span style={{ fontSize: size - 1, color: "#94a3b8" }}>{lang==="en"?"No reviews yet":"Sin reseñas aún"}</span>;
   }
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
