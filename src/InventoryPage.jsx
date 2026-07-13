@@ -520,8 +520,8 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
       } else {
         // Publicar a tiendas que calzan (por categoría y distancia)
         const { data: stores } = await supabase.from("profiles")
-          .select("id,store_categories,store_city,store_ships_nationwide,store_phone,store_lat,store_lng,store_radius_km")
-          .eq("role","store");
+          .select("id,store_categories,store_city,store_ships_nationwide,store_phone,store_lat,store_lng,store_radius_km,store_paused")
+          .eq("role","store").or("store_paused.is.null,store_paused.eq.false");
         const nationalSearch = form.scope === "national";
         let notifiedCount = 0;
         (stores||[]).forEach(st => {

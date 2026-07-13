@@ -80,6 +80,8 @@ export default function StoreView({ user, onLogout }) {
   };
 
   const loadRequests = async () => {
+    // Si la tienda está en pausa, no recibe pedidos nuevos
+    if (profile.store_paused) { setRequests([]); return; }
     // Solicitudes abiertas que calzan por categoría y por distancia (radio de cobertura)
     const { data } = await supabase.from("part_requests")
       .select("*, owner:owner_id(full_name)")
@@ -130,6 +132,24 @@ export default function StoreView({ user, onLogout }) {
   };
 
   const toggleCat = (c) => setProfile(p=>({...p, store_categories: (p.store_categories||[]).includes(c) ? p.store_categories.filter(x=>x!==c) : [...(p.store_categories||[]), c]}));
+
+  // Pausar / activar la tienda (deja de recibir pedidos nuevos)
+  const togglePause = async () => {
+    const paused = !profile.store_paused;
+    setProfile(p=>({...p, store_paused: paused}));
+    await supabase.from("profiles").update({ store_paused: paused }).eq("id", user.id);
+    setMsg(paused
+      ? L("Tienda en pausa. No recibirás pedidos nuevos.","Store paused. You won't receive new orders.")
+      : L("Tienda activa. Ya recibes pedidos.","Store active. You're receiving orders again."));
+    setTimeout(()=>setMsg(""),3000);
+    if (!paused) loadRequests();
+  };
+
+  // Guardar preferencia de notificación
+  const saveNotifPref = async (key, value) => {
+    setProfile(p=>({...p, [key]: value}));
+    await supabase.from("profiles").update({ [key]: value }).eq("id", user.id);
+  };
 
   const respondedIds = myResponses.map(r=>r.request_id);
   // Iniciales de la tienda para el avatar (ej: "West Marine" -> "WM")
@@ -182,22 +202,73 @@ export default function StoreView({ user, onLogout }) {
             {showStoreMenu && (
               <>
                 <div style={{position:"fixed",inset:0,zIndex:200}} onClick={()=>setShowStoreMenu(false)}/>
-                <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,boxShadow:"0 12px 32px rgba(10,37,64,.14)",minWidth:210,padding:6,zIndex:210}}>
-                  <div style={{padding:"10px 12px 8px",borderBottom:"1px solid #f1f5f9",marginBottom:4}}>
-                    <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{profile.store_name||(lang==="es"?"Mi tienda":"My store")}</div>
-                    <div style={{fontSize:11,color:"#94a3b8"}}>{profile.store_city||user?.email}</div>
+                <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,boxShadow:"0 12px 32px rgba(10,37,64,.14)",minWidth:270,padding:6,zIndex:210}}>
+
+                  {/* Cabecera: identidad de la tienda */}
+                  <div style={{padding:"10px 12px 10px",borderBottom:"1px solid #f1f5f9",marginBottom:6}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{profile.store_name||L("Mi tienda","My store")}</div>
+                    <div style={{fontSize:11,color:"#94a3b8"}}>{user?.email}</div>
                   </div>
-                  <button onMouseDown={()=>{setTab("perfil");setShowStoreMenu(false);}} style={storeMenuItem}>{t("store.myStore")}</button>
-                  <button onMouseDown={()=>{setTab("respuestas");setShowStoreMenu(false);}} style={storeMenuItem}>{t("store.quotes")}</button>
-                  {/* Idioma */}
+
+                  {/* 1. ESTADO — pausar/activar la tienda */}
+                  <div style={{padding:"4px 12px 8px"}}>
+                    <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>{L("ESTADO","STATUS")}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 11px",background:profile.store_paused?"#fffbeb":"#f0fdf4",border:`1px solid ${profile.store_paused?"#fde68a":"#bbf7d0"}`,borderRadius:9}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:700,color:profile.store_paused?"#b45309":"#15803d"}}>
+                          {profile.store_paused ? L("Tienda en pausa","Store paused") : L("Tienda activa","Store active")}
+                        </div>
+                        <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>
+                          {profile.store_paused ? L("No recibes pedidos","Not receiving orders") : L("Recibiendo pedidos","Receiving orders")}
+                        </div>
+                      </div>
+                      <button onMouseDown={(e)=>{e.preventDefault();togglePause();}} style={{
+                        width:40,height:22,borderRadius:20,border:"none",cursor:"pointer",position:"relative",
+                        background:profile.store_paused?"#cbd5e1":"linear-gradient(120deg,#16a34a,#22c55e)",transition:".2s",
+                      }}>
+                        <span style={{position:"absolute",top:2,left:profile.store_paused?2:20,width:18,height:18,borderRadius:"50%",background:"#fff",transition:".2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. NOTIFICACIONES */}
+                  <div style={{padding:"4px 12px 8px",borderTop:"1px solid #f1f5f9",marginTop:4}}>
+                    <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",margin:"8px 0 6px"}}>{L("NOTIFICACIONES","NOTIFICATIONS")}</div>
+                    {[
+                      {k:"notify_whatsapp", l:L("Avisos por WhatsApp","WhatsApp alerts")},
+                      {k:"notify_email",    l:L("Avisos por email","Email alerts")},
+                    ].map(n=>(
+                      <label key={n.k} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer"}}>
+                        <input type="checkbox" checked={profile[n.k]!==false} onChange={e=>saveNotifPref(n.k, e.target.checked)} style={{width:14,height:14,cursor:"pointer"}}/>
+                        <span style={{fontSize:12,color:"#475569"}}>{n.l}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* 3. CUENTA */}
+                  <div style={{padding:"4px 12px 4px",borderTop:"1px solid #f1f5f9",marginTop:4}}>
+                    <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",margin:"8px 0 4px"}}>{L("CUENTA","ACCOUNT")}</div>
+                  </div>
+                  <button onMouseDown={()=>{setShowStoreMenu(false);setTab("perfil");}} style={storeMenuItem}>{L("Datos de la tienda","Store details")}</button>
+                  <button onMouseDown={async(e)=>{e.preventDefault(); const {error}=await supabase.auth.resetPasswordForEmail(user.email); alert(error?L("No se pudo enviar el correo","Could not send the email"):L("Te enviamos un correo para cambiar tu contraseña","We sent you an email to change your password")); setShowStoreMenu(false);}} style={storeMenuItem}>{L("Cambiar contraseña","Change password")}</button>
+
+                  {/* 4. IDIOMA */}
                   <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderTop:"1px solid #f1f5f9",marginTop:4}}>
-                    <span style={{fontSize:13,color:"#1e293b",flex:1}}>{lang==="es"?"Idioma":"Language"}</span>
+                    <span style={{fontSize:13,color:"#1e293b",flex:1}}>{L("Idioma","Language")}</span>
                     <div style={{display:"flex",gap:3,background:"#f1f5f9",borderRadius:7,padding:2}}>
                       <button onMouseDown={(e)=>{e.preventDefault();setLang("es");}} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
                       <button onMouseDown={(e)=>{e.preventDefault();setLang("en");}} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
                     </div>
                   </div>
-                  <button onMouseDown={onLogout} style={{...storeMenuItem,color:"#dc2626",borderTop:"1px solid #f1f5f9",marginTop:4}}>{t("store.logout")}</button>
+
+                  {/* 5. AYUDA */}
+                  <a href={`mailto:info@carive.co?subject=${encodeURIComponent(L("Ayuda — Portal de Tiendas","Help — Store Portal"))}`}
+                     style={{...storeMenuItem, display:"block", textDecoration:"none", borderTop:"1px solid #f1f5f9", marginTop:4}}>
+                    {L("Ayuda y soporte","Help & support")}
+                  </a>
+
+                  {/* 6. CERRAR SESIÓN */}
+                  <button onMouseDown={onLogout} style={{...storeMenuItem,color:"#dc2626",borderTop:"1px solid #f1f5f9",marginTop:4}}>{L("Cerrar sesión","Log out")}</button>
                 </div>
               </>
             )}
@@ -205,6 +276,7 @@ export default function StoreView({ user, onLogout }) {
         </div>
       </div>
 
+      {msg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"11px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:5000,boxShadow:"0 8px 24px rgba(0,0,0,.2)"}}>{msg}</div>}
       <div style={{maxWidth:820,margin:"0 auto",padding:"24px 20px"}}>
         {/* Header storefront (solo con perfil completo) */}
         {profileComplete && (
@@ -212,7 +284,20 @@ export default function StoreView({ user, onLogout }) {
             <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:"radial-gradient(circle,rgba(56,189,248,.22),transparent 70%)"}}/>
             <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,marginBottom:4}}>{profile.store_name}</div>
             <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?` · ${L("Envío nacional","Nationwide shipping")}`:profile.store_radius_km?` · ${L("Cobertura","Coverage")} ${Math.round(kmToMi(profile.store_radius_km))} mi`:""}</div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(56,189,248,.2)",color:"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>✓ {t("store.active")}</div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:profile.store_paused?"rgba(251,191,36,.2)":"rgba(56,189,248,.2)",color:profile.store_paused?"#fcd34d":"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>{profile.store_paused?L("En pausa","Paused"):`✓ ${t("store.active")}`}</div>
+          </div>
+        )}
+
+        {/* Aviso: tienda en pausa */}
+        {profile.store_paused && (
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#b45309"}}>{L("Tu tienda está en pausa","Your store is paused")}</div>
+              <div style={{fontSize:12,color:"#92400e",marginTop:2}}>{L("No estás recibiendo pedidos nuevos. Actívala cuando quieras volver.","You're not receiving new orders. Turn it back on whenever you're ready.")}</div>
+            </div>
+            <button onClick={togglePause} style={{padding:"8px 16px",background:"linear-gradient(120deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {L("Activar tienda","Activate store")}
+            </button>
           </div>
         )}
 
@@ -363,7 +448,7 @@ export default function StoreView({ user, onLogout }) {
         {/* ── PERFIL DE TIENDA ── */}
         {tab==="perfil"&&(
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:16}}>Mi Tienda</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:16}}>{L("Mi Tienda","My Store")}</div>
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18,display:"flex",flexDirection:"column",gap:12}}>
               <div>
                 <label style={lbl}>{L("Nombre de la tienda","Store name")} *</label>

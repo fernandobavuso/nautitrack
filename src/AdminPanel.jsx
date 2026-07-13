@@ -64,6 +64,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
   // Tiendas que califican para un pedido (por categoría y distancia/nacional)
   const matchingStores = (req) => {
     return stores.filter(st => {
+      if (st.store_paused) return false;  // tienda en pausa: no recibe pedidos
       const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
       const catMatch = cats.length===0 || cats.includes((req.category||"").toLowerCase());
       if (!catMatch) return false;
