@@ -63,6 +63,30 @@ const BADGE_DEFS = [
 
 // Traducción de etiquetas que viven en constantes de módulo
 const CREW_EN = {
+  // Roles
+  "Capitán":"Captain","Primer Oficial":"First Officer","Jefe de Máquinas":"Chief Engineer",
+  "Electricista":"Electrician","Marinero":"Deckhand","Chef":"Chef","Camarero":"Steward",
+  "Mecánico":"Mechanic","Carpintero":"Carpenter","Soldador":"Welder","Otro":"Other",
+  // Certificaciones
+  "STCW Básico":"Basic STCW","Licencia de Capitán":"Captain's License",
+  "Primeros Auxilios Marítimo":"Maritime First Aid","Seguridad Contraincendios":"Fire Safety",
+  "Supervivencia en el Mar":"Sea Survival","Radar ARPA":"ARPA Radar","GMDSS Operador":"GMDSS Operator",
+  "Buceo":"Diving","Licencia Costera":"Coastal License","Licencia de Pesca":"Fishing License",
+  // Idiomas
+  "Español":"Spanish","Inglés":"English","Portugués":"Portuguese","Francés":"French",
+  "Italiano":"Italian","Alemán":"German","Holandés":"Dutch","Chino":"Chinese",
+  "Japonés":"Japanese","Árabe":"Arabic","Ruso":"Russian",
+  // Países (los que cambian de nombre)
+  "USA/Canadá":"USA/Canada","España":"Spain","México":"Mexico","Perú":"Peru","Panamá":"Panama",
+  "Países Bajos":"Netherlands","Japón":"Japan","Sudáfrica":"South Africa","Bélgica":"Belgium",
+  "República Dominicana":"Dominican Republic","República Checa":"Czech Republic","Hungría":"Hungary",
+  "Turquía":"Turkey","Líbano":"Lebanon","Etiopía":"Ethiopia","Camerún":"Cameroon",
+  "Pakistán":"Pakistan","Bangladés":"Bangladesh","Canadá":"Canada","Haití":"Haiti",
+  "Alemania":"Germany","Brasil":"Brazil","Italia":"Italy","Francia":"France","Grecia":"Greece",
+  "Suecia":"Sweden","Suiza":"Switzerland","Noruega":"Norway","Dinamarca":"Denmark",
+  "Finlandia":"Finland","Irlanda":"Ireland","Polonia":"Poland","Rusia":"Russia",
+  "Corea del Sur":"South Korea","India":"India","Australia":"Australia","Nueva Zelanda":"New Zealand",
+  "Marruecos":"Morocco","Emiratos Árabes Unidos":"United Arab Emirates","Egipto":"Egypt","Nigeria":"Nigeria","Kenia":"Kenya",
   "Capitán":"Captain","Jefe de Máquinas":"Chief Engineer","Mecánico":"Mechanic","Marinero":"Deckhand",
   "Camarero":"Steward","Cocinero":"Cook","Azafata":"Stewardess",
   "STCW Básico":"Basic STCW","Licencia de Capitán":"Captain's License","Primeros Auxilios Marítimo":"Maritime First Aid",
@@ -709,11 +733,11 @@ export default function CrewProfile({ user, onLogout }) {
                     return (
                       <>
                         <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>
-                          {unlocked ? "Activa para que los propietarios te encuentren" : "🔒 Verifica tu identidad con IA para activar"}
+                          {unlocked ? L("Activa para que los propietarios te encuentren","Turn on so owners can find you") : L("Verifica tu identidad con IA para activar","Verify your identity with AI to enable")}
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <div onClick={async ()=>{
-                            if (!unlocked) { setMsg("🔒 Primero verifica tu identidad: sube foto, documento, nombre y presiona Verificar identidad"); setTimeout(()=>setMsg(""),5000); return; }
+                            if (!unlocked) { setMsg(L("Primero verifica tu identidad: sube foto, documento, nombre y presiona Verificar identidad","First verify your identity: upload photo, document, name and press Verify identity")); setTimeout(()=>setMsg(""),5000); return; }
                             const newVal = !profile.available;
                             set("available", newVal);
                             await supabase.from("profiles").update({ available:newVal }).eq("id", user.id);
@@ -865,7 +889,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <label style={s.label}>{T("cw.phone")} *</label>
                   <div style={{display:"flex",gap:6}}>
                     <select value={profile.phone_code||"+58"} onChange={e=>set("phone_code",e.target.value)} style={{...s.input,width:140,flexShrink:0}}>
-                      {COUNTRY_CODES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.code} {c.name}</option>)}
+                      {COUNTRY_CODES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.code} {cl(c.name, lang)}</option>)}
                     </select>
                     <input value={profile.phone||""} onChange={e=>set("phone",e.target.value)} placeholder="4141234567" style={{...s.input,flex:1}}/>
                   </div>
@@ -881,7 +905,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <label style={s.label}>{T("cw.country")} *</label>
                   <select value={profile.nationality||""} onChange={e=>set("nationality",e.target.value)} style={s.input}>
                     <option value="">{T("cw.selectCountry")}</option>
-                    {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
+                    {NATIONALITIES.map(n=><option key={n} value={n}>{cl(n, lang)}</option>)}
                   </select>
                 </div>
 
@@ -894,14 +918,14 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{marginBottom:10}}>
                   <label style={s.label}>{T("cw.languages")} *</label>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
-                    {LANGUAGES.map(lang=>(
-                      <button key={lang} onClick={()=>toggleLang(lang)} style={{
+                    {LANGUAGES.map(lg=>(
+                      <button key={lg} onClick={()=>toggleLang(lg)} style={{
                         padding:"4px 10px",border:"1.5px solid",borderRadius:16,fontSize:11,cursor:"pointer",
-                        background:(profile.languages||[]).includes(lang)?"#eff6ff":"#f8fafc",
-                        borderColor:(profile.languages||[]).includes(lang)?"#2563eb":"#e2e8f0",
-                        color:(profile.languages||[]).includes(lang)?"#2563eb":"#64748b",
-                        fontWeight:(profile.languages||[]).includes(lang)?700:400,
-                      }}>{lang}</button>
+                        background:(profile.languages||[]).includes(lg)?"#eff6ff":"#f8fafc",
+                        borderColor:(profile.languages||[]).includes(lg)?"#2563eb":"#e2e8f0",
+                        color:(profile.languages||[]).includes(lg)?"#2563eb":"#64748b",
+                        fontWeight:(profile.languages||[]).includes(lg)?700:400,
+                      }}>{cl(lg, lang)}</button>
                     ))}
                   </div>
                 </div>
@@ -910,14 +934,14 @@ export default function CrewProfile({ user, onLogout }) {
                   <div>
                     <label style={s.label}>{T("cw.mainRole")} *</label>
                     <select value={profile.crew_role||"Capitán"} onChange={e=>set("crew_role",e.target.value)} style={s.input}>
-                      {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
+                      {CREW_ROLES.map(r=><option key={r} value={r}>{cl(r, lang)}</option>)}
                     </select>
                   </div>
                   <div>
                     <label style={s.label}>{T("cw.otherRoles")}</label>
                     <select value={profile.secondary_role||""} onChange={e=>set("secondary_role",e.target.value)} style={s.input}>
                       <option value="">{T("cw.none")}</option>
-                      {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
+                      {CREW_ROLES.map(r=><option key={r} value={r}>{cl(r, lang)}</option>)}
                     </select>
                   </div>
                 </div>
@@ -981,7 +1005,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <label style={s.label}>{T("cw.cert")}</label>
                 <select value={newCert.name} onChange={e=>setNewCert({...newCert,name:e.target.value})} style={s.input}>
                   <option value="">{T("cw.select")}</option>
-                  {CERT_OPTIONS.map(o=><option key={o}>{o}</option>)}
+                  {CERT_OPTIONS.map(o=><option key={o} value={o}>{cl(o, lang)}</option>)}
                 </select>
                 {newCert.name==="Otro"&&(
                   <input value={newCert.custom_name} onChange={e=>setNewCert({...newCert,custom_name:e.target.value})}
@@ -1066,7 +1090,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <label style={s.label}>{T("cw.yourRole")}</label>
                   <select value={newExp.role} onChange={e=>setNewExp({...newExp,role:e.target.value})} style={s.input}>
                     <option value="">{T("cw.select")}</option>
-                    {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
+                    {CREW_ROLES.map(r=><option key={r} value={r}>{cl(r, lang)}</option>)}
                   </select>
                 </div>
                 <div>
