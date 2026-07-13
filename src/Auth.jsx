@@ -104,7 +104,7 @@ export default function Auth({ onLogin, invite }) {
               <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>Crea tu cuenta abajo para aceptar la invitación.</div>
             </div>
           ); })()}
-          <div style={s.tagline}>{lang==="es"?"Gestión inteligente de embarcaciones":"Smart vessel management"}</div>
+          <div style={s.tagline}>{t("auth.smartMgmt")}</div>
         </div>
 
         {/* Tabs */}
@@ -135,38 +135,38 @@ export default function Auth({ onLogin, invite }) {
           )}
           {mode==="register"&&(
             <div>
-              <label style={s.label}>¿Qué eres?</label>
+              <label style={s.label}>{t("auth.whatAreYou")}</label>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 <button type="button" onClick={()=>setUserRole("owner")} style={roleCard(userRole==="owner")}>
-                  <div style={{fontSize:13,fontWeight:700,color:userRole==="owner"?"#2563eb":"#0f172a"}}>Barco</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Eres dueño de una embarcación o gerencias una, y quieres organizar todo lo del barco en un solo lugar.</div>
+                  <div style={{fontSize:13,fontWeight:700,color:userRole==="owner"?"#2563eb":"#0f172a"}}>{t("auth.roleBoat")}</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{t("auth.roleBoatDesc")}</div>
                 </button>
                 <button type="button" onClick={()=>setUserRole("crew")} style={roleCard(userRole==="crew")}>
-                  <div style={{fontSize:13,fontWeight:700,color:userRole==="crew"?"#2563eb":"#0f172a"}}>Tripulante</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Eres capitán, marinero o azafata y quieres abrir tu campo laboral.</div>
+                  <div style={{fontSize:13,fontWeight:700,color:userRole==="crew"?"#2563eb":"#0f172a"}}>{t("auth.roleCrew")}</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{t("auth.roleCrewDesc")}</div>
                 </button>
                 <button type="button" onClick={()=>setUserRole("store")} style={roleCard(userRole==="store")}>
-                  <div style={{fontSize:13,fontWeight:700,color:userRole==="store"?"#2563eb":"#0f172a"}}>Tienda</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Tienes una tienda de artículos marinos y quieres expandir tu clientela.</div>
+                  <div style={{fontSize:13,fontWeight:700,color:userRole==="store"?"#2563eb":"#0f172a"}}>{t("auth.roleStore")}</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{t("auth.roleStoreDesc")}</div>
                 </button>
               </div>
 
               {/* Sub-flujo BARCO: dueño o gerente */}
               {userRole==="owner"&&(
                 <div style={{marginTop:14,padding:14,background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
-                  <label style={s.label}>¿Cuál es tu caso?</label>
+                  <label style={s.label}>{t("auth.yourCase")}</label>
                   <div style={{display:"flex",gap:8,marginBottom:boatRole?12:0}}>
-                    <button type="button" onClick={()=>setBoatRole("dueno")} style={pill(boatRole==="dueno")}>Soy el dueño</button>
-                    <button type="button" onClick={()=>setBoatRole("gerente")} style={pill(boatRole==="gerente")}>Soy el gerente</button>
+                    <button type="button" onClick={()=>setBoatRole("dueno")} style={pill(boatRole==="dueno")}>{t("auth.imOwner")}</button>
+                    <button type="button" onClick={()=>setBoatRole("gerente")} style={pill(boatRole==="gerente")}>{t("auth.imManager")}</button>
                   </div>
 
                   {/* DUEÑO → ¿tiene tripulación? */}
                   {boatRole==="dueno"&&(
                     <div>
-                      <label style={s.label}>Tripulación</label>
+                      <label style={s.label}>{t("auth.crewLabel")}</label>
                       <div style={{display:"flex",gap:8,marginBottom:hasCrew?12:0}}>
-                        <button type="button" onClick={()=>setHasCrew("si")} style={pill(hasCrew==="si")}>Tengo tripulación</button>
-                        <button type="button" onClick={()=>setHasCrew("no")} style={pill(hasCrew==="no")}>No tengo</button>
+                        <button type="button" onClick={()=>setHasCrew("si")} style={pill(hasCrew==="si")}>{t("auth.haveCrew")}</button>
+                        <button type="button" onClick={()=>setHasCrew("no")} style={pill(hasCrew==="no")}>{t("auth.noCrew")}</button>
                       </div>
                       {hasCrew==="si"&&(
                         <div>
@@ -215,7 +215,7 @@ export default function Auth({ onLogin, invite }) {
           </div>
           {mode==="register"&&(
             <div>
-              <label style={s.label}>Confirmar contraseña</label>
+              <label style={s.label}>{t("auth.confirmPwd")}</label>
               <input type="password" value={confirmPwd} onChange={e=>setConfirmPwd(e.target.value)} placeholder="••••••••" style={s.input}
                 onKeyDown={e=>e.key==="Enter"&&handleRegister()}/>
             </div>
@@ -234,20 +234,20 @@ export default function Auth({ onLogin, invite }) {
               if(!email){setError("Escribe tu email primero");return;}
               await supabase.auth.resetPasswordForEmail(email);
               setSuccess("Te enviamos un link para restablecer tu contraseña.");
-            }}>¿Olvidaste tu contraseña?</button>
+            }}>{t("auth.forgot")}</button>
           )}
         </div>
 
         {/* Features */}
         <div style={s.footer}>
           <div style={s.featuresGrid}>
-            <div style={s.feature}><span style={s.featureText}>Bitácora digital</span></div>
-            <div style={s.feature}><span style={s.featureText}>Control de tareas</span></div>
-            <div style={s.feature}><span style={s.featureText}>Asistente IA</span></div>
-            <div style={s.feature}><span style={s.featureText}>Alertas WhatsApp</span></div>
+            <div style={s.feature}><span style={s.featureText}>{t("auth.featLog")}</span></div>
+            <div style={s.feature}><span style={s.featureText}>{t("auth.featTasks")}</span></div>
+            <div style={s.feature}><span style={s.featureText}>{t("auth.featAI")}</span></div>
+            <div style={s.feature}><span style={s.featureText}>{t("auth.featWA")}</span></div>
           </div>
           <div style={{fontSize:11,color:"#cbd5e1",marginTop:12,textAlign:"center",letterSpacing:"0.04em"}}>
-            Gestión inteligente · Desde cualquier lugar
+            {t("auth.anywhere")}
           </div>
         </div>
       </div>

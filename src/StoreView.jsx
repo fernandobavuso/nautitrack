@@ -11,7 +11,7 @@ import { useLang } from "./i18n.jsx";
 const STORE_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
 
 export default function StoreView({ user, onLogout }) {
-  const { t } = useLang();
+  const { t, lang, setLang } = useLang();
   const [tab, setTab] = useState("solicitudes");
   const [profile, setProfile] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -21,6 +21,7 @@ export default function StoreView({ user, onLogout }) {
   const [msg, setMsg] = useState("");
   const [respondTo, setRespondTo] = useState(null);
   const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem("nt_store_welcomed") !== "1");
+  const [showStoreMenu, setShowStoreMenu] = useState(false);
 
   useEffect(() => { loadProfile(); loadTiers().then(setCommissionTiers); }, []);
   useEffect(() => { if (profile) { loadRequests(); loadResponses(); } }, [profile]);
@@ -95,6 +96,9 @@ export default function StoreView({ user, onLogout }) {
   const toggleCat = (c) => setProfile(p=>({...p, store_categories: (p.store_categories||[]).includes(c) ? p.store_categories.filter(x=>x!==c) : [...(p.store_categories||[]), c]}));
 
   const respondedIds = myResponses.map(r=>r.request_id);
+  // Iniciales de la tienda para el avatar (ej: "West Marine" -> "WM")
+  const storeInitials = (profile?.store_name || user?.email || "T")
+    .trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase() || "T";
   const profileComplete = profile?.store_name && profile?.store_city && (profile?.store_categories||[]).length>0;
 
   // Métricas del negocio
@@ -132,7 +136,36 @@ export default function StoreView({ user, onLogout }) {
               <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===tb.k?700:500,background:tab===tb.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"transparent",color:tab===tb.k?"#fff":"#64748b"}}>{tb.l}</button>
             ))}
           </div>
-          <button onClick={onLogout} style={{padding:"7px 12px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:12,color:"#94a3b8",marginLeft:4}}>Salir</button>
+          <div style={{position:"relative",marginLeft:6}}>
+            <button onClick={(e)=>{e.stopPropagation();setShowStoreMenu(v=>!v);}} style={{display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:4}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,letterSpacing:"0.02em"}}>
+                {storeInitials}
+              </div>
+              <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
+            </button>
+            {showStoreMenu && (
+              <>
+                <div style={{position:"fixed",inset:0,zIndex:200}} onClick={()=>setShowStoreMenu(false)}/>
+                <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,boxShadow:"0 12px 32px rgba(10,37,64,.14)",minWidth:210,padding:6,zIndex:210}}>
+                  <div style={{padding:"10px 12px 8px",borderBottom:"1px solid #f1f5f9",marginBottom:4}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{profile.store_name||(lang==="es"?"Mi tienda":"My store")}</div>
+                    <div style={{fontSize:11,color:"#94a3b8"}}>{profile.store_city||user?.email}</div>
+                  </div>
+                  <button onMouseDown={()=>{setTab("perfil");setShowStoreMenu(false);}} style={storeMenuItem}>{t("store.myStore")}</button>
+                  <button onMouseDown={()=>{setTab("respuestas");setShowStoreMenu(false);}} style={storeMenuItem}>{t("store.quotes")}</button>
+                  {/* Idioma */}
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderTop:"1px solid #f1f5f9",marginTop:4}}>
+                    <span style={{fontSize:13,color:"#1e293b",flex:1}}>{lang==="es"?"Idioma":"Language"}</span>
+                    <div style={{display:"flex",gap:3,background:"#f1f5f9",borderRadius:7,padding:2}}>
+                      <button onMouseDown={(e)=>{e.preventDefault();setLang("es");}} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
+                      <button onMouseDown={(e)=>{e.preventDefault();setLang("en");}} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
+                    </div>
+                  </div>
+                  <button onMouseDown={onLogout} style={{...storeMenuItem,color:"#dc2626",borderTop:"1px solid #f1f5f9",marginTop:4}}>{t("store.logout")}</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -177,7 +210,7 @@ export default function StoreView({ user, onLogout }) {
         {/* ── SOLICITUDES ── */}
         {tab==="solicitudes"&&(
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Solicitudes para ti{profile.store_city?` · ${profile.store_city}`:""}</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{t("store.requestsForYou")}{profile.store_city?` · ${profile.store_city}`:""}</div>
             {requests.length===0&&(
               <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                 <div style={{fontWeight:600}}>{t("store.noRequests")}</div>
@@ -485,3 +518,5 @@ function RespondModal({ request, store, user, onClose, onDone }) {
 
 const lbl = {display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:5};
 const inp = {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"};
+
+const storeMenuItem = {display:"block",width:"100%",textAlign:"left",padding:"9px 12px",border:"none",borderRadius:7,cursor:"pointer",background:"transparent",fontSize:13,color:"#1e293b",fontWeight:500};

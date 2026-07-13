@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLang } from "./i18n.jsx";
 import CariveLogo from "./CariveLogo";
 import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
@@ -70,6 +71,7 @@ const PAYMENT_METHODS = [
 ];
 
 export default function CrewProfile({ user, onLogout }) {
+  const { t: T, lang, setLang } = useLang();
   const { isMobile, isTablet } = useResponsive();
   const [profile,   setProfile]   = useState(null);
   const [loading,   setLoading]   = useState(true);
@@ -138,11 +140,11 @@ export default function CrewProfile({ user, onLogout }) {
   }, [user?.id]);
 
   const TABS = [
-    {key:"inicio",   icon:"", label:"Inicio"},
-    {key:"perfil",   icon:"", label:"Mi Perfil"},
-    {key:"pagos",    icon:"", label:"Pagos"},
-    {key:"buscar",   icon:"", label:"Buscar Barco"},
-    {key:"propuestas",icon:"", label:"Propuestas"},
+    {key:"inicio",   icon:"", label:lang==="es"?"Inicio":"Home"},
+    {key:"perfil",   icon:"", label:lang==="es"?"Mi Perfil":"My Profile"},
+    {key:"pagos",    icon:"", label:lang==="es"?"Pagos":"Payments"},
+    {key:"buscar",   icon:"", label:lang==="es"?"Buscar Barco":"Find a Boat"},
+    {key:"propuestas",icon:"", label:lang==="es"?"Propuestas":"Proposals"},
     {key:"daytrips", icon:"", label:"Day Trips"},
     {key:"solicitudes",icon:"", label:"Solicitudes"},
   ];
@@ -500,7 +502,11 @@ export default function CrewProfile({ user, onLogout }) {
               <span style={{cursor:"pointer",display:"flex"}} onClick={()=>setShowNotifPanel(true)}><IconBell size={19} color="#475569"/></span>
               {unreadCount>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#dc2626",color:"#fff",fontSize:9,fontWeight:700,minWidth:15,height:15,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px"}}>{unreadCount}</div>}
             </div>
-            <button onClick={onLogout} style={{padding:"5px 10px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:11,color:"#94a3b8",marginLeft:4}}>Salir</button>
+            <div style={{display:"flex",gap:3,background:"#f1f5f9",borderRadius:7,padding:2,marginLeft:4}}>
+              <button onClick={()=>setLang("es")} style={{padding:"3px 8px",border:"none",borderRadius:5,cursor:"pointer",fontSize:10,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
+              <button onClick={()=>setLang("en")} style={{padding:"3px 8px",border:"none",borderRadius:5,cursor:"pointer",fontSize:10,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
+            </div>
+            <button onClick={onLogout} style={{padding:"5px 10px",background:"none",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontSize:11,color:"#94a3b8",marginLeft:4}}>{lang==="es"?"Salir":"Log out"}</button>
           </div>
         )}
       </nav>
