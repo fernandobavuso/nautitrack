@@ -60,6 +60,18 @@ const BADGE_DEFS = [
   {id:"passport",    icon:"", label:"Pasaporte Vigente",   color:"#7c3aed", bg:"#f5f3ff", border:"#ddd6fe"},
 ];
 
+
+// Traducción de etiquetas que viven en constantes de módulo
+const CREW_EN = {
+  "Pago Móvil":"Mobile Payment","Transferencia":"Bank transfer","Efectivo USD":"Cash USD","Otro método":"Other method",
+  "Zelle":"Zelle","PayPal":"PayPal","USDT (Cripto)":"USDT (Crypto)",
+  "Banco":"Bank","Teléfono":"Phone","Cédula":"ID number","N° de cuenta":"Account number","Cuenta a nombre de":"Account holder",
+  "Email asociado":"Associated email","Nota (opcional)":"Note (optional)","Descripción":"Description","Datos de contacto":"Contact details",
+  "Bilingüe":"Bilingual","Capitán Certificado":"Certified Captain","STCW Certificado":"STCW Certified","Usuario Certificado":"Certified User",
+  "Pasaporte Vigente":"Valid Passport","Buceo":"Diving","Capitán":"Captain","Marinero":"Deckhand","Camarero":"Steward",
+};
+const cl = (label, lang) => lang === "en" ? (CREW_EN[label] || label) : label;
+
 const PAYMENT_METHODS = [
   {key:"pagomovil",  label:"Pago Móvil",     fields:[{k:"banco",l:"Banco"},{k:"telefono",l:"Teléfono"},{k:"cedula",l:"Cédula"}]},
   {key:"zelle",      label:"Zelle",          fields:[{k:"email",l:"Email o teléfono"},{k:"nombre",l:"Cuenta a nombre de"}]},
@@ -146,7 +158,7 @@ export default function CrewProfile({ user, onLogout }) {
     {key:"buscar",   icon:"", label:lang==="es"?"Buscar Barco":"Find a Boat"},
     {key:"propuestas",icon:"", label:lang==="es"?"Propuestas":"Proposals"},
     {key:"daytrips", icon:"", label:"Day Trips"},
-    {key:"solicitudes",icon:"", label:"Solicitudes"},
+    {key:"solicitudes",icon:"", label:lang==="es"?"Solicitudes":"Applications"},
   ];
 
   useEffect(() => { loadProfile(); loadRequests(); loadStats(); }, []);
@@ -458,7 +470,7 @@ export default function CrewProfile({ user, onLogout }) {
 
   if (loading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f7ff"}}>
-      <div style={{textAlign:"center"}}><div style={{display:"flex",justifyContent:"center"}}><CariveLogo size={44} /></div><div style={{color:"#64748b",marginTop:8}}>Cargando perfil...</div></div>
+      <div style={{textAlign:"center"}}><div style={{display:"flex",justifyContent:"center"}}><CariveLogo size={44} /></div><div style={{color:"#64748b",marginTop:8}}>{T("cw.loadingProfile")}</div></div>
     </div>
   );
 
@@ -473,7 +485,7 @@ export default function CrewProfile({ user, onLogout }) {
           <CariveLogo size={30} />
           <div>
             <div style={{fontSize:14,fontWeight:800,color:"#0f172a",lineHeight:1}}>Carive</div>
-            <div style={{fontSize:10,color:"#64748b"}}>Perfil Tripulación</div>
+            <div style={{fontSize:10,color:"#64748b"}}>{T("cw.crewProfile")}</div>
           </div>
         </div>
 
@@ -516,7 +528,7 @@ export default function CrewProfile({ user, onLogout }) {
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:200}} onClick={()=>setMobileMenuOpen(false)}>
           <div style={{position:"absolute",left:0,top:0,bottom:0,width:260,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Menú</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{T("cw.menu")}</div>
               <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
             </div>
             <div style={{padding:"12px"}}>
@@ -570,19 +582,19 @@ export default function CrewProfile({ user, onLogout }) {
             {/* Tarjetas de resumen */}
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:24}}>
               <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
-                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>MI REPUTACIÓN</div>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{T("cw.myRep")}</div>
                 <Stars avg={myRep.avg} count={myRep.count} size={15}/>
               </div>
               <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
-                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>VIAJES COMPLETADOS</div>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{T("cw.trips")}</div>
                 <div style={{fontSize:24,fontWeight:800,color:"#0f172a"}}>{completedCount}</div>
               </div>
               <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
-                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>POSTULACIONES ACTIVAS</div>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{T("cw.activeApps")}</div>
                 <div style={{fontSize:24,fontWeight:800,color:"#0f172a"}}>{openApps}</div>
               </div>
               <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
-                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>ESTADO</div>
+                <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{T("cw.myStatus")}</div>
                 <div style={{fontSize:14,fontWeight:700,color:(profile.badges||[]).includes("verified")?"#16a34a":"#d97706"}}>
                   {(profile.badges||[]).includes("verified")?"Verificado":"Sin verificar"}
                 </div>
@@ -592,26 +604,26 @@ export default function CrewProfile({ user, onLogout }) {
             {/* Aviso si no está verificado */}
             {!(profile.badges||[]).includes("verified")&&(
               <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:14,padding:16,marginBottom:20}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>Completa tu verificación</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>{T("cw.completeVerif")}</div>
                 <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Verifica tu identidad para poder aplicar a barcos y recibir solicitudes de viaje.</div>
-                <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Ir a Mi Perfil</button>
+                <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{T("cw.goProfile")}</button>
               </div>
             )}
 
             {/* Accesos rápidos */}
-            <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Accesos rápidos</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{T("cw.quickAccess")}</div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:24}}>
-              <button onClick={()=>setTab("daytrips")} style={qaBtn}>Ver viajes disponibles (Day Trips)</button>
-              <button onClick={()=>setTab("buscar")} style={qaBtn}>Buscar barcos para trabajar</button>
-              <button onClick={()=>setTab("perfil")} style={qaBtn}>Editar mi perfil</button>
-              <button onClick={()=>setTab("solicitudes")} style={qaBtn}>Ver mis solicitudes</button>
+              <button onClick={()=>setTab("daytrips")} style={qaBtn}>{T("cw.seeTrips")}</button>
+              <button onClick={()=>setTab("buscar")} style={qaBtn}>{T("cw.findBoats")}</button>
+              <button onClick={()=>setTab("perfil")} style={qaBtn}>{T("cw.editProfile")}</button>
+              <button onClick={()=>setTab("solicitudes")} style={qaBtn}>{T("cw.seeRequests")}</button>
             </div>
 
             {/* Mis barcos (donde es capitán/gestor fijo) */}
             {myBoats.length>0&&(
               <div>
-                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Mis barcos</div>
-                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Embarcaciones que gestionas. Toca una para abrir su panel.</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{T("cw.myBoats")}</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{T("cw.myBoatsDesc")}</div>
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {myBoats.map(b=>(
                     <button key={b.id} onClick={()=>setTab("barco")} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,cursor:"pointer",textAlign:"left",width:"100%"}}>
@@ -677,7 +689,7 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginTop:16,borderTop:"1px solid #f1f5f9",paddingTop:14}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>DISPONIBILIDAD DE TRABAJO</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.08em",marginBottom:4}}>{T("cw.workAvail")}</div>
                   {(() => {
                     const unlocked = (profile.badges||[]).includes("verified");
                     const isOn = unlocked && profile.available;
@@ -714,12 +726,12 @@ export default function CrewProfile({ user, onLogout }) {
               {/* Badges */}
               <div style={s.card}>
                 <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:10}}>🏅 Badges</div>
-                {earnedBadges.length===0&&<div style={{fontSize:11,color:"#94a3b8",textAlign:"center",padding:"10px 0"}}>Completa tu perfil para ganar badges</div>}
+                {earnedBadges.length===0&&<div style={{fontSize:11,color:"#94a3b8",textAlign:"center",padding:"10px 0"}}>{T("cw.completeProfile")}</div>}
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {earnedBadges.map(b=>(
                     <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:b.bg,border:`1px solid ${b.border}`,borderRadius:8}}>
                       <span style={{fontSize:16}}>{b.icon}</span>
-                      <span style={{fontSize:11,fontWeight:700,color:b.color}}>{b.label}</span>
+                      <span style={{fontSize:11,fontWeight:700,color:b.color}}>{cl(b.label, lang)}</span>
                     </div>
                   ))}
                 </div>
@@ -732,13 +744,13 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Documento de identidad */}
               <div style={s.card}>
-                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>Documento de Identidad</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>{T("cw.idDoc")}</div>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
                 <input ref={docRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
 
                 {/* Campo nombre legal */}
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Nombre completo como aparece en el documento *</label>
+                  <label style={s.label}>{T("cw.fullNameDoc")} *</label>
                   <input value={profile.legal_name||""} onChange={e=>set("legal_name",e.target.value)}
                     placeholder="Ej: Pedro Enrique Aguilar López" style={s.input}/>
                 </div>
@@ -747,7 +759,7 @@ export default function CrewProfile({ user, onLogout }) {
                   ? <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{display:"flex",gap:8,alignItems:"center"}}>
                         <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento subido</span>
-                        <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>Cambiar</button>
+                        <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>{T("cw.change")}</button>
                       </div>
                       {(profile.badges||[]).includes("verified")
                         ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ Identidad verificada por IA</div>
@@ -823,21 +835,21 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Info básica */}
               <div style={s.card}>
-                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>Información Personal</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>{T("cw.personalInfo")}</div>
 
                 <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
-                    <label style={s.label}>Nombre *</label>
+                    <label style={s.label}>{T("cw.firstName")} *</label>
                     <input value={profile.first_name||""} onChange={e=>set("first_name",e.target.value)} placeholder="Carlos" style={s.input}/>
                   </div>
                   <div>
-                    <label style={s.label}>Apellido *</label>
+                    <label style={s.label}>{T("cw.lastName")} *</label>
                     <input value={profile.last_name||""} onChange={e=>set("last_name",e.target.value)} placeholder="Mendoza" style={s.input}/>
                   </div>
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Teléfono *</label>
+                  <label style={s.label}>{T("cw.phone")} *</label>
                   <div style={{display:"flex",gap:6}}>
                     <select value={profile.phone_code||"+58"} onChange={e=>set("phone_code",e.target.value)} style={{...s.input,width:140,flexShrink:0}}>
                       {COUNTRY_CODES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.code} {c.name}</option>)}
@@ -853,21 +865,21 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>País de origen *</label>
+                  <label style={s.label}>{T("cw.country")} *</label>
                   <select value={profile.nationality||""} onChange={e=>set("nationality",e.target.value)} style={s.input}>
-                    <option value="">Selecciona tu país...</option>
+                    <option value="">{T("cw.selectCountry")}</option>
                     {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
                   </select>
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Zona de trabajo *</label>
-                  <input value={profile.work_zone||""} onChange={e=>set("work_zone",e.target.value)} placeholder="Ej: Lechería, Puerto La Cruz, Margarita" style={s.input}/>
+                  <label style={s.label}>{T("cw.workZone")} *</label>
+                  <input value={profile.work_zone||""} onChange={e=>set("work_zone",e.target.value)} placeholder={T("cw.workZonePh")} style={s.input}/>
                   <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>La ciudad o zona donde trabajas. Recibirás solicitudes de viaje de tu zona.</div>
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Idiomas *</label>
+                  <label style={s.label}>{T("cw.languages")} *</label>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
                     {LANGUAGES.map(lang=>(
                       <button key={lang} onClick={()=>toggleLang(lang)} style={{
@@ -883,22 +895,22 @@ export default function CrewProfile({ user, onLogout }) {
 
                 <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
-                    <label style={s.label}>Rol principal *</label>
+                    <label style={s.label}>{T("cw.mainRole")} *</label>
                     <select value={profile.crew_role||"Capitán"} onChange={e=>set("crew_role",e.target.value)} style={s.input}>
                       {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label style={s.label}>Otros roles</label>
+                    <label style={s.label}>{T("cw.otherRoles")}</label>
                     <select value={profile.secondary_role||""} onChange={e=>set("secondary_role",e.target.value)} style={s.input}>
-                      <option value="">Ninguno</option>
+                      <option value="">{T("cw.none")}</option>
                       {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label style={s.label}>Bio / CV breve *</label>
+                  <label style={s.label}>{T("cw.bio")} *</label>
                   <textarea value={profile.bio||""} onChange={e=>set("bio",e.target.value)}
                     placeholder="Capitán con 10 años de experiencia en el oriente venezolano. Especialista en yates de motor de 40-70 pies..."
                     rows={3} style={{...s.input,resize:"vertical"}}/>
@@ -907,8 +919,8 @@ export default function CrewProfile({ user, onLogout }) {
 
               {/* Dato curioso */}
               <div style={{...s.card,background:"linear-gradient(135deg,#fffbeb,#fff7ed)",border:"1px solid #fde68a"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>Dato Curioso</div>
-                <div style={{fontSize:11,color:"#b45309",marginBottom:12}}>Comparte cuál es tu playa favorita en el mundo</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>{T("cw.funFact")}</div>
+                <div style={{fontSize:11,color:"#b45309",marginBottom:12}}>{T("cw.funFactDesc")}</div>
                 <input value={(profile.fun_facts||{}).playa_favorita||""} onChange={e=>setProfile(p=>({...p,fun_facts:{...(p.fun_facts||{}),playa_favorita:e.target.value}}))}
                   placeholder="Ej: Playa Medina, Venezuela" style={{...s.input,borderColor:"#fde68a",background:"#fff"}}/>
               </div>
@@ -922,14 +934,14 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:700}}>
             {/* Lista de certificaciones guardadas */}
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Mis Certificaciones</div>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>Tus certificaciones náuticas con documento de respaldo</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>{T("cw.myCerts")}</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>{T("cw.certsDesc")}</div>
               <div style={{fontSize:11,color:"#2563eb",marginBottom:16}}>Las certificaciones visibles (STCW, licencias, primeros auxilios) te hacen más atractivo y te abren mejores oportunidades de trabajo.</div>
 
               {(profile.certifications||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
                     <div style={{fontSize:36,marginBottom:8}}>📜</div>
-                    <div style={{fontWeight:600}}>Sin certificaciones aún</div>
+                    <div style={{fontWeight:600}}>{T("cw.noCerts")}</div>
                   </div>
                 : <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:8}}>
                     {(profile.certifications||[]).map((cert,i)=>(
@@ -941,7 +953,7 @@ export default function CrewProfile({ user, onLogout }) {
                             {cert.date&&`Emitido: ${cert.date}`}{cert.expiry&&` · Vence: ${cert.expiry}`}
                           </div>
                         </div>
-                        {cert.doc_url&&<a href={cert.doc_url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",fontWeight:600}}>Ver doc</a>}
+                        {cert.doc_url&&<a href={cert.doc_url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#2563eb",fontWeight:600}}>{T("cw.viewDoc")}</a>}
                         <button onClick={()=>deleteCertification(i)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16}}>🗑</button>
                       </div>
                     ))}
@@ -953,28 +965,28 @@ export default function CrewProfile({ user, onLogout }) {
             <div style={{...s.card,marginTop:16,border:"1.5px solid #bfdbfe"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Certificación</div>
               <div style={{marginBottom:10}}>
-                <label style={s.label}>Certificación</label>
+                <label style={s.label}>{T("cw.cert")}</label>
                 <select value={newCert.name} onChange={e=>setNewCert({...newCert,name:e.target.value})} style={s.input}>
-                  <option value="">Seleccionar...</option>
+                  <option value="">{T("cw.select")}</option>
                   {CERT_OPTIONS.map(o=><option key={o}>{o}</option>)}
                 </select>
                 {newCert.name==="Otro"&&(
                   <input value={newCert.custom_name} onChange={e=>setNewCert({...newCert,custom_name:e.target.value})}
-                    placeholder="Especifica la certificación" style={{...s.input,marginTop:6}}/>
+                    placeholder={T("cw.specifyCert")} style={{...s.input,marginTop:6}}/>
                 )}
               </div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                 <div>
-                  <label style={s.label}>Fecha de emisión</label>
+                  <label style={s.label}>{T("cw.issueDate")}</label>
                   <input type="date" value={newCert.date} onChange={e=>setNewCert({...newCert,date:e.target.value})} style={s.input}/>
                 </div>
                 <div>
-                  <label style={s.label}>Fecha de vencimiento</label>
+                  <label style={s.label}>{T("cw.expiryDate")}</label>
                   <input type="date" value={newCert.expiry} onChange={e=>setNewCert({...newCert,expiry:e.target.value})} style={s.input}/>
                 </div>
               </div>
               <div style={{marginBottom:14}}>
-                <label style={s.label}>Diploma / Certificado *</label>
+                <label style={s.label}>{T("cw.diploma")} *</label>
                 {newCert.doc_url
                   ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento cargado</div>
                   : <label style={{display:"block",padding:"8px 12px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
@@ -1007,7 +1019,7 @@ export default function CrewProfile({ user, onLogout }) {
               {(profile.experience||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
                     <div style={{fontSize:36,marginBottom:8}}>🚢</div>
-                    <div style={{fontWeight:600}}>Sin historial aún</div>
+                    <div style={{fontWeight:600}}>{T("cw.noHistory")}</div>
                   </div>
                 : <div style={{display:"flex",flexDirection:"column",gap:8}}>
                     {(profile.experience||[]).map((exp,i)=>(
@@ -1030,38 +1042,38 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Experiencia</div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                 <div>
-                  <label style={s.label}>Marca del barco</label>
+                  <label style={s.label}>{T("cw.boatBrand")}</label>
                   <input value={newExp.brand} onChange={e=>setNewExp({...newExp,brand:e.target.value})} placeholder="Ej: Sea Ray" style={s.input}/>
                 </div>
                 <div>
-                  <label style={s.label}>Eslora (pies)</label>
+                  <label style={s.label}>{T("cw.length")}</label>
                   <input value={newExp.length} onChange={e=>setNewExp({...newExp,length:e.target.value})} placeholder="Ej: 65" style={s.input}/>
                 </div>
                 <div>
-                  <label style={s.label}>Tu rol</label>
+                  <label style={s.label}>{T("cw.yourRole")}</label>
                   <select value={newExp.role} onChange={e=>setNewExp({...newExp,role:e.target.value})} style={s.input}>
-                    <option value="">Seleccionar...</option>
+                    <option value="">{T("cw.select")}</option>
                     {CREW_ROLES.map(r=><option key={r}>{r}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={s.label}>Período</label>
+                  <label style={s.label}>{T("cw.period")}</label>
                   <select value={newExp.period} onChange={e=>setNewExp({...newExp,period:e.target.value})} style={s.input}>
-                    <option value="">Seleccionar...</option>
-                    <option>Menos de 3 meses</option>
+                    <option value="">{T("cw.select")}</option>
+                    <option>{T("cw.lessThan3")}</option>
                     <option>3 a 6 meses</option>
                     <option>6 meses a 1 año</option>
                     <option>1 a 2 años</option>
                     <option>2 a 3 años</option>
                     <option>3 a 5 años</option>
                     <option>5 a 10 años</option>
-                    <option>Más de 10 años</option>
+                    <option>{T("cw.moreThan10")}</option>
                   </select>
                 </div>
               </div>
               <div style={{marginBottom:14}}>
-                <label style={s.label}>Notas</label>
-                <input value={newExp.notes} onChange={e=>setNewExp({...newExp,notes:e.target.value})} placeholder="Rutas frecuentes, tipo de operación, etc." style={s.input}/>
+                <label style={s.label}>{T("cw.notes")}</label>
+                <input value={newExp.notes} onChange={e=>setNewExp({...newExp,notes:e.target.value})} placeholder={T("cw.bioPh")} style={s.input}/>
               </div>
               <button onClick={addExperience} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                 Agregar a mi perfil
@@ -1075,7 +1087,7 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:700}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4,display:"flex",alignItems:"center",gap:8}}><IconCard size={17} color="#2563eb"/> Métodos de Pago</div>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:20}}>Activa los métodos que aceptas y completa tus datos</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:20}}>{T("cw.paymentsDesc")}</div>
 
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 {PAYMENT_METHODS.map(pm=>{
@@ -1086,7 +1098,7 @@ export default function CrewProfile({ user, onLogout }) {
                       <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:active?"#eff6ff":"#f8fafc",cursor:"pointer"}} onClick={()=>togglePaymentMethod(pm.key)}>
   
                         <div style={{flex:1}}>
-                          <div style={{fontSize:13,fontWeight:700,color:active?"#1d4ed8":"#475569"}}>{pm.label}</div>
+                          <div style={{fontSize:13,fontWeight:700,color:active?"#1d4ed8":"#475569"}}>{cl(pm.label, lang)}</div>
                         </div>
                         <div style={{
                           width:36,height:20,borderRadius:10,background:active?"#2563eb":"#cbd5e1",
@@ -1100,9 +1112,9 @@ export default function CrewProfile({ user, onLogout }) {
                           <div style={{display:"grid",gridTemplateColumns:pm.fields.length>1?"1fr 1fr":"1fr",gap:8}}>
                             {pm.fields.map(f=>(
                               <div key={f.k}>
-                                <label style={s.label}>{f.l}</label>
+                                <label style={s.label}>{cl(f.l, lang)}</label>
                                 <input value={data[f.k]||""} onChange={e=>setPayment(pm.key,f.k,e.target.value)}
-                                  placeholder={f.l} style={s.input}/>
+                                  placeholder={cl(f.l, lang)} style={s.input}/>
                               </div>
                             ))}
                           </div>
@@ -1122,7 +1134,7 @@ export default function CrewProfile({ user, onLogout }) {
             <div style={s.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                 <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>Mis Documentos</div>
+                  <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>{T("cw.myDocs")}</div>
                   <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Documento de identidad, pasaporte, licencias y certificados · Organiza en carpetas</div>
                   <div style={{fontSize:11,color:"#2563eb",marginTop:4}}>Tener tus documentos al día y visibles le da confianza a los propietarios y acelera tu contratación.</div>
                 </div>
@@ -1148,7 +1160,7 @@ export default function CrewProfile({ user, onLogout }) {
                 if (docs.length===0) return (
                   <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                     <div style={{fontSize:40,marginBottom:8}}>📁</div>
-                    <div style={{fontWeight:600}}>Sin documentos</div>
+                    <div style={{fontWeight:600}}>{T("cw.noDocs")}</div>
                     <div style={{fontSize:12,marginTop:4}}>Tu documento aparecerá aquí al subirlo · Agrega licencias y certificados</div>
                   </div>
                 );
@@ -1200,7 +1212,7 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🔍 Buscar Embarcación</div>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Encuentra barcos por ciudad o tipo y aplica directamente</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>{T("cw.findBoatsDesc")}</div>
 
               {!(profile.badges||[]).includes("verified")&&(
                 <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#b45309"}}>
@@ -1210,7 +1222,7 @@ export default function CrewProfile({ user, onLogout }) {
 
               <div style={{display:"flex",gap:8,marginBottom:16}}>
                 <input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchVessels()}
-                  placeholder="Ciudad o tipo (ej: Margarita, Yate Motor)..." style={{...s.input,flex:1}}/>
+                  placeholder={T("cw.searchPh")} style={{...s.input,flex:1}}/>
                 <button onClick={searchVessels} disabled={searching}
                   style={{padding:"10px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13}}>
                   {searching?"...":"Buscar"}
@@ -1251,7 +1263,7 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="daytrips"&&(
           <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:12}}>Viajes Disponibles</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:12}}>{T("cw.availTrips")}</div>
               <DayTripsCrew user={user} profile={profile}/>
             </div>
           </div>
@@ -1269,8 +1281,8 @@ export default function CrewProfile({ user, onLogout }) {
               {requests.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                   <div style={{fontSize:40,marginBottom:12}}>📬</div>
-                  <div>Sin aplicaciones aún</div>
-                  <div style={{fontSize:12,marginTop:4}}>Ve a "Buscar Barco" para aplicar</div>
+                  <div>{T("cw.noApps")}</div>
+                  <div style={{fontSize:12,marginTop:4}}>{T("cw.goSearch")}</div>
                 </div>
               )}
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -1294,8 +1306,8 @@ export default function CrewProfile({ user, onLogout }) {
                     {/* Si es invitación del dueño pendiente, botones aceptar/rechazar */}
                     {r.status==="pending"&&r.initiated_by==="owner_invited"&&(
                       <div style={{display:"flex",gap:8,marginTop:10}}>
-                        <button onClick={()=>respondToInvite(r,"matched")} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Aceptar</button>
-                        <button onClick={()=>respondToInvite(r,"rejected")} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Rechazar</button>
+                        <button onClick={()=>respondToInvite(r,"matched")} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>{T("cw.accept")}</button>
+                        <button onClick={()=>respondToInvite(r,"rejected")} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>{T("cw.reject")}</button>
                       </div>
                     )}
                     {/* Si hay match, botón de chat */}
@@ -1315,11 +1327,11 @@ export default function CrewProfile({ user, onLogout }) {
         {showFolderModal&&(
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowFolderModal(false)}>
             <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
-              <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:14}}>Nueva carpeta</div>
+              <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:14}}>{T("cw.newFolder")}</div>
               <input value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Ej: Licencias de navegación" autoFocus style={{...s.input,marginBottom:16}}/>
               <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>setShowFolderModal(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>Cancelar</button>
-                <button onClick={async()=>{ if(newFolderName.trim()){ await addFolder(newFolderName.trim()); setMsg("✅ Carpeta '"+newFolderName.trim()+"' creada"); setTimeout(()=>setMsg(""),3000);} setShowFolderModal(false);}} style={{flex:1,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#fff",fontWeight:700}}>Crear</button>
+                <button onClick={()=>setShowFolderModal(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>{T("common.cancel")}</button>
+                <button onClick={async()=>{ if(newFolderName.trim()){ await addFolder(newFolderName.trim()); setMsg("✅ Carpeta '"+newFolderName.trim()+"' creada"); setTimeout(()=>setMsg(""),3000);} setShowFolderModal(false);}} style={{flex:1,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#fff",fontWeight:700}}>{lang==="es"?"Crear":"Create"}</button>
               </div>
             </div>
           </div>
@@ -1329,9 +1341,9 @@ export default function CrewProfile({ user, onLogout }) {
         {showUploadModal&&(
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>{setShowUploadModal(false);setPendingUpload(null);}}>
             <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
-              <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:6}}>Guardar documento</div>
+              <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:6}}>{T("cw.saveDoc")}</div>
               <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>{pendingUpload?.name}</div>
-              <label style={s.label}>Elige la carpeta</label>
+              <label style={s.label}>{T("cw.selectFolder")}</label>
               <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
                 {[...new Set([...(profile.doc_folders||["Identidad","Licencias","Certificados"]), "General"])].map(folder=>(
                   <button key={folder} onClick={async()=>{ await uploadDocument(pendingUpload, folder); setShowUploadModal(false); setPendingUpload(null);}}
@@ -1340,7 +1352,7 @@ export default function CrewProfile({ user, onLogout }) {
                   </button>
                 ))}
               </div>
-              <button onClick={()=>{setShowUploadModal(false);setPendingUpload(null);}} style={{width:"100%",padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>Cancelar</button>
+              <button onClick={()=>{setShowUploadModal(false);setPendingUpload(null);}} style={{width:"100%",padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>{T("common.cancel")}</button>
             </div>
           </div>
         )}
@@ -1364,7 +1376,7 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowVerifyPopup(false)}>
             <div style={{background:"#fff",borderRadius:20,padding:"32px 28px",maxWidth:380,textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
               <div style={{width:72,height:72,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:38,margin:"0 auto 16px"}}>✅</div>
-              <div style={{fontSize:20,fontWeight:800,color:"#16a34a",marginBottom:8}}>¡Identidad Verificada!</div>
+              <div style={{fontSize:20,fontWeight:800,color:"#16a34a",marginBottom:8}}>{T("cw.verifiedId")}</div>
               <div style={{fontSize:13,color:"#475569",lineHeight:1.5,marginBottom:6}}>
                 Tu documento y foto fueron verificados exitosamente con inteligencia artificial.
               </div>
@@ -1375,7 +1387,7 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
               )}
               <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:20,padding:"6px 14px",margin:"8px 0 16px"}}>
-                <span>✅</span><span style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>Usuario Certificado</span>
+                <span>✅</span><span style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>{cl("Usuario Certificado", lang)}</span>
               </div>
               <button onClick={()=>setShowVerifyPopup(false)} style={{width:"100%",padding:"12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
                 Entendido

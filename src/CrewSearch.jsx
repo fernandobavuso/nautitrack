@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLang } from "./i18n.jsx";
 import { supabase } from "./supabase";
 import { notify } from "./notifications";
 
@@ -11,6 +12,8 @@ const CERTS = ["STCW","Licencia de Capitán","Primeros Auxilios","Buceo","Radio 
 const CONTRACT_TYPES = ["Fijo / tiempo completo","Por temporada","Medio tiempo","Por proyecto"];
 
 export default function CrewSearch({ vessel, user, onPublished }) {
+  const { lang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
   const [sub, setSub] = useState("buscar"); // buscar / guardados
   const [saved, setSaved] = useState([]);
   const [msg, setMsg] = useState("");
@@ -151,8 +154,8 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
           {/* Ciudad */}
           <div style={{marginBottom:16}}>
-            <label style={lbl}>Ciudad del barco *</label>
-            <input value={f.city} onChange={e=>setF({...f,city:e.target.value})} placeholder="Ej: Lechería" style={inp}/>
+            <label style={lbl}>{L("Ciudad del barco","Boat city")} *</label>
+            <input value={f.city} onChange={e=>setF({...f,city:e.target.value})} placeholder={L("Ej: Lechería","e.g. Miami")} style={inp}/>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>El tripulante debe estar en esta ciudad para recibir tu oferta.</div>
           </div>
 
@@ -167,32 +170,32 @@ export default function CrewSearch({ vessel, user, onPublished }) {
           {/* Edad + género */}
           <div style={{display:"flex",gap:10,marginBottom:16}}>
             <div style={{flex:1}}>
-              <label style={lbl}>Edad mínima</label>
+              <label style={lbl}>{L("Edad mínima","Min age")}</label>
               <input type="number" value={f.min_age} onChange={e=>setF({...f,min_age:e.target.value})} placeholder="Sin mín." style={inp}/>
             </div>
             <div style={{flex:1}}>
-              <label style={lbl}>Edad máxima</label>
+              <label style={lbl}>{L("Edad máxima","Max age")}</label>
               <input type="number" value={f.max_age} onChange={e=>setF({...f,max_age:e.target.value})} placeholder="Sin máx." style={inp}/>
             </div>
             <div style={{flex:1}}>
-              <label style={lbl}>Género</label>
+              <label style={lbl}>{L("Género","Gender")}</label>
               <select value={f.gender} onChange={e=>setF({...f,gender:e.target.value})} style={inp}>
-                <option value="cualquiera">Cualquiera</option>
-                <option value="M">Masculino</option>
-                <option value="F">Femenino</option>
+                <option value="cualquiera">{L("Cualquiera","Any")}</option>
+                <option value="M">{L("Masculino","Male")}</option>
+                <option value="F">{L("Femenino","Female")}</option>
               </select>
             </div>
           </div>
 
           {/* Experiencia */}
           <div style={{marginBottom:16}}>
-            <label style={lbl}>Experiencia mínima (años)</label>
+            <label style={lbl}>{L("Experiencia mínima (años)","Min experience (years)")}</label>
             <input type="number" value={f.min_experience} onChange={e=>setF({...f,min_experience:e.target.value})} placeholder="Sin mínimo" style={inp}/>
           </div>
 
           {/* Idiomas */}
           <div style={{marginBottom:16}}>
-            <label style={lbl}>Idiomas requeridos</label>
+            <label style={lbl}>{L("Idiomas requeridos","Required languages")}</label>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {LANGS.map(l=>(
                 <button key={l} onClick={()=>toggle("languages",l)} style={chip(f.languages.includes(l))}>{l}</button>
@@ -202,7 +205,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
           {/* Certificaciones */}
           <div style={{marginBottom:16}}>
-            <label style={lbl}>Certificaciones requeridas</label>
+            <label style={lbl}>{L("Certificaciones requeridas","Required certifications")}</label>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {CERTS.map(c=>(
                 <button key={c} onClick={()=>toggle("certifications",c)} style={chip(f.certifications.includes(c))}>{c}</button>
@@ -213,13 +216,13 @@ export default function CrewSearch({ vessel, user, onPublished }) {
           {/* Vive a bordo */}
           <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,cursor:"pointer"}}>
             <input type="checkbox" checked={f.liveaboard} onChange={e=>setF({...f,liveaboard:e.target.checked})} style={{width:15,height:15}}/>
-            <span style={{fontSize:13,color:"#374151"}}>Debe poder vivir a bordo (liveaboard)</span>
+            <span style={{fontSize:13,color:"#374151"}}>{L("Debe poder vivir a bordo (liveaboard)","Must be able to live aboard")}</span>
           </label>
 
           {/* Notas */}
           <div style={{marginBottom:20}}>
-            <label style={lbl}>Detalles adicionales</label>
-            <textarea value={f.notes} onChange={e=>setF({...f,notes:e.target.value})} rows={3} placeholder="Describe el trabajo, horario, expectativas..." style={{...inp,resize:"vertical"}}/>
+            <label style={lbl}>{L("Detalles adicionales","Additional details")}</label>
+            <textarea value={f.notes} onChange={e=>setF({...f,notes:e.target.value})} rows={3} placeholder={L("Describe el trabajo, horario, expectativas...","Describe the job, schedule, expectations...")} style={{...inp,resize:"vertical"}}/>
           </div>
 
           <button onClick={search} disabled={publishing} style={{width:"100%",padding:"13px",background:publishing?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
@@ -235,15 +238,15 @@ export default function CrewSearch({ vessel, user, onPublished }) {
                 </div>
                 {results.length>0 && (
                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{padding:"7px 10px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#1e293b",background:"#fff"}}>
-                    <option value="match">Mejor coincidencia</option>
-                    <option value="experiencia">Más experiencia</option>
+                    <option value="match">{L("Mejor coincidencia","Best match")}</option>
+                    <option value="experiencia">{L("Más experiencia","Most experience")}</option>
                   </select>
                 )}
               </div>
 
               {results.length===0 && (
                 <div style={{textAlign:"center",padding:"36px 20px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12}}>
-                  <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:6}}>No hay tripulantes que coincidan</div>
+                  <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:6}}>{L("No hay tripulantes que coincidan","No matching crew found")}</div>
                   <div style={{fontSize:12,color:"#78350f",lineHeight:1.5}}>Prueba a ampliar los criterios: menos certificaciones obligatorias, rango de edad más amplio, o revisa que la ciudad esté bien escrita.</div>
                 </div>
               )}
@@ -283,7 +286,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
         <div style={{maxWidth:680}}>
           {saved.length===0&&(
             <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-              <div style={{fontWeight:600}}>No tienes tripulantes guardados</div>
+              <div style={{fontWeight:600}}>{L("No tienes tripulantes guardados","You have no saved crew")}</div>
               <div style={{fontSize:12,marginTop:4}}>Guarda candidatos desde "Posible tripulación" para revisarlos después</div>
             </div>
           )}
