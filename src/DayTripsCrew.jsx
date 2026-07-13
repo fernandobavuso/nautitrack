@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
+import { useLang } from "./i18n.jsx";
 import { supabase } from "./supabase";
 import { notify } from "./notifications";
 
 // Panel de Day Trips para el tripulante: ve solicitudes abiertas y se postula
 export default function DayTripsCrew({ user, profile }) {
+  const { lang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
+  const cl=(v)=>lang==="en"?({"Capitán":"Captain","Marinero":"Deckhand","Camarero":"Steward","Azafata":"Stewardess","Cocinero":"Cook"}[v]||v):v;
   const [trips, setTrips] = useState([]);
   const [myApps, setMyApps] = useState([]);
   const [completedTrips, setCompletedTrips] = useState([]);
@@ -136,14 +140,14 @@ export default function DayTripsCrew({ user, profile }) {
         </div>
       )}
 
-      <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>Viajes que coinciden con tu rol ({profile?.crew_role||"—"}) y tu zona ({profile?.work_zone||"sin zona"}). Postúlate a los que te interesen.</div>
+      <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>{L("Viajes que coinciden con tu rol","Trips matching your role")} ({cl(profile?.crew_role||"—", lang)}) {L("y tu zona","and your area")} ({profile?.work_zone||L("sin zona","no area")}). {L("Postúlate a los que te interesen.","Apply to the ones that interest you.")}</div>
 
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {trips.length===0&&(
           <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
             <div style={{fontSize:40,marginBottom:8}}></div>
-            <div style={{fontWeight:600}}>No hay viajes disponibles ahora</div>
-            <div style={{fontSize:12,marginTop:4}}>Vuelve pronto, se publican seguido</div>
+            <div style={{fontWeight:600}}>{L("No hay viajes disponibles ahora","No trips available right now")}</div>
+            <div style={{fontSize:12,marginTop:4}}>{L("Vuelve pronto, se publican seguido","Check back soon, new ones are posted often")}</div>
           </div>
         )}
         {trips.map(trip=>{

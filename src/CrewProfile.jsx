@@ -5,7 +5,7 @@ import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
 import ChatPanel from "./ChatPanel";
 import DayTripsCrew from "./DayTripsCrew";
-import { IconBell, IconCard } from "./icons.jsx";
+import { IconBell, IconCard, IconInbox } from "./icons.jsx";
 import CrewProposals from "./CrewProposals";
 import NotifPanel from "./NotifPanel";
 import { countUnread } from "./notifications";
@@ -63,6 +63,11 @@ const BADGE_DEFS = [
 
 // Traducción de etiquetas que viven en constantes de módulo
 const CREW_EN = {
+  "Capitán":"Captain","Jefe de Máquinas":"Chief Engineer","Mecánico":"Mechanic","Marinero":"Deckhand",
+  "Camarero":"Steward","Cocinero":"Cook","Azafata":"Stewardess",
+  "STCW Básico":"Basic STCW","Licencia de Capitán":"Captain's License","Primeros Auxilios Marítimo":"Maritime First Aid",
+  "Español":"Spanish","Inglés":"English","Portugués":"Portuguese","Francés":"French","Italiano":"Italian",
+  "Alemán":"German","Holandés":"Dutch","Chino":"Chinese","Japonés":"Japanese","Árabe":"Arabic","Ruso":"Russian",
   "Cédula":"ID number","Email o teléfono":"Email or phone","Email de PayPal":"PayPal email",
   "6 meses a 1 año":"6 months to 1 year","1 a 2 años":"1 to 2 years","2 a 3 años":"2 to 3 years",
   "3 a 5 años":"3 to 5 years","5 a 10 años":"5 to 10 years",
@@ -304,7 +309,7 @@ export default function CrewProfile({ user, onLogout }) {
         const r = await fetch(url);
         if (!r.ok) throw new Error("No se pudo leer la imagen ("+r.status+")");
         const blob = await r.blob();
-        if (blob.size < 100) throw new Error("La imagen está vacía o corrupta");
+        if (blob.size < 100) throw new Error(L("La imagen está vacía o corrupta","The image is empty or corrupted"));
         return new Promise((res,rej) => {
           const reader = new FileReader();
           reader.onload = () => res(reader.result.split(',')[1]);
@@ -347,7 +352,7 @@ export default function CrewProfile({ user, onLogout }) {
           setShowVerifyPopup(true);
         } else {
           let razon = "No se pudo verificar. ";
-          if (!data.result.face_in_doc) razon += "No se detectó foto en el documento. ";
+          if (!data.result.face_in_doc) razon += L("No se detectó foto en el documento. ","No photo detected in the document. ");
           if (data.result.faces_match===false) razon += "La foto de perfil no coincide con el documento. ";
           if (!data.result.is_official_doc) razon += "El documento no parece oficial. ";
           setMsg("⚠️ " + razon);
@@ -456,7 +461,7 @@ export default function CrewProfile({ user, onLogout }) {
 
   const respondToInvite = async (conn, newStatus) => {
     await supabase.from("connections").update({ status:newStatus }).eq("id", conn.id);
-    setMsg(newStatus==="matched"?"✅ ¡Match! Ya puedes chatear con el propietario":"Invitación rechazada");
+    setMsg(newStatus==="matched"?L("✅ ¡Match! Ya puedes chatear con el propietario","✅ Match! You can now chat with the owner"):L("Invitación rechazada","Invitation declined"));
     setTimeout(()=>setMsg(""),4000);
     loadRequests();
   };
@@ -567,14 +572,14 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── INICIO (dashboard resumido) ── */}
         {tab==="inicio"&&(
-          <div style={{maxWidth:760}}>
+          <div style={{maxWidth:760,margin:"0 auto"}}>
             {/* Saludo + clima */}
             <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:18,padding:isMobile?"20px":"24px 28px",color:"#fff",marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
                 <div>
-                  <div style={{fontSize:12,opacity:0.7,marginBottom:4,textTransform:"capitalize"}}>{new Date().toLocaleDateString("es-VE",{weekday:"long",day:"numeric",month:"long"})}</div>
-                  <div style={{fontSize:24,fontWeight:800}}>Hola{profile.first_name?`, ${profile.first_name}`:""}</div>
-                  <div style={{fontSize:13,opacity:0.85,marginTop:2}}>{(profile.badges||[]).includes("verified")?"Estás listo para navegar":"Completa tu verificación para empezar"}</div>
+                  <div style={{fontSize:12,opacity:0.7,marginBottom:4,textTransform:"capitalize"}}>{new Date().toLocaleDateString(lang==="en"?"en-US":"es-VE",{weekday:"long",day:"numeric",month:"long"})}</div>
+                  <div style={{fontSize:24,fontWeight:800}}>{L("Hola","Hi")}{profile.first_name?`, ${profile.first_name}`:""}</div>
+                  <div style={{fontSize:13,opacity:0.85,marginTop:2}}>{(profile.badges||[]).includes("verified")?L("Estás listo para navegar","You're ready to sail"):L("Completa tu verificación para empezar","Complete your verification to get started")}</div>
                 </div>
                 {crewWeather&&(
                   <div style={{textAlign:"right",flexShrink:0}}>
@@ -613,7 +618,7 @@ export default function CrewProfile({ user, onLogout }) {
             {!(profile.badges||[]).includes("verified")&&(
               <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:14,padding:16,marginBottom:20}}>
                 <div style={{fontSize:14,fontWeight:700,color:"#b45309",marginBottom:4}}>{T("cw.completeVerif")}</div>
-                <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>Verifica tu identidad para poder aplicar a barcos y recibir solicitudes de viaje.</div>
+                <div style={{fontSize:12,color:"#92400e",marginBottom:10}}>{L("Verifica tu identidad para poder aplicar a barcos y recibir solicitudes de viaje.","Verify your identity to apply to boats and receive trip requests.")}</div>
                 <button onClick={()=>setTab("perfil")} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{T("cw.goProfile")}</button>
               </div>
             )}
@@ -654,7 +659,7 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:isMobile?"100%":980,margin:"0 auto"}}>
             {/* Sub-pestañas */}
             <div style={{display:"flex",gap:6,marginBottom:20,overflowX:"auto",borderBottom:"1px solid #e2e8f0",paddingBottom:0}}>
-              {[{k:"datos",l:"Mi Perfil"},{k:"documentos",l:"Documentos"},{k:"certs",l:"Certificaciones"},{k:"historial",l:"Historial"}].map(st=>(
+              {[{k:"datos",l:L("Mi Perfil","My Profile")},{k:"documentos",l:L("Documentos","Documents")},{k:"certs",l:L("Certificaciones","Certifications")},{k:"historial",l:L("Historial","History")}].map(st=>(
                 <button key={st.k} onClick={()=>setPerfilSub(st.k)} style={{
                   padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,whiteSpace:"nowrap",
                   fontWeight:perfilSub===st.k?700:500, color:perfilSub===st.k?"#2563eb":"#64748b",
@@ -689,10 +694,10 @@ export default function CrewProfile({ user, onLogout }) {
                   <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{profile.nationality||""}</div>
                   <input ref={photoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadPhoto(e.target.files[0])}/>
                   <button onClick={()=>photoRef.current.click()} style={{marginTop:10,padding:"6px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#475569",fontWeight:600}}>
-                    📷 {profile.photo_url?"Cambiar foto":"Subir foto"}
+                    📷 {profile.photo_url?L("Cambiar foto","Change photo"):L("Subir foto","Upload photo")}
                   </button>
                   <div style={{marginTop:8,fontSize:10,color:"#94a3b8",lineHeight:1.5,textAlign:"center"}}>
-                    Foto estilo pasaporte · Fondo blanco · Sin lentes ni gorras
+                    {L("Foto estilo pasaporte · Fondo blanco · Sin lentes ni gorras","Passport-style photo · White background · No glasses or hats")}
                   </div>
                 </div>
 
@@ -722,7 +727,7 @@ export default function CrewProfile({ user, onLogout }) {
                             <div style={{position:"absolute",top:3,left:isOn?20:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
                           </div>
                           <span style={{fontSize:12,color:isOn?"#16a34a":"#94a3b8",fontWeight:600}}>
-                            {!unlocked ? "Bloqueado" : isOn ? "Disponible" : "No disponible"}
+                            {!unlocked ? L("Bloqueado","Locked") : isOn ? L("Disponible","Available") : L("No disponible","Not available")}
                           </span>
                         </div>
                       </>
@@ -785,7 +790,7 @@ export default function CrewProfile({ user, onLogout }) {
                       )}
                     </div>
                   : <button onClick={()=>docRef.current.click()} style={{width:"100%",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
-                      📷 Subir foto del documento de identidad
+                      📷 {L("Subir foto del documento de identidad","Upload photo of your ID document")}
                     </button>
                 }
 
@@ -794,7 +799,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                     <input type="checkbox" id="has_passport" checked={profile.has_passport||false} onChange={e=>set("has_passport",e.target.checked)} style={{width:14,height:14,cursor:"pointer"}}/>
                     <label htmlFor="has_passport" style={{fontSize:12,color:"#475569",cursor:"pointer",fontWeight:600}}>
-                      Tengo pasaporte vigente <span style={{color:"#94a3b8",fontWeight:400}}>(opcional · genera badge 🛂)</span>
+                      {L("Tengo pasaporte vigente","I have a valid passport")} <span style={{color:"#94a3b8",fontWeight:400}}>({L("opcional · genera badge","optional · earns badge")} 🛂)</span>
                     </label>
                   </div>
                   {profile.has_passport&&(
@@ -812,13 +817,13 @@ export default function CrewProfile({ user, onLogout }) {
                                 set("passport_url",d.publicUrl);
                                 const badges=[...new Set([...(profile.badges||[]),"passport"])];
                                 set("badges",badges);
-                                setMsg("✅ Pasaporte subido. Badge 🛂 desbloqueado!");
+                                setMsg(L("✅ Pasaporte subido. Badge 🛂 desbloqueado!","✅ Passport uploaded. Badge 🛂 unlocked!"));
                                 setTimeout(()=>setMsg(""),3000);
                               }}/>
                             </label>
                           </div>
                         : <label style={{display:"block",padding:"8px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#f8fafc",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
-                            📷 Subir foto de pasaporte
+                            📷 {L("Subir foto de pasaporte","Upload passport photo")}
                             <input type="file" accept="image/*" style={{display:"none"}} onChange={async e=>{
                               const file=e.target.files[0]; if(!file) return;
                               const path=`profiles/${user.id}/passport.${file.name.split(".").pop()}`;
@@ -827,7 +832,7 @@ export default function CrewProfile({ user, onLogout }) {
                               set("passport_url",d.publicUrl);
                               const badges=[...new Set([...(profile.badges||[]),"passport"])];
                               set("badges",badges);
-                              setMsg("✅ Pasaporte subido. Badge 🛂 desbloqueado!");
+                              setMsg(L("✅ Pasaporte subido. Badge 🛂 desbloqueado!","✅ Passport uploaded. Badge 🛂 unlocked!"));
                               setTimeout(()=>setMsg(""),3000);
                             }}/>
                           </label>
@@ -883,7 +888,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{marginBottom:10}}>
                   <label style={s.label}>{T("cw.workZone")} *</label>
                   <input value={profile.work_zone||""} onChange={e=>set("work_zone",e.target.value)} placeholder={T("cw.workZonePh")} style={s.input}/>
-                  <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>La ciudad o zona donde trabajas. Recibirás solicitudes de viaje de tu zona.</div>
+                  <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>{L("La ciudad o zona donde trabajas. Recibirás solicitudes de viaje de tu zona.","The city or area where you work. You will receive trip requests from your area.")}</div>
                 </div>
 
                 <div style={{marginBottom:10}}>
@@ -920,7 +925,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <div>
                   <label style={s.label}>{T("cw.bio")} *</label>
                   <textarea value={profile.bio||""} onChange={e=>set("bio",e.target.value)}
-                    placeholder="Capitán con 10 años de experiencia en el oriente venezolano. Especialista en yates de motor de 40-70 pies..."
+                    placeholder={L("Capitán con 10 años de experiencia en el oriente venezolano. Especialista en yates de motor de 40-70 pies...","Captain with 10 years of experience in South Florida. Specialist in 40-70 ft motor yachts...")}
                     rows={3} style={{...s.input,resize:"vertical"}}/>
                 </div>
               </div>
@@ -939,12 +944,12 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── CERTIFICACIONES ── */}
         {tab==="perfil"&&perfilSub==="certs"&&(
-          <div style={{maxWidth:700}}>
+          <div style={{maxWidth:700,margin:"0 auto"}}>
             {/* Lista de certificaciones guardadas */}
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>{T("cw.myCerts")}</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>{T("cw.certsDesc")}</div>
-              <div style={{fontSize:11,color:"#2563eb",marginBottom:16}}>Las certificaciones visibles (STCW, licencias, primeros auxilios) te hacen más atractivo y te abren mejores oportunidades de trabajo.</div>
+              <div style={{fontSize:11,color:"#2563eb",marginBottom:16}}>{L("Las certificaciones visibles (STCW, licencias, primeros auxilios) te hacen más atractivo y te abren mejores oportunidades de trabajo.","Visible certifications (STCW, licenses, first aid) make you more attractive and open better job opportunities.")}</div>
 
               {(profile.certifications||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
@@ -998,7 +1003,7 @@ export default function CrewProfile({ user, onLogout }) {
                 {newCert.doc_url
                   ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600}}>✅ Documento cargado</div>
                   : <label style={{display:"block",padding:"8px 12px",border:"1.5px dashed #cbd5e1",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:11,color:"#64748b",textAlign:"center"}}>
-                      📎 Subir foto o PDF del certificado (obligatorio)
+                      📎 {L("Subir foto o PDF del certificado (obligatorio)","Upload photo or PDF of the certificate (required)")}
                       <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{
                         const file=e.target.files[0]; if(!file) return;
                         const path=`profiles/${user.id}/cert_${Date.now()}.${file.name.split(".").pop()}`;
@@ -1010,7 +1015,7 @@ export default function CrewProfile({ user, onLogout }) {
                 }
               </div>
               <button onClick={addCertification} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                Agregar a mi perfil
+                {L("Agregar a mi perfil","Add to my profile")}
               </button>
             </div>
           </div>
@@ -1018,7 +1023,7 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── HISTORIAL ── */}
         {tab==="perfil"&&perfilSub==="historial"&&(
-          <div style={{maxWidth:700}}>
+          <div style={{maxWidth:700,margin:"0 auto"}}>
             {/* Lista de experiencias guardadas */}
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🚢 {L("Historial de Embarcaciones","Vessel History")}</div>
@@ -1084,7 +1089,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <input value={newExp.notes} onChange={e=>setNewExp({...newExp,notes:e.target.value})} placeholder={T("cw.bioPh")} style={s.input}/>
               </div>
               <button onClick={addExperience} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                Agregar a mi perfil
+                {L("Agregar a mi perfil","Add to my profile")}
               </button>
             </div>
           </div>
@@ -1092,7 +1097,7 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── MÉTODOS DE PAGO ── */}
         {tab==="pagos"&&(
-          <div style={{maxWidth:700}}>
+          <div style={{maxWidth:700,margin:"0 auto"}}>
             <div style={s.card}>
               <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4,display:"flex",alignItems:"center",gap:8}}><IconCard size={17} color="#2563eb"/> {L("Métodos de Pago","Payment Methods")}</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:20}}>{T("cw.paymentsDesc")}</div>
@@ -1138,13 +1143,13 @@ export default function CrewProfile({ user, onLogout }) {
 
         {/* ── DOCUMENTOS ── */}
         {tab==="perfil"&&perfilSub==="documentos"&&(
-          <div style={{maxWidth:760}}>
+          <div style={{maxWidth:760,margin:"0 auto"}}>
             <div style={s.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                 <div>
                   <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>{T("cw.myDocs")}</div>
-                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>Documento de identidad, pasaporte, licencias y certificados · Organiza en carpetas</div>
-                  <div style={{fontSize:11,color:"#2563eb",marginTop:4}}>Tener tus documentos al día y visibles le da confianza a los propietarios y acelera tu contratación.</div>
+                  <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{L("Documento de identidad, pasaporte, licencias y certificados · Organiza en carpetas","ID document, passport, licenses and certificates · Organize in folders")}</div>
+                  <div style={{fontSize:11,color:"#2563eb",marginTop:4}}>{L("Tener tus documentos al día y visibles le da confianza a los propietarios y acelera tu contratación.","Keeping your documents current and visible builds owner trust and speeds up your hiring.")}</div>
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>{setNewFolderName("");setShowFolderModal(true);}}
@@ -1169,7 +1174,7 @@ export default function CrewProfile({ user, onLogout }) {
                   <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                     <div style={{fontSize:40,marginBottom:8}}>📁</div>
                     <div style={{fontWeight:600}}>{T("cw.noDocs")}</div>
-                    <div style={{fontSize:12,marginTop:4}}>Tu documento aparecerá aquí al subirlo · Agrega licencias y certificados</div>
+                    <div style={{fontSize:12,marginTop:4}}>{L("Tu documento aparecerá aquí al subirlo · Agrega licencias y certificados","Your document will appear here once uploaded · Add licenses and certificates")}</div>
                   </div>
                 );
                 return (
@@ -1197,7 +1202,7 @@ export default function CrewProfile({ user, onLogout }) {
                                   <div style={{padding:"8px 10px"}}>
                                     <div style={{fontSize:11,fontWeight:600,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
-                                      <span style={{fontSize:9,color:"#94a3b8"}}>{new Date(doc.uploaded).toLocaleDateString("es-VE")}</span>
+                                      <span style={{fontSize:9,color:"#94a3b8"}}>{new Date(doc.uploaded).toLocaleDateString(lang==="en"?"en-US":"es-VE")}</span>
                                       {doc.type!=="cedula"&&<button onClick={()=>deleteDocument(realIdx)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>🗑</button>}
                                     </div>
                                   </div>
@@ -1224,7 +1229,7 @@ export default function CrewProfile({ user, onLogout }) {
 
               {!(profile.badges||[]).includes("verified")&&(
                 <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#b45309"}}>
-                  ⚠️ Necesitas verificar tu identidad antes de aplicar a barcos. Ve a Mi Perfil → sube foto y documento → Verificar identidad.
+                  ⚠️ {L("Necesitas verificar tu identidad antes de aplicar a barcos. Ve a Mi Perfil → sube foto y documento → Verificar identidad.","You need to verify your identity before applying to boats. Go to My Profile → upload photo and document → Verify identity.")}
                 </div>
               )}
 
@@ -1247,7 +1252,7 @@ export default function CrewProfile({ user, onLogout }) {
                         {/* No mostramos nombre del barco — privacidad del dueño */}
                         <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{v.type}{v.lengthFt?` · ${v.lengthFt} pies`:""}</div>
                         <div style={{fontSize:11,color:"#64748b"}}>{v.brand||""} {v.model||""}</div>
-                        <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>📍 {v.city||"Ubicación reservada"}</div>
+                        <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>📍 {v.city||L("Ubicación reservada","Location withheld")}</div>
                       </div>
                       <button onClick={()=>!sent&&sendRequest(v)} disabled={sent} style={{
                         padding:"8px 14px",border:"none",borderRadius:8,cursor:sent?"default":"pointer",
@@ -1259,7 +1264,7 @@ export default function CrewProfile({ user, onLogout }) {
                 })}
                 {searchRes.length===0&&!searching&&(
                   <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
-                    {search?"No se encontraron embarcaciones":"Usa el buscador para ver barcos disponibles"}
+                    {search?L("No se encontraron embarcaciones","No vessels found"):L("Usa el buscador para ver barcos disponibles","Use the search to see available boats")}
                   </div>
                 )}
               </div>
@@ -1285,10 +1290,10 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="solicitudes"&&(
           <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:16}}>📬 Mis Aplicaciones</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:16,display:"flex",alignItems:"center",gap:8}}><IconInbox size={17} color="#2563eb"/> {L("Mis Aplicaciones","My Applications")}</div>
               {requests.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                  <div style={{fontSize:40,marginBottom:12}}>📬</div>
+                  <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><IconInbox size={36} color="#cbd5e1"/></div>
                   <div>{T("cw.noApps")}</div>
                   <div style={{fontSize:12,marginTop:4}}>{T("cw.goSearch")}</div>
                 </div>
@@ -1415,7 +1420,7 @@ export default function CrewProfile({ user, onLogout }) {
       {(tab==="perfil"||tab==="pagos")&&(
         <div style={{position:"fixed",bottom:24,right:24,zIndex:100}}>
           <button onClick={saveProfile} disabled={saving} style={{padding:"12px 24px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(29,78,216,0.4)",opacity:saving?0.7:1}}>
-            {saving?"⏳ Guardando...":"💾 Guardar"}
+            {saving?L("⏳ Guardando...","⏳ Saving..."):L("💾 Guardar","💾 Save")}
           </button>
         </div>
       )}

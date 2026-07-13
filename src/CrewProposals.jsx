@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useLang } from "./i18n.jsx";
 import { supabase } from "./supabase";
 import { notify } from "./notifications";
 
 // Propuestas de trabajo FIJO que recibe el tripulante
 // Marca Interesado / No interesado
 export default function CrewProposals({ user, profile }) {
+  const { lang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
@@ -40,12 +43,12 @@ export default function CrewProposals({ user, profile }) {
 
   return (
     <div style={{maxWidth:680}}>
-      <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:4}}>Propuestas de trabajo</div>
-      <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>Propietarios que buscan tripulación fija y tú calificas</div>
+      <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:4}}>{L("Propuestas de trabajo","Job proposals")}</div>
+      <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>{L("Propietarios que buscan tripulación fija y tú calificas","Owners looking for permanent crew who match your profile")}</div>
 
       {proposals.length===0&&(
         <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-          <div style={{fontWeight:600}}>Sin propuestas por ahora</div>
+          <div style={{fontWeight:600}}>{L("Sin propuestas por ahora","No proposals yet")}</div>
           <div style={{fontSize:12,marginTop:4}}>Cuando un propietario busque un perfil como el tuyo en tu ciudad, te avisaremos</div>
         </div>
       )}
