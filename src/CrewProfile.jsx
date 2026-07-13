@@ -682,7 +682,7 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="perfil"&&(
           <div style={{maxWidth:isMobile?"100%":980,margin:"0 auto"}}>
             {/* Sub-pestañas */}
-            <div style={{display:"flex",gap:6,marginBottom:20,overflowX:"auto",borderBottom:"1px solid #e2e8f0",paddingBottom:0}}>
+            <div className="no-scrollbar" style={{display:"flex",gap:6,marginBottom:20,overflowX:"auto",borderBottom:"1px solid #e2e8f0",paddingBottom:0}}>
               {[{k:"datos",l:L("Mi Perfil","My Profile")},{k:"documentos",l:L("Documentos","Documents")},{k:"certs",l:L("Certificaciones","Certifications")},{k:"historial",l:L("Historial","History")}].map(st=>(
                 <button key={st.k} onClick={()=>setPerfilSub(st.k)} style={{
                   padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,whiteSpace:"nowrap",

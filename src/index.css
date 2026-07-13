@@ -121,3 +121,12 @@ html, body, #root {
   max-width: 100%;
   overflow-x: hidden;
 }
+
+/* Oculta la barra de scroll pero mantiene el scroll (para tabs horizontales) */
+.no-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE/Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome, Safari */
+}
