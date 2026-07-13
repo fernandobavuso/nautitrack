@@ -63,6 +63,13 @@ const BADGE_DEFS = [
 
 // Traducción de etiquetas que viven en constantes de módulo
 const CREW_EN = {
+  "Cédula":"ID number","Email o teléfono":"Email or phone","Email de PayPal":"PayPal email",
+  "6 meses a 1 año":"6 months to 1 year","1 a 2 años":"1 to 2 years","2 a 3 años":"2 to 3 years",
+  "3 a 5 años":"3 to 5 years","5 a 10 años":"5 to 10 years",
+  "5 Años de Exp.":"5 Yrs Exp.","10 Años de Exp.":"10 Yrs Exp.",
+  "Email o teléfono":"Email or phone","Email de PayPal":"PayPal email",
+  "6 meses a 1 año":"6 months to 1 year","1 a 2 años":"1 to 2 years","2 a 3 años":"2 to 3 years",
+  "3 a 5 años":"3 to 5 years","5 a 10 años":"5 to 10 years",
   "Pago Móvil":"Mobile Payment","Transferencia":"Bank transfer","Efectivo USD":"Cash USD","Otro método":"Other method",
   "Zelle":"Zelle","PayPal":"PayPal","USDT (Cripto)":"USDT (Crypto)",
   "Banco":"Bank","Teléfono":"Phone","Cédula":"ID number","N° de cuenta":"Account number","Cuenta a nombre de":"Account holder",
@@ -84,6 +91,7 @@ const PAYMENT_METHODS = [
 
 export default function CrewProfile({ user, onLogout }) {
   const { t: T, lang, setLang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
   const { isMobile, isTablet } = useResponsive();
   const [profile,   setProfile]   = useState(null);
   const [loading,   setLoading]   = useState(true);
@@ -287,9 +295,9 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const verifyIdentity = async () => {
-    if (!profile.id_doc_url) { setMsg("⚠️ Sube tu documento de identidad primero"); setTimeout(()=>setMsg(""),4000); return; }
-    if (!profile.photo_url)  { setMsg("⚠️ Sube tu foto de perfil primero"); setTimeout(()=>setMsg(""),4000); return; }
-    if (!profile.legal_name?.trim()) { setMsg("⚠️ Escribe tu nombre completo como aparece en el documento"); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.id_doc_url) { setMsg(L("⚠️ Sube tu documento de identidad primero","⚠️ Upload your ID document first")); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.photo_url)  { setMsg(L("⚠️ Sube tu foto de perfil primero","⚠️ Upload your profile photo first")); setTimeout(()=>setMsg(""),4000); return; }
+    if (!profile.legal_name?.trim()) { setMsg(L("⚠️ Escribe tu nombre completo como aparece en el documento","⚠️ Enter your full name as it appears on the document")); setTimeout(()=>setMsg(""),4000); return; }
     setVerifying(true); setMsg("");
     try {
       const toBase64 = async (url) => {
@@ -317,7 +325,7 @@ export default function CrewProfile({ user, onLogout }) {
       console.log("[Carive] verify-id respuesta:", data);
 
       if (data.error) {
-        setMsg("⚠️ Error del verificador: " + data.error);
+        setMsg(L("⚠️ Error del verificador: ","⚠️ Verifier error: ") + data.error);
         setTimeout(()=>setMsg(""),6000);
         setVerifying(false);
         return;
@@ -346,7 +354,7 @@ export default function CrewProfile({ user, onLogout }) {
           setTimeout(()=>setMsg(""),6000);
         }
       } else {
-        setMsg("⚠️ El verificador no devolvió resultado. Intenta de nuevo.");
+        setMsg(L("⚠️ El verificador no devolvió resultado. Intenta de nuevo.","⚠️ The verifier returned no result. Try again."));
         setTimeout(()=>setMsg(""),5000);
       }
     } catch(e) {
@@ -386,13 +394,13 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const addCertification = async () => {
-    if (!newCert.name) { setMsg("⚠️ Selecciona el tipo de certificación"); setTimeout(()=>setMsg(""),3000); return; }
-    if (!newCert.doc_url) { setMsg("⚠️ Debes subir el documento de la certificación"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!newCert.name) { setMsg(L("⚠️ Selecciona el tipo de certificación","⚠️ Select the certification type")); setTimeout(()=>setMsg(""),3000); return; }
+    if (!newCert.doc_url) { setMsg(L("⚠️ Debes subir el documento de la certificación","⚠️ You must upload the certification document")); setTimeout(()=>setMsg(""),3000); return; }
     const certs = [...(profile.certifications||[]), newCert];
     set("certifications", certs);
     await supabase.from("profiles").update({ certifications: certs }).eq("id", user.id);
     setNewCert({name:"",custom_name:"",date:"",expiry:"",doc_url:""});
-    setMsg("✅ Certificación agregada");
+    setMsg(L("✅ Certificación agregada","✅ Certification added"));
     setTimeout(()=>setMsg(""),3000);
   };
 
@@ -403,12 +411,12 @@ export default function CrewProfile({ user, onLogout }) {
   };
 
   const addExperience = async () => {
-    if (!newExp.brand) { setMsg("⚠️ Indica la marca del barco"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!newExp.brand) { setMsg(L("⚠️ Indica la marca del barco","⚠️ Enter the boat brand")); setTimeout(()=>setMsg(""),3000); return; }
     const exps = [...(profile.experience||[]), newExp];
     set("experience", exps);
     await supabase.from("profiles").update({ experience: exps }).eq("id", user.id);
     setNewExp({brand:"",length:"",role:"",period:"",notes:""});
-    setMsg("✅ Experiencia agregada");
+    setMsg(L("✅ Experiencia agregada","✅ Experience added"));
     setTimeout(()=>setMsg(""),3000);
   };
 
@@ -430,7 +438,7 @@ export default function CrewProfile({ user, onLogout }) {
 
   const sendRequest = async (vessel) => {
     if (!(profile.badges||[]).includes("verified")) {
-      setMsg("⚠️ Debes verificar tu identidad antes de aplicar a un barco");
+      setMsg(L("⚠️ Debes verificar tu identidad antes de aplicar a un barco","⚠️ You must verify your identity before applying to a boat"));
       setTimeout(()=>setMsg(""),5000);
       return;
     }
@@ -442,7 +450,7 @@ export default function CrewProfile({ user, onLogout }) {
     });
     if (error?.code==="23505") setMsg("⚠️ Ya aplicaste a este barco");
     else if (error) setMsg("⚠️ Error: "+error.message);
-    else { setMsg("✅ ¡Aplicación enviada! El dueño la revisará"); loadRequests(); }
+    else { setMsg(L("✅ ¡Aplicación enviada! El dueño la revisará","✅ Application sent! The owner will review it")); loadRequests(); }
     setTimeout(()=>setMsg(""),4000);
   };
 
@@ -548,7 +556,7 @@ export default function CrewProfile({ user, onLogout }) {
                 </button>
               ))}
               <div style={{borderTop:"1px solid #f1f5f9",marginTop:8,paddingTop:8}}>
-                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#dc2626",fontWeight:600,fontSize:14}}>🚪 Cerrar Sesión</button>
+                <button onClick={()=>{onLogout();setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#dc2626",fontWeight:600,fontSize:14}}>🚪 {L("Cerrar Sesión","Log out")}</button>
               </div>
             </div>
           </div>
@@ -745,14 +753,14 @@ export default function CrewProfile({ user, onLogout }) {
               {/* Documento de identidad */}
               <div style={s.card}>
                 <div style={{fontSize:12,fontWeight:700,color:"#0f172a",marginBottom:4}}>{T("cw.idDoc")}</div>
-                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Visible para propietarios que te contraten · Genera badge ✅ Verificado</div>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>{L("Visible para propietarios que te contraten · Genera badge ✅ Verificado","Visible to owners who hire you · Earns ✅ Verified badge")}</div>
                 <input ref={docRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>uploadDoc(e.target.files[0])}/>
 
                 {/* Campo nombre legal */}
                 <div style={{marginBottom:10}}>
                   <label style={s.label}>{T("cw.fullNameDoc")} *</label>
                   <input value={profile.legal_name||""} onChange={e=>set("legal_name",e.target.value)}
-                    placeholder="Ej: Pedro Enrique Aguilar López" style={s.input}/>
+                    placeholder={L("Ej: Pedro Enrique Aguilar López","e.g. John Michael Smith")} style={s.input}/>
                 </div>
 
                 {profile.id_doc_url
@@ -762,12 +770,12 @@ export default function CrewProfile({ user, onLogout }) {
                         <button onClick={()=>docRef.current.click()} style={{fontSize:10,padding:"3px 8px",border:"1px solid #e2e8f0",borderRadius:5,background:"#f8fafc",cursor:"pointer",color:"#64748b"}}>{T("cw.change")}</button>
                       </div>
                       {(profile.badges||[]).includes("verified")
-                        ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ Identidad verificada por IA</div>
+                        ? <div style={{fontSize:11,color:"#16a34a",fontWeight:600,background:"#f0fdf4",padding:"6px 10px",borderRadius:7,border:"1px solid #bbf7d0"}}>✅ {L("Identidad verificada por IA","Identity verified by AI")}</div>
                         : <button onClick={verifyIdentity} disabled={verifying||!profile.legal_name} style={{width:"100%",padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:(verifying||!profile.legal_name)?0.5:1}}>
                             {verifying?"Verificando...":"Verificar identidad con IA"}
                           </button>
                       }
-                      {!profile.legal_name&&<div style={{fontSize:10,color:"#f59e0b"}}>⚠️ Escribe tu nombre legal arriba para verificar</div>}
+                      {!profile.legal_name&&<div style={{fontSize:10,color:"#f59e0b"}}>⚠️ {L("Escribe tu nombre legal arriba para verificar","Enter your legal name above to verify")}</div>}
                       {verifyResult&&(
                         <div style={{fontSize:10,color:"#64748b",background:"#f8fafc",padding:"8px",borderRadius:7,border:"1px solid #e2e8f0"}}>
                           {verifyResult.extracted_name&&<div>Nombre detectado: <strong>{verifyResult.extracted_name}</strong></div>}
@@ -861,7 +869,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{marginBottom:10}}>
                   <label style={s.label}>Email</label>
                   <input value={profile.email||user.email||""} onChange={e=>set("email",e.target.value)} style={{...s.input,background:"#f8fafc"}} readOnly/>
-                  <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>Para cambiar tu email contacta soporte en info@nautitrack.vz</div>
+                  <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>{L("Para cambiar tu email contacta soporte en info@carive.co","To change your email contact support at info@carive.co")}</div>
                 </div>
 
                 <div style={{marginBottom:10}}>
@@ -963,7 +971,7 @@ export default function CrewProfile({ user, onLogout }) {
 
             {/* Formulario nueva certificación */}
             <div style={{...s.card,marginTop:16,border:"1.5px solid #bfdbfe"}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Certificación</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ {L("Agregar Certificación","Add Certification")}</div>
               <div style={{marginBottom:10}}>
                 <label style={s.label}>{T("cw.cert")}</label>
                 <select value={newCert.name} onChange={e=>setNewCert({...newCert,name:e.target.value})} style={s.input}>
@@ -1013,8 +1021,8 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{maxWidth:700}}>
             {/* Lista de experiencias guardadas */}
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🚢 Historial de Embarcaciones</div>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>Tu experiencia embarcado (el nombre del barco se mantiene privado)</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🚢 {L("Historial de Embarcaciones","Vessel History")}</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>{L("Tu experiencia embarcado (el nombre del barco se mantiene privado)","Your onboard experience (boat name stays private)")}</div>
 
               {(profile.experience||[]).length===0
                 ? <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
@@ -1039,7 +1047,7 @@ export default function CrewProfile({ user, onLogout }) {
 
             {/* Formulario nueva experiencia */}
             <div style={{...s.card,marginTop:16,border:"1.5px solid #bfdbfe"}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ Agregar Experiencia</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>＋ {L("Agregar Experiencia","Add Experience")}</div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                 <div>
                   <label style={s.label}>{T("cw.boatBrand")}</label>
@@ -1062,11 +1070,11 @@ export default function CrewProfile({ user, onLogout }) {
                     <option value="">{T("cw.select")}</option>
                     <option>{T("cw.lessThan3")}</option>
                     <option>3 a 6 meses</option>
-                    <option>6 meses a 1 año</option>
-                    <option>1 a 2 años</option>
-                    <option>2 a 3 años</option>
-                    <option>3 a 5 años</option>
-                    <option>5 a 10 años</option>
+                    <option>{cl("6 meses a 1 año", lang)}</option>
+                    <option>{cl("1 a 2 años", lang)}</option>
+                    <option>{cl("2 a 3 años", lang)}</option>
+                    <option>{cl("3 a 5 años", lang)}</option>
+                    <option>{cl("5 a 10 años", lang)}</option>
                     <option>{T("cw.moreThan10")}</option>
                   </select>
                 </div>
@@ -1086,7 +1094,7 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="pagos"&&(
           <div style={{maxWidth:700}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4,display:"flex",alignItems:"center",gap:8}}><IconCard size={17} color="#2563eb"/> Métodos de Pago</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4,display:"flex",alignItems:"center",gap:8}}><IconCard size={17} color="#2563eb"/> {L("Métodos de Pago","Payment Methods")}</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:20}}>{T("cw.paymentsDesc")}</div>
 
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -1211,7 +1219,7 @@ export default function CrewProfile({ user, onLogout }) {
         {tab==="buscar"&&(
           <div style={{maxWidth:600,margin:"0 auto"}}>
             <div style={s.card}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🔍 Buscar Embarcación</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>🔍 {L("Buscar Embarcación","Find a Vessel")}</div>
               <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>{T("cw.findBoatsDesc")}</div>
 
               {!(profile.badges||[]).includes("verified")&&(
@@ -1292,7 +1300,7 @@ export default function CrewProfile({ user, onLogout }) {
                       <div>
                         <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{r.vessel?.type||"Embarcación"}</div>
                         <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>📍 {r.vessel?.city||"—"} · Rol: {r.crew_role}</div>
-                        {r.initiated_by==="owner_invited"&&<div style={{fontSize:11,color:"#7c3aed",marginTop:2,fontWeight:600}}>⭐ El dueño te invitó</div>}
+                        {r.initiated_by==="owner_invited"&&<div style={{fontSize:11,color:"#7c3aed",marginTop:2,fontWeight:600}}>⭐ {L("El dueño te invitó","The owner invited you")}</div>}
                       </div>
                       <span style={{
                         padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",
@@ -1328,7 +1336,7 @@ export default function CrewProfile({ user, onLogout }) {
           <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowFolderModal(false)}>
             <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
               <div style={{fontSize:16,fontWeight:700,color:"#0f172a",marginBottom:14}}>{T("cw.newFolder")}</div>
-              <input value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder="Ej: Licencias de navegación" autoFocus style={{...s.input,marginBottom:16}}/>
+              <input value={newFolderName} onChange={e=>setNewFolderName(e.target.value)} placeholder={L("Ej: Licencias de navegación","e.g. Navigation licenses")} autoFocus style={{...s.input,marginBottom:16}}/>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>setShowFolderModal(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#475569",fontWeight:600}}>{T("common.cancel")}</button>
                 <button onClick={async()=>{ if(newFolderName.trim()){ await addFolder(newFolderName.trim()); setMsg("✅ Carpeta '"+newFolderName.trim()+"' creada"); setTimeout(()=>setMsg(""),3000);} setShowFolderModal(false);}} style={{flex:1,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,color:"#fff",fontWeight:700}}>{lang==="es"?"Crear":"Create"}</button>

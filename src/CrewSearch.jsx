@@ -47,7 +47,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
   // BUSCAR: encuentra tripulantes que hacen match y los MUESTRA (no envía nada)
   const search = async () => {
-    if (!f.city.trim()) { setMsg("Indica la ciudad del barco"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!f.city.trim()) { setMsg(L("Indica la ciudad del barco","Enter the boat city")); setTimeout(()=>setMsg(""),3000); return; }
     setPublishing(true);
     setResults(null);
 
@@ -126,7 +126,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
     if (perr && perr.code==="23505") { setMsg("Ya le enviaste oferta a este tripulante"); setTimeout(()=>setMsg(""),3000); return; }
     notify(crew.id, { type:"crew_search", title:"Oferta de trabajo fijo", body:`Un propietario busca ${f.role} en ${f.city}. ¿Te interesa?`, link:"propuestas" });
     setSentTo(prev=>({...prev, [crew.id]:true}));
-    setMsg("Oferta enviada. Si le interesa, aparecerá en Posible Tripulación.");
+    setMsg(L("Oferta enviada. Si le interesa, aparecerá en Posible Tripulación.","Offer sent. If interested, they will appear in Potential Crew."));
     setTimeout(()=>setMsg(""),3500);
     onPublished && onPublished();
   };
@@ -135,7 +135,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
     <div>
       {/* Sub-tabs */}
       <div style={{display:"flex",gap:6,marginBottom:18,borderBottom:"1px solid #e2e8f0"}}>
-        {[{k:"buscar",l:"Buscar tripulación"},{k:"guardados",l:"Guardados"}].map(t=>(
+        {[{k:"buscar",l:L("Buscar tripulación","Find crew")},{k:"guardados",l:L("Guardados","Saved")}].map(t=>(
           <button key={t.k} onClick={()=>setSub(t.k)} style={{padding:"10px 16px",border:"none",background:"none",cursor:"pointer",fontSize:13,fontWeight:sub===t.k?700:500,color:sub===t.k?"#2563eb":"#64748b",borderBottom:sub===t.k?"2px solid #2563eb":"2px solid transparent",marginBottom:-1}}>{t.l}</button>
         ))}
       </div>
@@ -146,7 +146,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
 
           {/* Rol */}
           <div style={{marginBottom:16}}>
-            <label style={lbl}>¿Qué rol buscas?</label>
+            <label style={lbl}>{L("¿Qué rol buscas?","What role are you looking for?")}</label>
             <select value={f.role} onChange={e=>setF({...f,role:e.target.value})} style={inp}>
               {ROLES.map(r=><option key={r}>{r}</option>)}
             </select>
@@ -156,12 +156,12 @@ export default function CrewSearch({ vessel, user, onPublished }) {
           <div style={{marginBottom:16}}>
             <label style={lbl}>{L("Ciudad del barco","Boat city")} *</label>
             <input value={f.city} onChange={e=>setF({...f,city:e.target.value})} placeholder={L("Ej: Lechería","e.g. Miami")} style={inp}/>
-            <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>El tripulante debe estar en esta ciudad para recibir tu oferta.</div>
+            <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>{L("El tripulante debe estar en esta ciudad para recibir tu oferta.","The crew member must be in this city to receive your offer.")}</div>
           </div>
 
           {/* Tipo de contrato */}
           <div style={{marginBottom:16}}>
-            <label style={lbl}>Tipo de contrato</label>
+            <label style={lbl}>{L("Tipo de contrato","Contract type")}</label>
             <select value={f.contract_type} onChange={e=>setF({...f,contract_type:e.target.value})} style={inp}>
               {CONTRACT_TYPES.map(c=><option key={c}>{c}</option>)}
             </select>
@@ -171,11 +171,11 @@ export default function CrewSearch({ vessel, user, onPublished }) {
           <div style={{display:"flex",gap:10,marginBottom:16}}>
             <div style={{flex:1}}>
               <label style={lbl}>{L("Edad mínima","Min age")}</label>
-              <input type="number" value={f.min_age} onChange={e=>setF({...f,min_age:e.target.value})} placeholder="Sin mín." style={inp}/>
+              <input type="number" value={f.min_age} onChange={e=>setF({...f,min_age:e.target.value})} placeholder={L("Sin mín.","No min.")} style={inp}/>
             </div>
             <div style={{flex:1}}>
               <label style={lbl}>{L("Edad máxima","Max age")}</label>
-              <input type="number" value={f.max_age} onChange={e=>setF({...f,max_age:e.target.value})} placeholder="Sin máx." style={inp}/>
+              <input type="number" value={f.max_age} onChange={e=>setF({...f,max_age:e.target.value})} placeholder={L("Sin máx.","No max.")} style={inp}/>
             </div>
             <div style={{flex:1}}>
               <label style={lbl}>{L("Género","Gender")}</label>
@@ -190,7 +190,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
           {/* Experiencia */}
           <div style={{marginBottom:16}}>
             <label style={lbl}>{L("Experiencia mínima (años)","Min experience (years)")}</label>
-            <input type="number" value={f.min_experience} onChange={e=>setF({...f,min_experience:e.target.value})} placeholder="Sin mínimo" style={inp}/>
+            <input type="number" value={f.min_experience} onChange={e=>setF({...f,min_experience:e.target.value})} placeholder={L("Sin mínimo","No minimum")} style={inp}/>
           </div>
 
           {/* Idiomas */}
@@ -287,7 +287,7 @@ export default function CrewSearch({ vessel, user, onPublished }) {
           {saved.length===0&&(
             <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
               <div style={{fontWeight:600}}>{L("No tienes tripulantes guardados","You have no saved crew")}</div>
-              <div style={{fontSize:12,marginTop:4}}>Guarda candidatos desde "Posible tripulación" para revisarlos después</div>
+              <div style={{fontSize:12,marginTop:4}}>{L('Guarda candidatos desde "Posible tripulación" para revisarlos después','Save candidates from "Potential crew" to review later')}</div>
             </div>
           )}
           <div style={{display:"flex",flexDirection:"column",gap:10}}>

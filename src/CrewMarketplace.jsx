@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLang } from "./i18n.jsx";
 import { supabase } from "./supabase";
 import { createInvitation } from "./invitations.jsx";
 import ChatPanel from "./ChatPanel";
@@ -10,6 +11,8 @@ import { getReputations, Stars } from "./reputation.jsx";
 // Panel del dueño para gestionar tripulantes
 // Props: vessel (barco actual), user (dueño), onClose
 export default function CrewMarketplace({ vessel, user, onClose }) {
+  const { lang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
   const [tab, setTab] = useState("miequipo");
   const [possibles, setPossibles] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -143,14 +146,14 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   // Dueño acepta una aplicación de tripulante → match
   const acceptApplication = async (conn) => {
     await supabase.from("connections").update({ status:"matched", owner_id:user.id }).eq("id", conn.id);
-    setMsg("✅ ¡Match! Ya puedes chatear con el tripulante");
+    setMsg(L("✅ ¡Match! Ya puedes chatear con el tripulante","✅ Match! You can now chat with the crew member"));
     setTimeout(()=>setMsg(""),4000);
     loadApplications();
   };
 
   const rejectApplication = async (conn) => {
     await supabase.from("connections").update({ status:"rejected" }).eq("id", conn.id);
-    setMsg("Aplicación rechazada");
+    setMsg(L("Aplicación rechazada","Application declined"));
     setTimeout(()=>setMsg(""),3000);
     loadApplications();
   };
@@ -158,7 +161,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
   // Dueño invita a un tripulante (desde búsqueda)
   const inviteCrew = async (crewProfile) => {
     const existing = myConnections.find(c => c.crew_id===crewProfile.id && c.vessel_id===vessel.id);
-    if (existing) { setMsg("⚠️ Ya tienes una conexión con este tripulante"); setTimeout(()=>setMsg(""),3000); return; }
+    if (existing) { setMsg(L("⚠️ Ya tienes una conexión con este tripulante","⚠️ You already have a connection with this crew member")); setTimeout(()=>setMsg(""),3000); return; }
     const { error } = await supabase.from("connections").insert({
       vessel_id:vessel.id, owner_id:user.id, crew_id:crewProfile.id,
       initiated_by:"owner_invited", status:"pending",
@@ -167,7 +170,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
     });
     if (error?.code==="23505") setMsg("⚠️ Ya invitaste a este tripulante");
     else if (error) setMsg("⚠️ Error: "+error.message);
-    else { setMsg("✅ ¡Invitación enviada! El tripulante la revisará"); loadConnections(); }
+    else { setMsg(L("✅ ¡Invitación enviada! El tripulante la revisará","✅ Invitation sent! The crew member will review it")); loadConnections(); }
     setTimeout(()=>setMsg(""),4000);
   };
 
@@ -184,7 +187,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
         {/* Header */}
         <div style={{padding:"16px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>Tripulación</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Tripulación","Crew")}</div>
             <div style={{fontSize:11,color:"#64748b"}}>Gestiona aplicaciones y busca tripulantes para {vessel.name}</div>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
@@ -193,9 +196,9 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:"1px solid #e2e8f0",padding:"0 12px"}}>
           {[
-            {key:"miequipo",label:"Mi Tripulación"},
+            {key:"miequipo",label:L("Mi Tripulación","My Crew")},
             {key:"daytrips",label:"Day Trips"},
-            {key:"buscar",label:"Buscar Tripulación"},
+            {key:"buscar",label:L("Buscar Tripulación","Find Crew")},
             {key:"posibles",label:`Posible Tripulación${possibleCount>0?` (${possibleCount})`:""}`},
             {key:"aplicaciones",label:`Aplicaciones${pendingApps.length>0?` (${pendingApps.length})`:""}`},
             {key:"matches",label:`Matches${matches.length>0?` (${matches.length})`:""}`},
@@ -216,8 +219,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
               {pendingApps.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                   <div style={{fontSize:40,marginBottom:8}}>📥</div>
-                  <div style={{fontWeight:600}}>Sin aplicaciones pendientes</div>
-                  <div style={{fontSize:12,marginTop:4}}>Cuando un tripulante aplique aparecerá aquí</div>
+                  <div style={{fontWeight:600}}>{L("Sin aplicaciones pendientes","No pending applications")}</div>
+                  <div style={{fontSize:12,marginTop:4}}>{L("Cuando un tripulante aplique aparecerá aquí","When a crew member applies, they will appear here")}</div>
                 </div>
               )}
               {pendingApps.map(app=>(
@@ -244,8 +247,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
               <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Capitanes y tripulantes interesados en trabajar contigo. Revisa su perfil, contáctalos o guárdalos para después.</div>
               {possibles.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
-                  <div style={{fontWeight:600}}>Sin candidatos por ahora</div>
-                  <div style={{fontSize:12,marginTop:4}}>Cuando publiques una búsqueda y alguien se interese, aparecerá aquí</div>
+                  <div style={{fontWeight:600}}>{L("Sin candidatos por ahora","No candidates yet")}</div>
+                  <div style={{fontSize:12,marginTop:4}}>{L("Cuando publiques una búsqueda y alguien se interese, aparecerá aquí","When you post a search and someone is interested, they will appear here")}</div>
                 </div>
               )}
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -266,7 +269,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                         </div>
                       </div>
                       <div style={{display:"flex",gap:8}}>
-                        <button onClick={()=>setSelectedCrew(c)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>Ver perfil</button>
+                        <button onClick={()=>setSelectedCrew(c)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Ver perfil","View profile")}</button>
                         <button onClick={()=>{ updatePossible(item,"contacted"); inviteCrew(c); }} style={{flex:1,padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Contactar</button>
                         <button onClick={()=>updatePossible(item, saved?"new":"saved")} style={{flex:1,padding:"8px",background:saved?"#fef9c3":"#fff",border:"1px solid #e2e8f0",borderRadius:8,color:saved?"#a16207":"#64748b",fontSize:12,fontWeight:700,cursor:"pointer"}}>{saved?"Guardado":"Guardar"}</button>
                         <button onClick={()=>updatePossible(item,"declined")} style={{flex:1,padding:"8px",background:"#fff",border:"1px solid #fecaca",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Declinar</button>
@@ -284,7 +287,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
               {matches.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                   <div style={{fontSize:40,marginBottom:8}}>🤝</div>
-                  <div style={{fontWeight:600}}>Sin matches aún</div>
+                  <div style={{fontWeight:600}}>{L("Sin matches aún","No matches yet")}</div>
                 </div>
               )}
               {matches.map(app=>(
@@ -313,7 +316,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                 {assignedCrew.length===0&&(
                   <div style={{textAlign:"center",padding:"24px 0",color:"#94a3b8"}}>
                     <div style={{fontSize:32,marginBottom:6}}>⚓</div>
-                    <div style={{fontWeight:600,fontSize:13}}>Sin tripulación asignada</div>
+                    <div style={{fontWeight:600,fontSize:13}}>{L("Sin tripulación asignada","No crew assigned")}</div>
                   </div>
                 )}
                 {assignedCrew.map(cap=>(
@@ -330,8 +333,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                     <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #f1f5f9",display:"flex",flexDirection:"column",gap:10}}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
                         <div>
-                          <div style={{fontSize:12,fontWeight:600,color:"#374151"}}>Tope para pedir repuestos</div>
-                          <div style={{fontSize:10,color:"#94a3b8"}}>Sobre este monto, te pedirá aprobación</div>
+                          <div style={{fontSize:12,fontWeight:600,color:"#374151"}}>{L("Tope para pedir repuestos","Parts request limit")}</div>
+                          <div style={{fontSize:10,color:"#94a3b8"}}>{L("Sobre este monto, te pedirá aprobación","Above this amount, it will ask for your approval")}</div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           <span style={{fontSize:13,color:"#64748b"}}>$</span>
@@ -356,19 +359,19 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                     {["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico"].map(r=><option key={r}>{r}</option>)}
                   </select>
                 </div>
-                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder="Email (si no tiene cuenta, te damos un link para invitar)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
-                <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder="Teléfono (opcional)" style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
+                <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder={L("Email (si no tiene cuenta, te damos un link para invitar)","Email (if they have no account, we give you an invite link)")} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
+                <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder={L("Teléfono (opcional)","Phone (optional)")} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
                 <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
                 {inviteLink && (
                   <div style={{background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:10,padding:12,marginTop:10}}>
-                    <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>No tiene cuenta — invítalo a unirse</div>
+                    <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>{L("No tiene cuenta — invítalo a unirse","No account — invite them to join")}</div>
                     <div style={{display:"flex",gap:6,marginBottom:8}}>
                       <input readOnly value={inviteLink} onClick={e=>e.target.select()} style={{flex:1,padding:"7px 10px",border:"1px solid #a7f3d0",borderRadius:6,fontSize:10,background:"#fff",boxSizing:"border-box"}}/>
                       <button onClick={copyInviteLink} style={{padding:"7px 12px",background:"#fff",border:"1px solid #a7f3d0",borderRadius:6,color:"#059669",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Copiar</button>
                     </div>
                     <div style={{display:"flex",gap:6}}>
-                      <a href={`https://wa.me/${(assignForm.phone||"").replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola ${assignForm.full_name}, te invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}. Abre este link para crear tu cuenta: ${inviteLink}`)}`} target="_blank" rel="noreferrer" style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>Enviar por WhatsApp</a>
-                      <a href={`mailto:${assignForm.email}?subject=${encodeURIComponent("Invitación a Carive")}&body=${encodeURIComponent(`Hola ${assignForm.full_name},\n\nTe invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}.\n\nAbre este link para crear tu cuenta:\n${inviteLink}\n\nSaludos`)}`} style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>Enviar por Email</a>
+                      <a href={`https://wa.me/${(assignForm.phone||"").replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola ${assignForm.full_name}, te invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}. Abre este link para crear tu cuenta: ${inviteLink}`)}`} target="_blank" rel="noreferrer" style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>{L("Enviar por WhatsApp","Send via WhatsApp")}</a>
+                      <a href={`mailto:${assignForm.email}?subject=${encodeURIComponent("Invitación a Carive")}&body=${encodeURIComponent(`Hola ${assignForm.full_name},\n\nTe invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}.\n\nAbre este link para crear tu cuenta:\n${inviteLink}\n\nSaludos`)}`} style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>{L("Enviar por Email","Send via Email")}</a>
                     </div>
                     <button onClick={()=>{setInviteLink("");setAssignForm({email:"",full_name:"",role:"Capitán",phone:""});}} style={{background:"none",border:"none",color:"#059669",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>Listo</button>
                   </div>
@@ -421,7 +424,7 @@ function CrewCard({ crew, rep, badgeIcons, onView, actions }) {
           )}
         </div>
       </div>
-      <button onClick={onView} style={{width:"100%",marginTop:10,marginBottom:8,padding:"7px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,color:"#475569",fontSize:12,fontWeight:600,cursor:"pointer"}}>Ver perfil completo</button>
+      <button onClick={onView} style={{width:"100%",marginTop:10,marginBottom:8,padding:"7px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,color:"#475569",fontSize:12,fontWeight:600,cursor:"pointer"}}>{L("Ver perfil completo","View full profile")}</button>
       {actions}
     </div>
   );
@@ -462,7 +465,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           {/* Bio */}
           {crew.bio&&(
             <div>
-              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>SOBRE MÍ</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>{L("SOBRE MÍ","ABOUT ME")}</div>
               <div style={{fontSize:13,color:"#475569",lineHeight:1.5}}>{crew.bio}</div>
             </div>
           )}
