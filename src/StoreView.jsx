@@ -188,7 +188,7 @@ export default function StoreView({ user, onLogout }) {
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:10,padding:4}}>
-            {[{k:"solicitudes",l:t("store.requests")},{k:"respuestas",l:t("store.quotes")},{k:"perfil",l:t("store.myStore")}].map(tb=>(
+            {[{k:"perfil",l:t("store.myStore")},{k:"respuestas",l:t("store.quotes")},{k:"solicitudes",l:t("store.requests")},{k:"ventas",l:L("Ventas","Sales")}].map(tb=>(
               <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===tb.k?700:500,background:tab===tb.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"transparent",color:tab===tb.k?"#fff":"#64748b"}}>{tb.l}</button>
             ))}
           </div>
@@ -505,9 +505,14 @@ export default function StoreView({ user, onLogout }) {
               </div>
               <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>{t("store.saveStore")}</button>
             </div>
+          </div>
+        )}
 
-            {/* ── COMISIONES Y TRANSACCIONES ── */}
-            <div style={{fontSize:16,fontWeight:800,color:"#0a2540",margin:"28px 0 12px",fontFamily:"'Sora',system-ui,sans-serif"}}>{t("store.commissions")}</div>
+        {/* ── VENTAS Y COMISIONES ── */}
+        {tab==="ventas"&&(
+          <div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:4,fontFamily:"'Sora',system-ui,sans-serif"}}>{L("Ventas y Comisiones","Sales & Commissions")}</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:18}}>{L("Tu historial de ventas y cómo se calculan las comisiones.","Your sales history and how commissions are calculated.")}</div>
 
             {/* Resumen */}
             {(() => {
