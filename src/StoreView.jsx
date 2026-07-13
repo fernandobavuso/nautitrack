@@ -9,25 +9,39 @@ import StoreOnboarding from "./StoreOnboarding.jsx";
 import { useLang } from "./i18n.jsx";
 
 const STORE_CATEGORIES = [
-  "Filtros","Aceites y Lubricantes","Correas","Motores","Transmisiones",
-  "Eléctrico","Baterías","Electrónica/Navegación","Bombas","Hélices",
-  "Refrigeración / A/C","Plomería","Sistemas de combustible","Dirección / Timón",
-  "Seguridad","Salvavidas","Ánodos","Pinturas","Fibra de vidrio",
-  "Tapicería","Toldos y Lonas","Cabos y Amarres","Ferretería marina",
-  "Limpieza","Buceo y Pesca","Otro",
+  // Motor y propulsión (lo más grande del mercado)
+  "Motores","Accesorios de Motor","Filtros","Aceites y Lubricantes","Correas",
+  "Transmisiones","Hélices","Sistemas de combustible","Mangueras y Abrazaderas",
+  // Eléctrico y electrónica
+  "Eléctrico","Baterías","Iluminación","Electrónica/Navegación","Indicadores y Sensores",
+  // Sistemas del barco
+  "Bombas","Plomería","Refrigeración / A/C","Ventilación","Desalinizadores",
+  "Dirección / Timón","Cocina e Interior",
+  // Casco y cubierta
+  "Ferretería marina","Ánodos","Pinturas","Fibra de vidrio","Tapicería","Toldos y Lonas",
+  "Anclas y Fondeo","Cabos y Amarres",
+  // Seguridad y otros
+  "Seguridad","Salvavidas","Limpieza","Mantenimiento General","Pesca","Buceo",
+  "Otro",
 ];
 
 // Traducción de categorías (se muestra en inglés, se guarda en español)
 const CAT_EN = {
-  "Filtros":"Filters","Aceites y Lubricantes":"Oils & Lubricants","Correas":"Belts",
-  "Motores":"Engines","Transmisiones":"Transmissions","Eléctrico":"Electrical",
-  "Baterías":"Batteries","Electrónica/Navegación":"Electronics/Navigation","Bombas":"Pumps",
-  "Hélices":"Propellers","Refrigeración / A/C":"Refrigeration / A/C","Plomería":"Plumbing",
-  "Sistemas de combustible":"Fuel Systems","Dirección / Timón":"Steering / Helm",
-  "Seguridad":"Safety","Salvavidas":"Life Jackets","Ánodos":"Anodes","Pinturas":"Paints",
+  "Motores":"Engines","Accesorios de Motor":"Engine Accessories","Filtros":"Filters",
+  "Aceites y Lubricantes":"Oils & Lubricants","Correas":"Belts","Transmisiones":"Transmissions",
+  "Hélices":"Propellers","Sistemas de combustible":"Fuel Systems",
+  "Mangueras y Abrazaderas":"Hoses & Clamps",
+  "Eléctrico":"Electrical","Baterías":"Batteries","Iluminación":"Lighting",
+  "Electrónica/Navegación":"Electronics/Navigation","Indicadores y Sensores":"Gauges & Senders",
+  "Bombas":"Pumps","Plomería":"Plumbing","Refrigeración / A/C":"Refrigeration / A/C",
+  "Ventilación":"Ventilation","Desalinizadores":"Watermakers",
+  "Dirección / Timón":"Steering & Controls","Cocina e Interior":"Galley & Interior",
+  "Ferretería marina":"Marine Hardware","Ánodos":"Anodes","Pinturas":"Paint",
   "Fibra de vidrio":"Fiberglass","Tapicería":"Upholstery","Toldos y Lonas":"Canvas & Covers",
-  "Cabos y Amarres":"Ropes & Mooring","Ferretería marina":"Marine Hardware",
-  "Limpieza":"Cleaning","Buceo y Pesca":"Diving & Fishing","Otro":"Other",
+  "Anclas y Fondeo":"Anchors & Docking","Cabos y Amarres":"Ropes & Mooring",
+  "Seguridad":"Safety","Salvavidas":"Life Jackets","Limpieza":"Cleaning",
+  "Mantenimiento General":"General Maintenance","Pesca":"Fishing","Buceo":"Diving",
+  "Otro":"Other",
 };
 const catL = (c, lang) => lang === "en" ? (CAT_EN[c] || c) : c;
 

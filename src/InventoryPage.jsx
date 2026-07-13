@@ -446,12 +446,15 @@ const qtyBtn = {width:30,height:30,borderRadius:8,border:"1.5px solid #e2e8f0",b
 const chip = (active) => ({padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",background:active?"#eff6ff":"#fff",borderColor:active?"#2563eb":"#e2e8f0",color:active?"#2563eb":"#64748b"});
 
 const REQ_CATEGORIES = [
-  "Filtros","Aceites y Lubricantes","Correas","Motores","Transmisiones",
-  "Eléctrico","Baterías","Electrónica/Navegación","Bombas","Hélices",
-  "Refrigeración / A/C","Plomería","Sistemas de combustible","Dirección / Timón",
-  "Seguridad","Salvavidas","Ánodos","Pinturas","Fibra de vidrio",
-  "Tapicería","Toldos y Lonas","Cabos y Amarres","Ferretería marina",
-  "Limpieza","Buceo y Pesca","Otro",
+  "Motores","Accesorios de Motor","Filtros","Aceites y Lubricantes","Correas",
+  "Transmisiones","Hélices","Sistemas de combustible","Mangueras y Abrazaderas",
+  "Eléctrico","Baterías","Iluminación","Electrónica/Navegación","Indicadores y Sensores",
+  "Bombas","Plomería","Refrigeración / A/C","Ventilación","Desalinizadores",
+  "Dirección / Timón","Cocina e Interior",
+  "Ferretería marina","Ánodos","Pinturas","Fibra de vidrio","Tapicería","Toldos y Lonas",
+  "Anclas y Fondeo","Cabos y Amarres",
+  "Seguridad","Salvavidas","Limpieza","Mantenimiento General","Pesca","Buceo",
+  "Otro",
 ];
 
 function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", captainLimit }) {
