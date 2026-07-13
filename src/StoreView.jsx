@@ -111,7 +111,7 @@ export default function StoreView({ user, onLogout }) {
 
   const loadResponses = async () => {
     const { data } = await supabase.from("part_responses")
-      .select("*, request:request_id(*, owner:owner_id(full_name,email), vessel:vessel_id(details))").eq("store_id", user.id).order("created_at",{ascending:false});
+      .select("*, request:request_id(*, owner:owner_id(full_name,phone,email))").eq("store_id", user.id).order("created_at",{ascending:false});
     setMyResponses(data||[]);
   };
 
@@ -320,8 +320,8 @@ export default function StoreView({ user, onLogout }) {
                             {r.request?.city?` · ${r.request.city}`:""}
                           </div>
                           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                            {(r.request?.vessel?.details?._profile?.phone) ? (
-                              <a href={`https://wa.me/${String(r.request.vessel.details._profile.phone).replace(/[^0-9]/g,"")}?text=${encodeURIComponent(L(`Hola ${r.request.owner.full_name||""}, soy de ${profile.store_name||"la tienda"} en Carive. Te escribo por tu pedido: ${r.request?.item_name}. ¿Coordinamos la entrega?`,`Hi ${r.request.owner.full_name||""}, I'm from ${profile.store_name||"the store"} on Carive. I'm reaching out about your order: ${r.request?.item_name}. Shall we coordinate delivery?`))}`}
+                            {r.request?.owner?.phone ? (
+                              <a href={`https://wa.me/${String(r.request.owner.phone).replace(/[^0-9]/g,"")}?text=${encodeURIComponent(L(`Hola ${r.request.owner.full_name||""}, soy de ${profile.store_name||"la tienda"} en Carive. Te escribo por tu pedido: ${r.request?.item_name}. ¿Coordinamos la entrega?`,`Hi ${r.request.owner.full_name||""}, I'm from ${profile.store_name||"the store"} on Carive. I'm reaching out about your order: ${r.request?.item_name}. Shall we coordinate delivery?`))}`}
                                  target="_blank" rel="noreferrer"
                                  style={{display:"inline-flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,padding:"8px 14px",fontSize:12,color:"#fff",fontWeight:700,textDecoration:"none"}}>
                                 WhatsApp

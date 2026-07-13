@@ -3211,6 +3211,11 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
   const setcfg=(k,v)=>setConfig(c=>({...c,[k]:v}));
 
   const save = async () => {
+    // El teléfono es necesario para que las tiendas puedan coordinar entregas
+    if (!form.phone?.trim()) {
+      alert("Agrega tu teléfono. Las tiendas lo necesitan para coordinar la entrega de repuestos contigo.");
+      return;
+    }
     const full_name = `${form.firstName} ${form.lastName}`.trim();
     await supabase.from("profiles").upsert({
       id: user.id, email: form.email||user.email,
@@ -3245,7 +3250,11 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
                 <div><label style={s.label}>Nombre</label><input value={form.firstName||""} onChange={e=>set("firstName",e.target.value)} style={s.input}/></div>
                 <div><label style={s.label}>Apellido</label><input value={form.lastName||""} onChange={e=>set("lastName",e.target.value)} style={s.input}/></div>
               </div>
-              <div><label style={s.label}>Teléfono</label><input value={form.phone||""} onChange={e=>set("phone",e.target.value)} style={s.input}/></div>
+              <div>
+                <label style={s.label}>Teléfono / WhatsApp <span style={{color:"#dc2626"}}>*</span></label>
+                <input value={form.phone||""} onChange={e=>set("phone",e.target.value)} placeholder="+1 305..." style={s.input}/>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:4,lineHeight:1.4}}>Las tiendas lo usan para coordinar la entrega de repuestos contigo. Solo se comparte cuando eliges una tienda.</div>
+              </div>
               <div><label style={s.label}>Email</label><input type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} style={s.input}/></div>
               <div><label style={s.label}>Ubicación de la Marina</label><input value={form.marinaAddress||""} onChange={e=>set("marinaAddress",e.target.value)} style={s.input}/></div>
             </div>

@@ -485,6 +485,12 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
 
   const submit = async () => {
     if (!form.item_name.trim()) return;
+    // Verificar que el dueño tenga teléfono (las tiendas lo necesitan para coordinar)
+    const { data: prof } = await supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle();
+    if (!prof?.phone?.trim()) {
+      alert("Antes de pedir un repuesto, agrega tu teléfono en Mi Perfil.\n\nLas tiendas lo necesitan para coordinar la entrega contigo. Solo se comparte cuando eliges una tienda.");
+      return;
+    }
     setSaving(true);
     const city = vessel.details?.city||vessel.marina||"";
     const authorName = user?.full_name || user?.email || (isCaptain?"Capitán":"Dueño");
