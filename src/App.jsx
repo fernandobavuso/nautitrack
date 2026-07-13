@@ -3360,6 +3360,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
     hin:          d.hin          || "",
     boatOwnerName:  d.boatOwnerName  || "",
     boatOwnerEmail: d.boatOwnerEmail || "",
+    notifyCheckin:  d.notifyCheckin !== false,   // por defecto: avisar
   });
 
   // Dimensions
@@ -3521,6 +3522,19 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
             <VesselField key="boatOwnerName" editMode={editMode} label="Dueño del barco" value={gen.boatOwnerName} onChange={v=>setGen(g=>({...g,boatOwnerName:v}))} placeholder="A quién se le envían los reportes"/>
             <VesselField key="boatOwnerEmail" editMode={editMode} label="Email del dueño" value={gen.boatOwnerEmail} onChange={v=>setGen(g=>({...g,boatOwnerEmail:v}))} placeholder="correo@ejemplo.com"/>
+            {/* Avisos de check-in / check-out por QR */}
+            <div style={{gridColumn:"1 / -1",marginTop:8,padding:"12px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10}}>
+              <label style={{display:"flex",alignItems:"center",gap:10,cursor:editMode?"pointer":"default"}}>
+                <input type="checkbox" disabled={!editMode}
+                  checked={gen.notifyCheckin !== false}
+                  onChange={e=>setGen(g=>({...g,notifyCheckin:e.target.checked}))}
+                  style={{width:15,height:15,cursor:editMode?"pointer":"default"}}/>
+                <div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>Avisarme de cada entrada y salida a bordo</div>
+                  <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>Recibirás un aviso cuando alguien haga check-in o check-out con el QR de esta embarcación.</div>
+                </div>
+              </label>
+            </div>
             <VesselField key="manuf" editMode={editMode} label="Fabricante" value={gen.manufacturer} onChange={v=>setGen(g=>({...g,manufacturer:v}))}/>
             <VesselField key="model" editMode={editMode} label="Modelo" value={gen.model} onChange={v=>setGen(g=>({...g,model:v}))}/>
             <VesselField key="year" editMode={editMode} label="Año" value={gen.year} onChange={v=>setGen(g=>({...g,year:v}))}/>
