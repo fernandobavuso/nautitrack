@@ -8,10 +8,32 @@ import { distanceKm, kmToMi } from "./geo.js";
 import StoreOnboarding from "./StoreOnboarding.jsx";
 import { useLang } from "./i18n.jsx";
 
-const STORE_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
+const STORE_CATEGORIES = [
+  "Filtros","Aceites y Lubricantes","Correas","Motores","Transmisiones",
+  "Eléctrico","Baterías","Electrónica/Navegación","Bombas","Hélices",
+  "Refrigeración / A/C","Plomería","Sistemas de combustible","Dirección / Timón",
+  "Seguridad","Salvavidas","Ánodos","Pinturas","Fibra de vidrio",
+  "Tapicería","Toldos y Lonas","Cabos y Amarres","Ferretería marina",
+  "Limpieza","Buceo y Pesca","Otro",
+];
+
+// Traducción de categorías (se muestra en inglés, se guarda en español)
+const CAT_EN = {
+  "Filtros":"Filters","Aceites y Lubricantes":"Oils & Lubricants","Correas":"Belts",
+  "Motores":"Engines","Transmisiones":"Transmissions","Eléctrico":"Electrical",
+  "Baterías":"Batteries","Electrónica/Navegación":"Electronics/Navigation","Bombas":"Pumps",
+  "Hélices":"Propellers","Refrigeración / A/C":"Refrigeration / A/C","Plomería":"Plumbing",
+  "Sistemas de combustible":"Fuel Systems","Dirección / Timón":"Steering / Helm",
+  "Seguridad":"Safety","Salvavidas":"Life Jackets","Ánodos":"Anodes","Pinturas":"Paints",
+  "Fibra de vidrio":"Fiberglass","Tapicería":"Upholstery","Toldos y Lonas":"Canvas & Covers",
+  "Cabos y Amarres":"Ropes & Mooring","Ferretería marina":"Marine Hardware",
+  "Limpieza":"Cleaning","Buceo y Pesca":"Diving & Fishing","Otro":"Other",
+};
+const catL = (c, lang) => lang === "en" ? (CAT_EN[c] || c) : c;
 
 export default function StoreView({ user, onLogout }) {
   const { t, lang, setLang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
   const [tab, setTab] = useState("solicitudes");
   const [profile, setProfile] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -175,7 +197,7 @@ export default function StoreView({ user, onLogout }) {
           <div style={{background:"linear-gradient(120deg,#0a2540,#0f3a5f)",borderRadius:18,padding:"22px 24px",color:"#fff",marginBottom:16,position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:"radial-gradient(circle,rgba(56,189,248,.22),transparent 70%)"}}/>
             <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,marginBottom:4}}>{profile.store_name}</div>
-            <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?" · Envío nacional":profile.store_radius_km?` · Cobertura ${Math.round(kmToMi(profile.store_radius_km))} mi`:""}</div>
+            <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?` · ${L("Envío nacional","Nationwide shipping")}`:profile.store_radius_km?` · ${L("Cobertura","Coverage")} ${Math.round(kmToMi(profile.store_radius_km))} mi`:""}</div>
             <div style={{display:"inline-flex",alignItems:"center",gap:4,background:"rgba(56,189,248,.2)",color:"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>✓ {t("store.active")}</div>
           </div>
         )}
@@ -301,11 +323,11 @@ export default function StoreView({ user, onLogout }) {
             <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:16}}>Mi Tienda</div>
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18,display:"flex",flexDirection:"column",gap:12}}>
               <div>
-                <label style={lbl}>Nombre de la tienda *</label>
+                <label style={lbl}>{L("Nombre de la tienda","Store name")} *</label>
                 <input value={profile.store_name||""} onChange={e=>setProfile({...profile,store_name:e.target.value})} placeholder="Ej: Repuestos Náuticos del Oriente" style={inp}/>
               </div>
               <div>
-                <label style={lbl}>Ubicación de la tienda *</label>
+                <label style={lbl}>{L("Ubicación de la tienda","Store location")} *</label>
                 <LocationPicker
                   value={profile.store_lat?{lat:profile.store_lat,lng:profile.store_lng,label:profile.store_city||"Ubicación guardada"}:null}
                   onChange={(loc)=>setProfile({...profile,store_lat:loc.lat,store_lng:loc.lng,store_city:loc.label})}
@@ -313,39 +335,44 @@ export default function StoreView({ user, onLogout }) {
               </div>
               <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
-                  <label style={lbl}>Teléfono / WhatsApp</label>
+                  <label style={lbl}>{L("Teléfono / WhatsApp","Phone / WhatsApp")}</label>
                   <input value={profile.store_phone||""} onChange={e=>setProfile({...profile,store_phone:e.target.value})} placeholder="+1 305..." style={inp}/>
                 </div>
                 <div style={{flex:1}}>
-                  <label style={lbl}>Radio de cobertura</label>
+                  <label style={lbl}>{L("Radio de cobertura","Coverage radius")}</label>
                   <select value={profile.store_radius_km||50} onChange={e=>setProfile({...profile,store_radius_km:Number(e.target.value)})} style={inp}>
-                    <option value={15}>Hasta ~10 millas</option>
-                    <option value={30}>Hasta ~20 millas</option>
-                    <option value={50}>Hasta ~30 millas</option>
-                    <option value={80}>Hasta ~50 millas</option>
-                    <option value={160}>Hasta ~100 millas</option>
+                    <option value={15}>{L("Hasta ~10 millas","Up to ~10 miles")}</option>
+                    <option value={30}>{L("Hasta ~20 millas","Up to ~20 miles")}</option>
+                    <option value={50}>{L("Hasta ~30 millas","Up to ~30 miles")}</option>
+                    <option value={80}>{L("Hasta ~50 millas","Up to ~50 miles")}</option>
+                    <option value={160}>{L("Hasta ~100 millas","Up to ~100 miles")}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label style={lbl}>Dirección (opcional)</label>
+                <label style={lbl}>{L("Dirección (opcional)","Address (optional)")}</label>
                 <input value={profile.store_address||""} onChange={e=>setProfile({...profile,store_address:e.target.value})} placeholder="Calle, número..." style={inp}/>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <input type="checkbox" id="nationwide" checked={profile.store_ships_nationwide||false} onChange={e=>setProfile({...profile,store_ships_nationwide:e.target.checked})} style={{width:15,height:15}}/>
-                <label htmlFor="nationwide" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>Envío a todo el país (recibir solicitudes sin importar la distancia)</label>
+                <label htmlFor="nationwide" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>{L("Envío a todo el país (recibir solicitudes sin importar la distancia)","Nationwide shipping (receive requests regardless of distance)")}</label>
               </div>
               <div>
-                <label style={lbl}>Categorías que manejas *</label>
-                <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>Solo recibirás solicitudes de estas categorías</div>
+                <label style={lbl}>{L("Categorías que manejas","Categories you carry")} *</label>
+                <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>{L("Solo recibirás solicitudes de estas categorías","You will only receive requests in these categories")}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {STORE_CATEGORIES.map(c=>(
                     <button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 11px",border:"1.5px solid",borderRadius:16,fontSize:11,cursor:"pointer",
                       background:(profile.store_categories||[]).includes(c)?"#eff6ff":"#f8fafc",
                       borderColor:(profile.store_categories||[]).includes(c)?"#2563eb":"#e2e8f0",
                       color:(profile.store_categories||[]).includes(c)?"#2563eb":"#64748b",
-                      fontWeight:(profile.store_categories||[]).includes(c)?700:400}}>{c}</button>
+                      fontWeight:(profile.store_categories||[]).includes(c)?700:400}}>{catL(c, lang)}</button>
                   ))}
+                </div>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
+                  {L("¿No ves tu categoría? Marca ","Don't see your category? Select ")}
+                  <strong>{L("Otro","Other")}</strong>
+                  {L(" y escríbenos a info@carive.co para agregarla."," and email us at info@carive.co to add it.")}
                 </div>
               </div>
               <button onClick={saveProfile} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>{t("store.saveStore")}</button>
@@ -379,7 +406,7 @@ export default function StoreView({ user, onLogout }) {
             {/* Tabla de rangos de comisión (transparencia total) */}
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:16,marginBottom:16}}>
               <div style={{fontSize:13,fontWeight:700,color:"#0a2540",marginBottom:4}}>{t("store.howComm")}</div>
-              <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>La comisión se descuenta solo cuando ganas una venta. A mayor monto, menor porcentaje.</div>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{L("La comisión se descuenta solo cuando ganas una venta. A mayor monto, menor porcentaje.","The commission is only deducted when you win a sale. The higher the amount, the lower the percentage.")}</div>
               {commissionTiers && (() => {
                 const region = (profile.store_country==="us"||(profile.store_city||"").toLowerCase().match(/miami|lauderdale|florida|beach|gables|grove/)) ? "US" : "VE";
                 const list = commissionTiers[region] || commissionTiers.VE || [];
@@ -388,7 +415,7 @@ export default function StoreView({ user, onLogout }) {
                     {list.map((t,i)=>(
                       <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",background:"#f8fafc",borderRadius:8}}>
                         <span style={{fontSize:12,color:"#475569"}}>
-                          {t.max==null ? `Ventas de $${t.min.toLocaleString()} en adelante` : `Ventas de $${t.min.toLocaleString()} a $${t.max.toLocaleString()}`}
+                          {t.max==null ? `${L("Ventas de","Sales from")} $${t.min.toLocaleString()} ${L("en adelante","and up")}` : `${L("Ventas de","Sales from")} $${t.min.toLocaleString()} ${L("a","to")} $${t.max.toLocaleString()}`}
                         </span>
                         <span style={{fontSize:14,fontWeight:800,color:"#2563eb"}}>{t.rate}%</span>
                       </div>
@@ -396,7 +423,7 @@ export default function StoreView({ user, onLogout }) {
                   </div>
                 );
               })()}
-              <div style={{fontSize:10,color:"#94a3b8",marginTop:10}}>Ejemplo: si vendes un repuesto en $300, y tu rango es 6%, la comisión es $18 y recibes $282.</div>
+              <div style={{fontSize:10,color:"#94a3b8",marginTop:10}}>{L("Ejemplo: si vendes un repuesto en $300, y tu rango es 6%, la comisión es $18 y recibes $282.","Example: if you sell a part for $300 and your tier is 6%, the commission is $18 and you receive $282.")}</div>
             </div>
 
             {/* Historial de transacciones ganadas */}

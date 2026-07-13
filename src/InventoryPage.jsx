@@ -425,7 +425,14 @@ const inp = {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",border
 const qtyBtn = {width:30,height:30,borderRadius:8,border:"1.5px solid #e2e8f0",background:"#f8fafc",cursor:"pointer",fontSize:16,fontWeight:700,color:"#475569",display:"flex",alignItems:"center",justifyContent:"center"};
 const chip = (active) => ({padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",background:active?"#eff6ff":"#fff",borderColor:active?"#2563eb":"#e2e8f0",color:active?"#2563eb":"#64748b"});
 
-const REQ_CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Motores","Eléctrico","Electrónica/Navegación","Bombas","Hélices","Seguridad","Ánodos","Pinturas","Plomería","Tapicería","Ferretería marina","Otro"];
+const REQ_CATEGORIES = [
+  "Filtros","Aceites y Lubricantes","Correas","Motores","Transmisiones",
+  "Eléctrico","Baterías","Electrónica/Navegación","Bombas","Hélices",
+  "Refrigeración / A/C","Plomería","Sistemas de combustible","Dirección / Timón",
+  "Seguridad","Salvavidas","Ánodos","Pinturas","Fibra de vidrio",
+  "Tapicería","Toldos y Lonas","Cabos y Amarres","Ferretería marina",
+  "Limpieza","Buceo y Pesca","Otro",
+];
 
 function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", captainLimit }) {
   const [form, setForm] = useState({
