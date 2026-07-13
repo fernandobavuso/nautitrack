@@ -75,7 +75,7 @@ export default function StoreView({ user, onLogout }) {
       store_ships_nationwide:profile.store_ships_nationwide||false, store_address:profile.store_address,
       store_lat:profile.store_lat, store_lng:profile.store_lng, store_radius_km:profile.store_radius_km||50,
     }).eq("id", user.id);
-    setMsg(error?("Error: "+error.message):"Perfil guardado");
+    setMsg(error?(L("Error: ","Error: ")+error.message):L("Perfil guardado","Profile saved"));
     setTimeout(()=>setMsg(""),3000);
   };
 
@@ -587,7 +587,7 @@ export default function StoreView({ user, onLogout }) {
 
       {/* Modal responder */}
       {respondTo&&(
-        <RespondModal request={respondTo} store={profile} user={user} onClose={()=>setRespondTo(null)} onDone={()=>{ setRespondTo(null); loadRequests(); loadResponses(); setMsg("Respuesta enviada"); setTimeout(()=>setMsg(""),3000); }}/>
+        <RespondModal request={respondTo} store={profile} user={user} onClose={()=>setRespondTo(null)} onDone={()=>{ setRespondTo(null); loadRequests(); loadResponses(); setMsg(L("Cotización enviada","Quote sent")); setTimeout(()=>setMsg(""),3000); }}/>
       )}
 
       {msg&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:3000}}>{msg}</div>}
@@ -596,6 +596,8 @@ export default function StoreView({ user, onLogout }) {
 }
 
 function RespondModal({ request, store, user, onClose, onDone }) {
+  const { lang } = useLang();
+  const L=(es,en)=>lang==="en"?en:es;
   const [type, setType] = useState("have");
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState("USD");
@@ -636,12 +638,12 @@ function RespondModal({ request, store, user, onClose, onDone }) {
         {competitors!==null&&competitors>0&&(
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 12px",marginBottom:14}}>
             <div style={{fontSize:12,fontWeight:700,color:"#b45309"}}>Compites con {competitors} {competitors===1?"tienda":"tiendas"} más</div>
-            <div style={{fontSize:11,color:"#92400e",marginTop:2}}>No ves sus precios. Da tu mejor precio: el dueño elige y la mejor oferta gana.</div>
+            <div style={{fontSize:11,color:"#92400e",marginTop:2}}>{L("No ves sus precios. Da tu mejor precio: el dueño elige y la mejor oferta gana.","You can't see their prices. Give your best price: the owner chooses and the best offer wins.")}</div>
           </div>
         )}
 
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
-          {[{k:"have",l:"Sí, tengo el repuesto"},{k:"have_questions",l:"Tengo, pero necesito más info"},{k:"decline",l:"No tengo este repuesto"}].map(o=>(
+          {[{k:"have",l:L("Sí, tengo el repuesto","Yes, I have this part")},{k:"have_questions",l:L("Tengo, pero necesito más info","I have it, but need more info")},{k:"decline",l:L("No tengo este repuesto","I don't have this part")}].map(o=>(
             <button key={o.k} onClick={()=>setType(o.k)} style={{padding:"10px 14px",border:"1.5px solid",borderRadius:10,cursor:"pointer",textAlign:"left",fontSize:13,fontWeight:600,
               borderColor:type===o.k?"#2563eb":"#e2e8f0", background:type===o.k?"#eff6ff":"#fff", color:type===o.k?"#2563eb":"#475569"}}>{o.l}</button>
           ))}
@@ -654,7 +656,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
                 <option value="USD">$ USD</option>
                 <option value="VES">Bs.</option>
               </select>
-              <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Tu mejor precio" style={{...inp,flex:1}}/>
+              <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder={L("Tu mejor precio","Your best price")} style={{...inp,flex:1}}/>
             </div>
             {/* Comisión estimada que verá descontada */}
             {est&&(
@@ -665,11 +667,11 @@ function RespondModal({ request, store, user, onClose, onDone }) {
           </div>
         )}
 
-        <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder={type==="have_questions"?"¿Qué necesitas saber? Ej: ¿marca exacta? ¿año del motor?":"Mensaje al cliente (opcional)"} style={{...inp,resize:"vertical",marginBottom:14}}/>
+        <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder={type==="have_questions"?L("¿Qué necesitas saber? Ej: ¿marca exacta? ¿año del motor?","What do you need to know? e.g. exact brand? engine year?"):L("Mensaje al cliente (opcional)","Message to the customer (optional)")} style={{...inp,resize:"vertical",marginBottom:14}}/>
 
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-          <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar oferta</button>
+          <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Enviar cotización","Send quote")}</button>
         </div>
       </div>
     </div>
