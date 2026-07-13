@@ -66,8 +66,8 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
     }).eq("id", response.id);
     // Cerrar la solicitud con su ganador
     await supabase.from("part_requests").update({ status:"resolved", winner_response_id:response.id }).eq("id", request.id);
-    // Notificar a la tienda ganadora
-    notify(response.store_id, { type:"auction_won", title:"¡Ganaste la venta!", body:`El cliente te eligió para: ${request.item_name}. Coordina la entrega.`, link:"respuestas" });
+    // Notificar a la tienda ganadora — ya puede ver el contacto del cliente
+    notify(response.store_id, { type:"auction_won", title:"¡Ganaste la venta!", body:`El cliente te eligió para: ${request.item_name}. Ya puedes ver su contacto en "Mis cotizaciones" para coordinar la entrega.`, link:"respuestas" });
     loadRequests();
   };
 
@@ -254,6 +254,26 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                           {/* Botón elegir ganador (solo si no resuelto y tiene precio) */}
                           {!resolved&&rp.response_type==="have"&&rp.price&&(
                             <button onClick={()=>chooseWinner(r,rp)} style={{width:"100%",marginTop:8,padding:"7px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Elegir esta tienda</button>
+                          )}
+                          {/* Coordinación tras elegir la tienda */}
+                          {isWinner&&(
+                            <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #bbf7d0"}}>
+                              <div style={{fontSize:11,fontWeight:700,color:"#15803d",marginBottom:6}}>Coordina la entrega con la tienda</div>
+                              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                                {rp.store?.store_phone ? (
+                                  <a href={`https://wa.me/${rp.store.store_phone.replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola ${rp.store?.store_name||""}, soy dueño de embarcación en Carive. Te elegí para mi pedido: ${r.item_name}. ¿Coordinamos la entrega y el pago?`)}`}
+                                     target="_blank" rel="noreferrer"
+                                     style={{display:"inline-flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,padding:"8px 14px",fontSize:12,color:"#fff",fontWeight:700,textDecoration:"none"}}>
+                                    WhatsApp
+                                  </a>
+                                ) : (
+                                  <span style={{fontSize:11,color:"#94a3b8"}}>La tienda no registró teléfono</span>
+                                )}
+                              </div>
+                              <div style={{fontSize:10,color:"#64748b",marginTop:8,lineHeight:1.4}}>
+                                Acuerden entrega y forma de pago directamente. Carive registra la venta para tu historial de costos.
+                              </div>
+                            </div>
                           )}
                         </div>
                       );})}

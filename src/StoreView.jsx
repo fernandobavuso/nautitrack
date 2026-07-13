@@ -111,7 +111,7 @@ export default function StoreView({ user, onLogout }) {
 
   const loadResponses = async () => {
     const { data } = await supabase.from("part_responses")
-      .select("*, request:request_id(*)").eq("store_id", user.id).order("created_at",{ascending:false});
+      .select("*, request:request_id(*, owner:owner_id(full_name,email), vessel:vessel_id(details))").eq("store_id", user.id).order("created_at",{ascending:false});
     setMyResponses(data||[]);
   };
 
@@ -305,9 +305,38 @@ export default function StoreView({ user, onLogout }) {
                       </div>
                       <span style={{fontSize:11,fontWeight:800,padding:"4px 11px",borderRadius:20,background:st.bg,color:st.c,whiteSpace:"nowrap"}}>{st.l}</span>
                     </div>
-                    {won&&r.sale_amount&&(
-                      <div style={{marginTop:12,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 12px",fontSize:11,color:"#15803d"}}>
-                        Venta: ${r.sale_amount}{r.commission_amount!=null?` · Comisión (${r.commission_rate}%): $${r.commission_amount} · Recibes: $${(Number(r.sale_amount)-Number(r.commission_amount)).toFixed(2)}`:""}
+                    {won&&(
+                      <div style={{marginTop:12,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"12px 14px"}}>
+                        {r.sale_amount&&(
+                          <div style={{fontSize:11,color:"#15803d",marginBottom:10}}>
+                            {L("Venta","Sale")}: ${r.sale_amount}{r.commission_amount!=null?` · ${L("Comisión","Commission")} (${r.commission_rate}%): $${r.commission_amount} · ${L("Recibes","You receive")}: $${(Number(r.sale_amount)-Number(r.commission_amount)).toFixed(2)}`:""}
+                          </div>
+                        )}
+                        {/* Contacto del dueño — se revela solo al ganar */}
+                        <div style={{borderTop:"1px solid #bbf7d0",paddingTop:10}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#15803d",marginBottom:6}}>{L("Coordina la entrega con el cliente","Coordinate delivery with the customer")}</div>
+                          <div style={{fontSize:12,color:"#0f172a",fontWeight:600,marginBottom:8}}>
+                            {r.request?.owner?.full_name||L("Cliente","Customer")}
+                            {r.request?.city?` · ${r.request.city}`:""}
+                          </div>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                            {(r.request?.vessel?.details?._profile?.phone) ? (
+                              <a href={`https://wa.me/${String(r.request.vessel.details._profile.phone).replace(/[^0-9]/g,"")}?text=${encodeURIComponent(L(`Hola ${r.request.owner.full_name||""}, soy de ${profile.store_name||"la tienda"} en Carive. Te escribo por tu pedido: ${r.request?.item_name}. ¿Coordinamos la entrega?`,`Hi ${r.request.owner.full_name||""}, I'm from ${profile.store_name||"the store"} on Carive. I'm reaching out about your order: ${r.request?.item_name}. Shall we coordinate delivery?`))}`}
+                                 target="_blank" rel="noreferrer"
+                                 style={{display:"inline-flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,padding:"8px 14px",fontSize:12,color:"#fff",fontWeight:700,textDecoration:"none"}}>
+                                WhatsApp
+                              </a>
+                            ) : (
+                              <span style={{fontSize:11,color:"#94a3b8"}}>{L("El cliente no registró teléfono","The customer has no phone on file")}</span>
+                            )}
+                            {r.request?.owner?.email && (
+                              <a href={`mailto:${r.request.owner.email}?subject=${encodeURIComponent(L("Tu pedido en Carive","Your Carive order")+": "+(r.request?.item_name||""))}`}
+                                 style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 14px",fontSize:12,color:"#475569",fontWeight:700,textDecoration:"none"}}>
+                                Email
+                              </a>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
