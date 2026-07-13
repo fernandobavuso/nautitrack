@@ -245,6 +245,19 @@
       <span data-es="Marketplace de repuestos" data-en="Parts marketplace">Marketplace de repuestos</span>
       <span data-es="Tripulación y capitanes" data-en="Crew & captains">Tripulación y capitanes</span>
     </div>
+
+    <!-- Pie: atribución legal (Carive es operado por The Boating Zone LLC) -->
+    <footer style="margin-top:56px;padding-top:22px;border-top:1px solid rgba(255,255,255,.08);width:100%;max-width:640px">
+      <div style="font-size:12px;color:#7f97b3;line-height:1.7">
+        <span data-es="Carive es un producto de" data-en="Carive is a product of">Carive es un producto de</span>
+        <strong style="color:#9fb4cc;font-weight:600"> The Boating Zone LLC</strong>
+        · Miami, Florida
+      </div>
+      <div style="font-size:11px;color:#5f7793;margin-top:6px">
+        © <span id="year">2026</span> The Boating Zone LLC ·
+        <a href="mailto:info@carive.co" style="color:#5f7793;text-decoration:none">info@carive.co</a>
+      </div>
+    </footer>
   </div>
 
   <footer>
@@ -306,6 +319,10 @@
     }
     return false;
   }
+
+  // Año actual en el pie
+  var yEl = document.getElementById('year');
+  if (yEl) yEl.textContent = new Date().getFullYear();
 
   // Conectar los botones de idioma de forma robusta
   document.getElementById('btn-es').addEventListener('click', function(){ setLang('es'); });
