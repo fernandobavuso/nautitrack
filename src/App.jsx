@@ -31,16 +31,15 @@ import { useResponsive } from "./useResponsive";
 
 
 
-// ── WhatsApp Config ───────────────────────────────────────────────────────────
-const WA_PHONE_ID = "110569092263550 7".replace(/\s/g,"");
-const WA_TOKEN    = "EAAT9nusek5sBRhjr6ndwYzICuQhZCMf4XTGEWUDXmZCjYEz6GZCRyvqYZCIqgFjZBLBzgUPKs7oZAh6X73NZCqPtsLW9upNtGY0YIIbn4esNrarrQzrFsZCZAX7WLsMHx1s2vuhiufMEZA0M9AAJESoW3hkJfikziQ2UMUeMZAJz1TcbZBlpcYkNZB9OEjONyjFvjaA4Mz5hdNZA2804qT9nyDFVSAkuDL81o9OXdlW2XcWTgxbNjyFZBi8055nfNt0c5puepkrhi2hXrOFEdRrNwEc0vy9X6AHhpRxDqQI2u0ZD";
-
+// ── WhatsApp ──────────────────────────────────────────────────────────────────
+// El envío pasa por /api/whatsapp, que usa el token del entorno (server-side,
+// WHATSAPP_TOKEN / WHATSAPP_PHONE_ID). El token NUNCA vive en el cliente.
 async function sendWhatsApp(to, message) {
   try {
     const resp = await fetch("/api/whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, message, token: WA_TOKEN, phoneNumberId: WA_PHONE_ID }),
+      body: JSON.stringify({ to, message }),
     });
     const data = await resp.json();
     return data.success ? { ok: true } : { ok: false, error: data.error };
