@@ -7,7 +7,7 @@
 
 // Plantillas aprobadas en Meta (nombre exacto)
 export const WA_TEMPLATES = {
-  NUEVO_PEDIDO:   "nuevo_pedido_tienda",       // {{1}} tienda, {{2}} producto, {{3}} ciudad, {{4}} distancia
+  NUEVO_PEDIDO:   "pedido_tienda_aviso",        // {{1}} tienda, {{2}} producto, {{3}} ciudad, {{4}} distancia (UTILITY)
   PEDIDO_URGENTE: "pedido_urgente_tienda",     // {{1}} tienda, {{2}} producto, {{3}} ciudad
   VENTA_GANADA:   "venta_ganada_tienda",       // {{1}} tienda, {{2}} producto, {{3}} monto, {{4}} cliente
   COTIZACIONES:   "cotizaciones_recibidas_dueno", // {{1}} dueño, {{2}} producto, {{3}} cantidad

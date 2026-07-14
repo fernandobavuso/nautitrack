@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         to,
         type: "template",
         template: {
-          name: "nuevo_pedido_tienda",
+          name: "pedido_tienda_aviso",
           language: { code: "es" },
           components: [{
             type: "body",
