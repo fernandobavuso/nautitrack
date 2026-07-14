@@ -648,6 +648,7 @@ export default function App() {
         setShowVesselDetails={setShowVesselDetails}
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
         setShowFleetManagers={setShowFleetManagers}
+        setShowFleetCrew={setShowFleetCrew}
         canManageFleet={getPlan(vessel).features?.multiFleet}
         setShowNotifications={setShowNotifications}
         setShowNotifPanel={setShowNotifPanel}
