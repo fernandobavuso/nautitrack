@@ -401,6 +401,7 @@ export const DICT = {
   "dash.indicators": { es: "Indicadores",  en: "Indicators" },
   "dash.fuel":       { es: "Combustible",  en: "Fuel" },
   "dash.engineHours":{ es: "Horas Motor",  en: "Engine Hours" },
+  "dash.genHours":   { es: "Horas Generador", en: "Generator Hours" },
 
   // ─── Founder banner ───
   "founder.title":   { es: "Acceso de Fundador", en: "Founder Access" },
