@@ -111,11 +111,12 @@ const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
 
 // Subtipos de "Visita"
 const VISIT_TYPES = [
+  "Buceo / Casco",           // buzo, ánodos, limpieza de casco
+  "Detailing",               // pulido, encerado
   "Inspección",
-  "Lavada",              // wash down
-  "Detailing",           // pulido, encerado
-  "Limpieza interior",   // forros, asientos, tapicería
-  "Buceo / Casco",       // buzo, ánodos, limpieza de casco
+  "Lavada",                  // wash down
+  "Limpieza interior",       // forros, asientos, tapicería
+  "Supervisión de técnico",  // acompañar/supervisar a un técnico externo
 ];
 
 const LOG_TYPES_EN = {
@@ -124,11 +125,12 @@ const LOG_TYPES_EN = {
 };
 
 const VISIT_TYPES_EN = {
+  "Buceo / Casco":"Diver / Hull",
+  "Detailing":"Detailing",
   "Inspección":"Inspection",
   "Lavada":"Wash Down",
-  "Detailing":"Detailing",
   "Limpieza interior":"Interior Cleaning",
-  "Buceo / Casco":"Diver / Hull",
+  "Supervisión de técnico":"Tech Supervision",
 };
 
 export const logTypeL   = (t, lang) => (lang === "en" ? (LOG_TYPES_EN[t]   || t) : t);
@@ -1700,6 +1702,8 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [type,setType]               = useState(initial?.type||"");
   const [visitType,setVisitType]     = useState(initial?.visitType||"");
   const [otherPerformed,setOtherPerformed] = useState("");   // si eligió "Otro"
+  const [supervised,setSupervised]         = useState(initial?.supervised||"");       // técnico supervisado
+  const [otherSupervised,setOtherSupervised] = useState("");
   const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Mi Equipo
 
   // Cargar el roster del gestor (Mi Equipo) para el desplegable de "Realizado por"
@@ -1788,7 +1792,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     if (type==="Salida")      entry={...entry,ownerAboard,crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
     if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment};
     // Visita: guardar el subtipo (qué clase de visita fue)
-    if (type==="Visita")      entry={...entry,visitType,systemId,equipment:finalEquip};
+    if (type==="Visita") {
+      const sup = supervised === "Otro" ? (otherSupervised.trim() || "Otro") : supervised;
+      entry={...entry, visitType, systemId, equipment:finalEquip, ...(sup && {supervised: sup})};
+    }
     // Actualizar horas si la visita fue una inspección de motores/generador
     if (type==="Visita" && visitType==="Inspección" && (systemId==="motores"||systemId==="generador")) {
       entry={...entry,engineHrsOut:engOut,genHrsOut:genOut};
@@ -1843,9 +1850,27 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             )}
             {visitType==="Inspección" && systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
             {visitType==="Inspección" && equipment==="Otro"&&<div><label style={s.label}>Especificar equipo</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder="Nombre del equipo..." style={s.input}/></div>}
+            {/* En una supervisión, registrar a quién se supervisó */}
+            {visitType==="Supervisión de técnico" && (
+              <div>
+                <label style={s.label}>Técnico / empresa supervisada</label>
+                <select value={supervised} onChange={e=>setSupervised(e.target.value)} style={s.input}>
+                  <option value="">Seleccionar...</option>
+                  {provNames.map(p=><option key={p} value={p}>{p}</option>)}
+                  <option value="Otro">Otro</option>
+                </select>
+                {supervised==="Otro" && (
+                  <input value={otherSupervised} onChange={e=>setOtherSupervised(e.target.value)}
+                    placeholder="Nombre del técnico o empresa" style={{...s.input, marginTop:8}} autoFocus/>
+                )}
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>
+                  Los proveedores vienen de tu directorio. Si no está, elige "Otro".
+                </div>
+              </div>
+            )}
             <div>
               <label style={s.label}>Notas <span style={{color:"#dc2626"}}>*</span></label>
-              <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder={visitType==="Lavada"?"Ej: Lavado completo exterior. El gelcoat de proa necesita pulido.":visitType==="Buceo / Casco"?"Ej: Limpieza de casco y cambio de ánodos. Hélice de babor con marca leve.":"Qué se hizo y si viste algo que atender..."} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
+              <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder={visitType==="Lavada"?"Ej: Lavado completo exterior. El gelcoat de proa necesita pulido.":visitType==="Buceo / Casco"?"Ej: Limpieza de casco y cambio de ánodos. Hélice de babor con marca leve.":visitType==="Supervisión de técnico"?"Ej: Supervisé el cambio de impeller del motor de babor. Técnico: Marine Tech. Trabajo conforme.":"Qué se hizo y si viste algo que atender..."} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
             {/* Horas de motor/generador (solo en inspecciones técnicas) */}
