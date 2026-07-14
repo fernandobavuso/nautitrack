@@ -68,10 +68,14 @@ export default async function handler(req, res) {
 
   // Enviar. Si el idioma no coincide (error 132001), reintentar con variantes.
   // Meta distingue "es" de "es_ES"/"es_MX", y "en" de "en_US".
+  // Intentar el idioma pedido y sus variantes; si no existe, caer al otro idioma.
+  // Así el mensaje sale igual aunque la plantilla solo esté en un idioma.
+  const esCodes = ["es", "es_ES", "es_MX", "es_LA"];
+  const enCodes = ["en", "en_US", "en_GB"];
   const langVariants = template
     ? (lang.startsWith("es")
-        ? [lang, "es", "es_ES", "es_MX", "es_LA"]
-        : [lang, "en", "en_US", "en_GB"])
+        ? [lang, ...esCodes, ...enCodes]    // pide español → si no hay, usa inglés
+        : [lang, ...enCodes, ...esCodes])   // pide inglés → si no hay, usa español
     : [lang];
   const tried = [...new Set(langVariants)];
 

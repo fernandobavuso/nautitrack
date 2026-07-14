@@ -41,7 +41,7 @@ export default async function handler(req, res) {
         type: "template",
         template: {
           name: "pedido_tienda_aviso",
-          language: { code: "es" },
+          language: { code: req.query.lang || "en" },
           components: [{
             type: "body",
             parameters: [
