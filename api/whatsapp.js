@@ -66,23 +66,52 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Debes indicar 'template' o 'message'" });
   }
 
-  try {
-    const resp = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await resp.json();
+  // Enviar. Si el idioma no coincide (error 132001), reintentar con variantes.
+  // Meta distingue "es" de "es_ES"/"es_MX", y "en" de "en_US".
+  const langVariants = template
+    ? (lang.startsWith("es")
+        ? [lang, "es", "es_ES", "es_MX", "es_LA"]
+        : [lang, "en", "en_US", "en_GB"])
+    : [lang];
+  const tried = [...new Set(langVariants)];
 
-    if (data.error) {
-      return res.status(400).json({
-        error: data.error.message,
-        code: data.error.code,
-        details: data.error.error_data?.details || null,
+  let lastError = null;
+
+  for (const code of tried) {
+    if (template) payload.template.language.code = code;
+
+    try {
+      const resp = await fetch(`${GRAPH}/${PHONE_ID}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
+      const data = await resp.json();
+
+      if (!data.error) {
+        return res.status(200).json({
+          success: true,
+          messageId: data.messages?.[0]?.id,
+          to: toClean,
+          langUsed: code,
+        });
+      }
+
+      lastError = data.error;
+      // 132001 = plantilla no existe en ese idioma → probar el siguiente
+      if (data.error.code !== 132001) break;
+    } catch (err) {
+      lastError = { message: err.message };
+      break;
     }
-    return res.status(200).json({ success: true, messageId: data.messages?.[0]?.id, to: toClean });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
   }
+
+  return res.status(400).json({
+    error: lastError?.message || "No se pudo enviar",
+    code: lastError?.code || null,
+    triedLanguages: tried,
+    hint: lastError?.code === 132001
+      ? `La plantilla "${template}" no existe en ninguno de estos idiomas: ${tried.join(", ")}. Verifica el nombre y el idioma en WhatsApp Manager.`
+      : null,
+  });
 }
