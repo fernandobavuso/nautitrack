@@ -104,38 +104,35 @@ const DEFAULT_SYSTEMS = [
     equipment:["Dinghy / Tender","Motor Fuera de Borda","Davit","Inflador","Reparación y Parches"] },
 ];
 
-const LOG_COLOR       = { Inspección:"#16a34a", Servicio:"#2563eb", Combustible:"#d97706", Salida:"#7c3aed", Compra:"#0891b2" };
-// Tipos de bitácora (alfabético). Separados a propósito: cada uno tiene
-// su costo, frecuencia y proveedor distinto — agruparlos perdería el control de costos.
-const LOG_TYPES = [
-  "Buceo / Casco",       // visita de buzo, limpieza de casco, ánodos
-  "Combustible",
-  "Compra",
-  "Detailing",           // pulido, encerado
+const LOG_COLOR       = { Visita:"#16a34a", Servicio:"#2563eb", Combustible:"#d97706", Salida:"#7c3aed", Compra:"#0891b2" };
+// Tipos de bitácora. "Visita" tiene un subtipo (qué clase de visita fue),
+// para no perder el detalle: cada subtipo tiene su costo y proveedor distinto.
+const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
+
+// Subtipos de "Visita"
+const VISIT_TYPES = [
   "Inspección",
   "Lavada",              // wash down
+  "Detailing",           // pulido, encerado
   "Limpieza interior",   // forros, asientos, tapicería
-  "Reparación",
-  "Salida",
-  "Servicio",
-  "Traslado",
+  "Buceo / Casco",       // buzo, ánodos, limpieza de casco
 ];
 
-// Traducción de tipos de bitácora
 const LOG_TYPES_EN = {
-  "Buceo / Casco":"Diver / Hull",
-  "Combustible":"Fuel",
-  "Compra":"Purchase",
-  "Detailing":"Detailing",
+  "Combustible":"Fuel", "Compra":"Purchase", "Salida":"Departure",
+  "Servicio":"Service", "Visita":"Visit",
+};
+
+const VISIT_TYPES_EN = {
   "Inspección":"Inspection",
   "Lavada":"Wash Down",
+  "Detailing":"Detailing",
   "Limpieza interior":"Interior Cleaning",
-  "Reparación":"Repair",
-  "Salida":"Departure",
-  "Servicio":"Service",
-  "Traslado":"Transport",
+  "Buceo / Casco":"Diver / Hull",
 };
-export const logTypeL = (t, lang) => (lang === "en" ? (LOG_TYPES_EN[t] || t) : t);
+
+export const logTypeL   = (t, lang) => (lang === "en" ? (LOG_TYPES_EN[t]   || t) : t);
+export const visitTypeL = (t, lang) => (lang === "en" ? (VISIT_TYPES_EN[t] || t) : t);
 const SERVICE_TYPES   = ["Preventivo","Reactivo","Reparación"];
 const PAYMENT_METHODS = ["Efectivo Bs","Efectivo USD","Pago Móvil","Tarjeta","Transferencia","Zelle"];
 const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Trimestral","Semestral","Anual","Por horas","Por millas"];
@@ -1156,7 +1153,7 @@ function LogCard({ vessel, setPage }) {
       <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBook size={17} color="#2563eb"/> Bitácora Reciente</span><button onClick={() => setPage("log")} style={s.linkBtn}>Ver todo →</button></div>
       {(vessel.log||[]).slice(0,4).map((e,i) => (
         <div key={i} style={s.logRow}>
-          <span style={{...s.logBadge,background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type]}}>{e.type}</span>
+          <span style={{...s.logBadge,background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type]}}>{e.visitType||e.type}</span>
           <span style={{fontSize:12,color:"#334155",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             {e.type==="Salida"?`${e.dest} · ${e.persons}p`:e.type==="Compra"?e.item:(e.desc||"").slice(0,50)}
           </span>
@@ -1665,7 +1662,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
             {filtered.map((e,i)=>(
               <tr key={i} style={{...s.trow,":hover":{background:"#f8fafc"}}}>
                 <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>
-                <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{e.type}{e.serviceType?` · ${e.serviceType}`:""}</span></td>
+                <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{logTypeL(e.type, lang)}{e.serviceType?` · ${e.serviceType}`:""}{e.visitType?` · ${visitTypeL(e.visitType, lang)}`:""}</span></td>
                 <td style={{...s.td,color:"#334155",maxWidth:320}}>
                   {e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||"Pendiente"}`:e.type==="Compra"?`${e.item||""} · $${e.costUSD||0}`:e.desc||""}
                 </td>
@@ -1696,10 +1693,12 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
 
 // KEY FIX: LogEntryModal — all state at top, no nested component definitions
 function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
+  const { lang } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
   const today = todayISO();
   const [type,setType]               = useState(initial?.type||"");
+  const [visitType,setVisitType]     = useState(initial?.visitType||"");
   const [date,setDate]               = useState(initial?.date||today);
   const [desc,setDesc]               = useState(initial?.desc||"");
   const [performedBy,setPerformedBy] = useState(initial?.performedBy||"");
@@ -1750,6 +1749,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const validate = () => {
     const e={};
     if (!type) e.type="Selecciona un tipo";
+    if (type==="Visita" && !visitType) e.type="Indica qué tipo de visita fue";
     if (!date) e.date="Requerido";
     if (type==="Servicio"&&!serviceType) e.serviceType="Requerido";
     if (type==="Servicio"&&!systemId)    e.system="Requerido";
@@ -1770,8 +1770,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
     if (type==="Salida")      entry={...entry,ownerAboard,crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
     if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment};
-    // Update engine/gen hours from inspection
-    if (type==="Inspección"&&(systemId==="motores"||systemId==="generador")) {
+    // Visita: guardar el subtipo (qué clase de visita fue)
+    if (type==="Visita")      entry={...entry,visitType,systemId,equipment:finalEquip};
+    // Actualizar horas si la visita fue una inspección de motores/generador
+    if (type==="Visita" && visitType==="Inspección" && (systemId==="motores"||systemId==="generador")) {
       entry={...entry,engineHrsOut:engOut,genHrsOut:genOut};
     }
     onSave(entry);
@@ -1789,9 +1791,20 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
           <div>
             <label style={s.label}>Tipo <span style={{color:"#dc2626"}}>*</span></label>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
-              {LOG_TYPES.map(t=><button key={t} onClick={()=>setType(t)} style={{...s.typeChip,background:type===t?LOG_COLOR[t]+"22":"#f8fafc",borderColor:type===t?LOG_COLOR[t]:"#e2e8f0",color:type===t?LOG_COLOR[t]:"#64748b",fontWeight:type===t?700:400}}>{t}</button>)}
+              {LOG_TYPES.map(t=><button key={t} onClick={()=>{setType(t); if(t!=="Visita") setVisitType("");}} style={{...s.typeChip,background:type===t?LOG_COLOR[t]+"22":"#f8fafc",borderColor:type===t?LOG_COLOR[t]:"#e2e8f0",color:type===t?LOG_COLOR[t]:"#64748b",fontWeight:type===t?700:400}}>{logTypeL(t, lang)}</button>)}
             </div>
             {errors.type&&<div style={s.errMsg}>{errors.type}</div>}
+
+            {/* Subtipo: qué clase de visita fue */}
+            {type==="Visita" && (
+              <div style={{marginTop:12}}>
+                <label style={s.label}>{lang==="es"?"¿Qué tipo de visita?":"What kind of visit?"} <span style={{color:"#dc2626"}}>*</span></label>
+                <select value={visitType} onChange={e=>setVisitType(e.target.value)} style={s.input}>
+                  <option value="">{lang==="es"?"Selecciona...":"Select..."}</option>
+                  {VISIT_TYPES.map(v=><option key={v} value={v}>{visitTypeL(v, lang)}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
