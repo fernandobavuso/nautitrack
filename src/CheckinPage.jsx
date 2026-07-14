@@ -1,252 +1,300 @@
 // Página pública de QR Check-in / Check-out
-// URL: nautitrack.vercel.app/checkin?v=VESSEL_ID
-// No requiere login — accesible desde cualquier celular al escanear QR
+// URL: app.carive.co/checkin?v=VESSEL_ID
+// No requiere login — se abre al escanear el QR del barco.
+//
+// Flujo inteligente:
+//   1. Elige tu nombre del roster del equipo (o escríbelo si no estás)
+//   2. Ves las tareas pendientes del barco
+//   3. Check-in → trabajas → Check-out
+//   4. Al salir: comentarios OBLIGATORIOS + puedes marcar la tarea completada
 
 import { useState, useEffect } from "react";
+
+const ROLES = ["Capitán", "Primer Oficial", "Jefe de Máquinas", "Mecánico", "Marinero", "Cocinero", "Camarero", "Otro"];
 
 export default function CheckinPage() {
   const params   = new URLSearchParams(window.location.search);
   const vesselId = params.get("v");
 
-  const [vessel,    setVessel]    = useState(null);
-  const [recentLogs,setRecentLogs]= useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState("");
+  const [vessel,     setVessel]     = useState(null);
+  const [roster,     setRoster]     = useState([]);
+  const [tasks,      setTasks]      = useState([]);
+  const [recentLogs, setRecentLogs] = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState("");
 
-  // Form state
+  // Formulario
   const [name,     setName]     = useState("");
   const [role,     setRole]     = useState("Marinero");
-  const [action,   setAction]   = useState(null);   // null | "checkin" | "checkout"
-  const [note,     setNote]     = useState("");
+  const [manual,   setManual]   = useState(false);   // escribir nombre a mano
+  const [action,   setAction]   = useState(null);    // "checkin" | "checkout"
+  const [taskId,   setTaskId]   = useState("");      // tarea que completó
+  const [notes,    setNotes]    = useState("");
   const [sending,  setSending]  = useState(false);
-  const [done,     setDone]     = useState(null);   // resultado final
+  const [done,     setDone]     = useState(null);
+  const [formError,setFormError]= useState("");
 
   useEffect(() => {
     if (!vesselId) { setError("QR inválido — no se encontró la embarcación."); setLoading(false); return; }
     fetch(`/api/checkin?vesselId=${vesselId}`)
       .then(r => r.json())
       .then(d => {
-        if (d.error) { setError(d.error); }
-        else { setVessel(d.vessel); setRecentLogs(d.recentLogs || []); }
+        if (d.error) setError(d.error);
+        else {
+          setVessel(d.vessel);
+          setRoster(d.roster || []);
+          setTasks(d.pendingTasks || []);
+          setRecentLogs(d.recentLogs || []);
+          if ((d.roster || []).length === 0) setManual(true);  // sin roster → escribir a mano
+        }
         setLoading(false);
       })
       .catch(() => { setError("Error de conexión."); setLoading(false); });
   }, [vesselId]);
 
-  const handleSubmit = async () => {
-    if (!name.trim() || !action) return;
+  // Al elegir a alguien del roster, tomamos su rol
+  const pickPerson = (personName) => {
+    setName(personName);
+    const p = roster.find(r => r.name === personName);
+    if (p?.role) setRole(p.role);
+  };
+
+  const submit = async () => {
+    setFormError("");
+    if (!name.trim()) { setFormError("Elige o escribe tu nombre."); return; }
+    if (!action)      { setFormError("Elige si entras o sales."); return; }
+    if (action === "checkout" && !notes.trim()) {
+      setFormError("Al salir debes escribir qué hiciste.");
+      return;
+    }
+
     setSending(true);
     try {
       const resp = await fetch("/api/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vesselId, crewName: name.trim(), crewRole: role,
-          action, locationNote: note.trim(), notes: ""
-        })
+          vesselId,
+          crewName: name.trim(),
+          crewRole: role,
+          action,
+          notes: notes.trim(),
+          taskId: action === "checkout" && taskId ? taskId : null,
+        }),
       });
-      const data = await resp.json();
-      if (data.success) {
-        setDone({ action, name: name.trim(), role, time: new Date() });
-      } else {
-        setError("Error al registrar. Intenta de nuevo.");
-      }
-    } catch(e) {
-      setError("Error de conexión.");
+      const d = await resp.json();
+      if (d.error) { setFormError(d.error); setSending(false); return; }
+      setDone({ action, name: name.trim(), role, time: new Date(), completedTask: d.completedTask });
+    } catch {
+      setFormError("Error de conexión. Intenta de nuevo.");
     }
     setSending(false);
   };
 
-  const fmtTime = (ts) => new Date(ts).toLocaleTimeString("es-VE", { hour:"2-digit", minute:"2-digit", hour12:true });
-  const fmtDate = (ts) => new Date(ts).toLocaleDateString("es-VE", { weekday:"short", day:"numeric", month:"short" });
+  // ── Estados de carga / error ──
+  if (loading) return <Screen><div style={{color:"#94a3b8"}}>Cargando...</div></Screen>;
+  if (error)   return <Screen><div style={{color:"#dc2626",fontWeight:600}}>{error}</div></Screen>;
 
-  // ── Loading ──
-  if (loading) return (
-    <div style={s.root}>
-      <div style={s.card}>
-        <div style={{textAlign:"center", padding:"40px 0", color:"#64748b"}}>
-          <div style={{fontSize:32, marginBottom:12}}>⚓</div>
-          <div>Cargando...</div>
-        </div>
-      </div>
-    </div>
-  );
+  // ── Pantalla de confirmación ──
+  if (done) {
+    const isIn = done.action === "checkin";
+    return (
+      <Screen>
+        <div style={{textAlign:"center",maxWidth:380}}>
+          <div style={{width:72,height:72,borderRadius:"50%",background:isIn?"#f0fdf4":"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={isIn?"#16a34a":"#2563eb"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              {isIn ? <><path d="M20 6 9 17l-5-5"/></> : <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>}
+            </svg>
+          </div>
 
-  // ── Error ──
-  if (error) return (
-    <div style={s.root}>
-      <div style={s.card}>
-        <div style={{textAlign:"center", padding:"40px 0"}}>
-          <div style={{fontSize:40, marginBottom:12}}>⚠️</div>
-          <div style={{fontWeight:700, color:"#dc2626", marginBottom:8}}>QR inválido</div>
-          <div style={{fontSize:13, color:"#64748b"}}>{error}</div>
-        </div>
-      </div>
-    </div>
-  );
+          <div style={{fontSize:22,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:8}}>
+            {isIn ? "Check-in registrado" : "Check-out registrado"}
+          </div>
 
-  // ── Éxito ──
-  if (done) return (
-    <div style={s.root}>
-      <div style={s.card}>
-        <div style={{textAlign:"center", padding:"20px 0"}}>
-          <div style={{fontSize:64, marginBottom:16}}>{done.action==="checkin" ? "✅" : "👋"}</div>
-          <div style={{fontSize:22, fontWeight:800, color:"#0f172a", marginBottom:8}}>
-            {done.action==="checkin" ? "¡Check-in registrado!" : "¡Check-out registrado!"}
+          <div style={{fontSize:14,color:"#64748b",lineHeight:1.6}}>
+            <strong style={{color:"#0f172a"}}>{done.name}</strong> · {done.role}<br/>
+            {vessel.name}<br/>
+            {done.time.toLocaleString("es", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })}
           </div>
-          <div style={{fontSize:14, color:"#475569", marginBottom:4}}>
-            {done.name} · {done.role}
+
+          {done.completedTask && (
+            <div style={{marginTop:18,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"12px 16px"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#15803d"}}>Tarea completada</div>
+              <div style={{fontSize:13,color:"#166534",marginTop:2}}>{done.completedTask}</div>
+            </div>
+          )}
+
+          <div style={{marginTop:24,fontSize:12,color:"#94a3b8"}}>
+            Ya puedes cerrar esta página.
           </div>
-          <div style={{fontSize:13, color:"#94a3b8", marginBottom:24}}>
-            {fmtTime(done.time)} · {fmtDate(done.time)}
-          </div>
-          <div style={{background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:12, padding:"14px 18px", marginBottom:20}}>
-            <div style={{fontSize:13, color:"#15803d", fontWeight:600}}>🚢 {vessel.name}</div>
-            <div style={{fontSize:12, color:"#64748b", marginTop:2}}>{vessel.marina}</div>
-          </div>
-          <div style={{fontSize:12, color:"#94a3b8"}}>
-            📱 El propietario fue notificado por WhatsApp
-          </div>
-          <button onClick={()=>{ setDone(null); setName(""); setNote(""); setAction(null); }}
-            style={{...s.btnOutline, marginTop:20, width:"100%"}}>
-            Registrar otra persona
-          </button>
         </div>
-      </div>
-    </div>
-  );
+      </Screen>
+    );
+  }
 
   // ── Formulario principal ──
   return (
-    <div style={s.root}>
-      <div style={s.card}>
+    <Screen align="flex-start">
+      <div style={{maxWidth:440,width:"100%",padding:"28px 0 40px"}}>
 
-        {/* Header barco */}
-        <div style={s.vesselHeader}>
-          <div style={{fontSize:32}}>🚢</div>
-          <div>
-            <div style={{fontSize:18, fontWeight:800, color:"#fff"}}>{vessel.name}</div>
-            <div style={{fontSize:12, color:"rgba(255,255,255,0.8)", marginTop:2}}>
-              {vessel.type} · {vessel.marina}
-            </div>
-          </div>
+        {/* Cabecera del barco */}
+        <div style={{textAlign:"center",marginBottom:26}}>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em",marginBottom:6}}>REGISTRO A BORDO</div>
+          <div style={{fontSize:26,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>{vessel.name}</div>
+          {vessel.marina && <div style={{fontSize:13,color:"#64748b",marginTop:3}}>{vessel.marina}</div>}
         </div>
 
-        {/* Logo */}
-        <div style={{textAlign:"center", padding:"12px 0 4px", borderBottom:"1px solid #f1f5f9", marginBottom:20}}>
-          <span style={{fontSize:11, color:"#94a3b8", letterSpacing:"0.1em"}}>NAUTITRACK.VZ</span>
-        </div>
+        {/* 1. Quién eres */}
+        <Card title="¿Quién eres?">
+          {!manual && roster.length > 0 ? (
+            <>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {roster.map(p => (
+                  <button key={p.id} onClick={() => pickPerson(p.name)} style={{
+                    display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+                    background: name === p.name ? "#eff6ff" : "#fff",
+                    border: `1.5px solid ${name === p.name ? "#2563eb" : "#e2e8f0"}`,
+                    borderRadius:11, cursor:"pointer", textAlign:"left", width:"100%",
+                  }}>
+                    <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,flexShrink:0}}>
+                      {p.name.split(" ").filter(Boolean).slice(0,2).map(w => w[0]).join("").toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{p.name}</div>
+                      <div style={{fontSize:12,color:"#64748b"}}>{p.role}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { setManual(true); setName(""); }} style={linkBtn}>
+                No estoy en la lista
+              </button>
+            </>
+          ) : (
+            <>
+              <label style={lbl}>Tu nombre</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: John Pérez" style={inp}/>
+              <label style={lbl}>Tu rol</label>
+              <select value={role} onChange={e => setRole(e.target.value)} style={inp}>
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {roster.length > 0 && (
+                <button onClick={() => { setManual(false); setName(""); }} style={linkBtn}>
+                  Volver a la lista del equipo
+                </button>
+              )}
+            </>
+          )}
+        </Card>
 
-        {/* Nombre */}
-        <div style={{marginBottom:14}}>
-          <label style={s.label}>Tu nombre completo *</label>
-          <input value={name} onChange={e=>setName(e.target.value)}
-            placeholder="Ej: Carlos Mendoza"
-            style={s.input} autoFocus/>
-        </div>
-
-        {/* Rol */}
-        <div style={{marginBottom:18}}>
-          <label style={s.label}>Tu rol en esta embarcación</label>
-          <div style={{display:"flex", gap:8}}>
-            {["Capitán","Marinero","Técnico","Invitado"].map(r=>(
-              <button key={r} onClick={()=>setRole(r)} style={{
-                flex:1, padding:"8px 4px", border:"1.5px solid",
-                borderRadius:8, fontSize:12, cursor:"pointer",
-                background:   role===r ? "#eff6ff" : "#f8fafc",
-                borderColor:  role===r ? "#2563eb" : "#e2e8f0",
-                color:        role===r ? "#2563eb" : "#64748b",
-                fontWeight:   role===r ? 700 : 400,
-              }}>{r}</button>
+        {/* 2. Entras o sales */}
+        <Card title="¿Entras o sales?">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {[
+              { k:"checkin",  l:"Entrar",  sub:"Check-in",  c:"#16a34a", bg:"#f0fdf4", bd:"#bbf7d0" },
+              { k:"checkout", l:"Salir",   sub:"Check-out", c:"#2563eb", bg:"#eff6ff", bd:"#bfdbfe" },
+            ].map(a => (
+              <button key={a.k} onClick={() => setAction(a.k)} style={{
+                padding:"16px 12px", borderRadius:12, cursor:"pointer",
+                background: action === a.k ? a.bg : "#fff",
+                border: `2px solid ${action === a.k ? a.c : "#e2e8f0"}`,
+              }}>
+                <div style={{fontSize:15,fontWeight:800,color: action === a.k ? a.c : "#64748b"}}>{a.l}</div>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{a.sub}</div>
+              </button>
             ))}
           </div>
-        </div>
+        </Card>
 
-        {/* Nota opcional */}
-        <div style={{marginBottom:20}}>
-          <label style={s.label}>Nota <span style={{color:"#94a3b8", fontWeight:400}}>(opcional)</span></label>
-          <input value={note} onChange={e=>setNote(e.target.value)}
-            placeholder="Ej: Llegué para revisión de motores"
-            style={s.input}/>
-        </div>
+        {/* 3. Si sale: tarea + comentarios obligatorios */}
+        {action === "checkout" && (
+          <Card title="¿Qué hiciste?">
+            {tasks.length > 0 && (
+              <>
+                <label style={lbl}>¿Completaste alguna tarea? (opcional)</label>
+                <select value={taskId} onChange={e => setTaskId(e.target.value)} style={inp}>
+                  <option value="">No completé ninguna tarea</option>
+                  {tasks.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.task}{t.equipment ? ` — ${t.equipment}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {taskId && (
+                  <div style={{fontSize:11,color:"#15803d",background:"#f0fdf4",padding:"7px 10px",borderRadius:7,marginTop:6}}>
+                    Se marcará como completada y quedará en la bitácora del barco.
+                  </div>
+                )}
+              </>
+            )}
 
-        {/* Botones CHECK-IN / CHECK-OUT */}
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:8}}>
-          <button
-            onClick={()=>{ setAction("checkin"); }}
-            style={{
-              ...s.btnCheckin,
-              opacity: action==="checkout" ? 0.4 : 1,
-              transform: action==="checkin" ? "scale(1.02)" : "scale(1)",
-              boxShadow: action==="checkin" ? "0 4px 20px rgba(22,163,74,0.35)" : "none",
-            }}>
-            <div style={{fontSize:28, marginBottom:4}}>✅</div>
-            <div style={{fontSize:16, fontWeight:800}}>CHECK-IN</div>
-            <div style={{fontSize:11, opacity:0.85, marginTop:2}}>Llegué al barco</div>
-          </button>
-          <button
-            onClick={()=>{ setAction("checkout"); }}
-            style={{
-              ...s.btnCheckout,
-              opacity: action==="checkin" ? 0.4 : 1,
-              transform: action==="checkout" ? "scale(1.02)" : "scale(1)",
-              boxShadow: action==="checkout" ? "0 4px 20px rgba(220,38,38,0.3)" : "none",
-            }}>
-            <div style={{fontSize:28, marginBottom:4}}>🔴</div>
-            <div style={{fontSize:16, fontWeight:800}}>CHECK-OUT</div>
-            <div style={{fontSize:11, opacity:0.85, marginTop:2}}>Me voy del barco</div>
-          </button>
-        </div>
-
-        {/* Confirmar */}
-        {action && (
-          <button onClick={handleSubmit} disabled={!name.trim() || sending}
-            style={{...s.btnConfirm, opacity:(!name.trim()||sending)?0.5:1, marginTop:6}}>
-            {sending ? "⏳ Registrando..." : `Confirmar ${action==="checkin"?"CHECK-IN":"CHECK-OUT"} →`}
-          </button>
+            <label style={lbl}>Comentarios <span style={{color:"#dc2626"}}>*</span></label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={4}
+              placeholder="Ej: Lavé el barco completo. El motor de estribor tiene una fuga pequeña de aceite, hay que revisarla."
+              style={{...inp, resize:"vertical", fontFamily:"inherit"}}
+            />
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:4,lineHeight:1.5}}>
+              Cuenta qué hiciste y si viste algo que haya que atender. Esto queda en el historial del barco.
+            </div>
+          </Card>
         )}
 
-        {/* Log reciente */}
-        {recentLogs.length > 0 && (
-          <div style={{marginTop:24}}>
-            <div style={{fontSize:11, fontWeight:700, color:"#94a3b8", letterSpacing:"0.08em", marginBottom:10}}>
-              ACTIVIDAD RECIENTE
-            </div>
-            <div style={{display:"flex", flexDirection:"column", gap:6}}>
-              {recentLogs.slice(0,5).map((l,i)=>(
-                <div key={i} style={{display:"flex", alignItems:"center", gap:10, padding:"8px 12px",
-                  background:"#f8fafc", borderRadius:8, border:"1px solid #f1f5f9"}}>
-                  <span style={{fontSize:14}}>{l.action==="checkin"?"✅":"🔴"}</span>
-                  <div style={{flex:1}}>
-                    <span style={{fontSize:12, fontWeight:600, color:"#1e293b"}}>{l.crew_name}</span>
-                    <span style={{fontSize:11, color:"#94a3b8", marginLeft:6}}>{l.crew_role}</span>
-                  </div>
-                  <div style={{fontSize:11, color:"#94a3b8", textAlign:"right"}}>
-                    <div>{fmtTime(l.timestamp)}</div>
-                    <div>{fmtDate(l.timestamp)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {formError && (
+          <div style={{background:"#fef2f2",border:"1px solid #fecaca",color:"#dc2626",padding:"11px 14px",borderRadius:10,fontSize:13,marginBottom:14}}>
+            {formError}
           </div>
         )}
 
-        <div style={{marginTop:20, textAlign:"center", fontSize:11, color:"#cbd5e1"}}>
-          Carive · Gestión inteligente de embarcaciones
-        </div>
+        <button onClick={submit} disabled={sending} style={{
+          width:"100%", padding:"15px", borderRadius:12, border:"none", cursor: sending ? "default" : "pointer",
+          background: sending ? "#94a3b8" : "linear-gradient(120deg,#2563eb,#0ea5e9)",
+          color:"#fff", fontSize:16, fontWeight:700,
+        }}>
+          {sending ? "Registrando..." : action === "checkout" ? "Registrar salida" : "Registrar entrada"}
+        </button>
+
+        {/* Actividad reciente */}
+        {recentLogs.length > 0 && (
+          <div style={{marginTop:28}}>
+            <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>ACTIVIDAD RECIENTE</div>
+            {recentLogs.slice(0, 4).map((l, i) => (
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"1px solid #f1f5f9",fontSize:12}}>
+                <span style={{color:"#475569"}}>
+                  <strong style={{color:"#0f172a"}}>{l.crew_name}</strong>
+                  <span style={{color: l.action === "checkin" ? "#16a34a" : "#2563eb", marginLeft:6, fontWeight:600}}>
+                    {l.action === "checkin" ? "entró" : "salió"}
+                  </span>
+                </span>
+                <span style={{color:"#94a3b8"}}>
+                  {new Date(l.timestamp).toLocaleString("es", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
-    </div>
+    </Screen>
   );
 }
 
-const s = {
-  root: { minHeight:"100vh", background:"linear-gradient(135deg,#0f172a,#1e3a5f)", display:"flex", alignItems:"center", justifyContent:"center", padding:16, fontFamily:"'Segoe UI',system-ui,sans-serif" },
-  card: { background:"#fff", borderRadius:20, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 30px 80px rgba(0,0,0,0.4)" },
-  vesselHeader: { background:"linear-gradient(120deg,#2563eb,#0ea5e9)", padding:"20px 24px", display:"flex", alignItems:"center", gap:14 },
-  label: { display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 },
-  input: { width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:9, fontSize:14, color:"#1e293b", background:"#fff", boxSizing:"border-box", outline:"none" },
-  btnCheckin:  { padding:"20px 12px", background:"linear-gradient(135deg,#16a34a,#22c55e)", border:"none", borderRadius:12, color:"#fff", cursor:"pointer", transition:"all 0.2s", textAlign:"center" },
-  btnCheckout: { padding:"20px 12px", background:"linear-gradient(135deg,#dc2626,#ef4444)", border:"none", borderRadius:12, color:"#fff", cursor:"pointer", transition:"all 0.2s", textAlign:"center" },
-  btnConfirm:  { width:"100%", padding:"14px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:10, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer" },
-  btnOutline:  { padding:"11px 16px", border:"1.5px solid #e2e8f0", borderRadius:9, background:"#fff", color:"#475569", fontSize:13, fontWeight:500, cursor:"pointer" },
-};
+// ── Componentes de apoyo ──
+const Screen = ({ children, align = "center" }) => (
+  <div style={{minHeight:"100vh",background:"#f1f5f9",display:"flex",alignItems:align,justifyContent:"center",padding:"0 20px"}}>
+    {children}
+  </div>
+);
+
+const Card = ({ title, children }) => (
+  <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,padding:18,marginBottom:14}}>
+    <div style={{fontSize:14,fontWeight:800,color:"#0a2540",marginBottom:13,fontFamily:"'Sora',system-ui,sans-serif"}}>{title}</div>
+    {children}
+  </div>
+);
+
+const lbl = {display:"block",fontSize:12,color:"#475569",fontWeight:600,marginBottom:5,marginTop:12};
+const inp = {width:"100%",padding:"11px 13px",border:"1.5px solid #e2e8f0",borderRadius:9,fontSize:14,color:"#1e293b",boxSizing:"border-box",outline:"none"};
+const linkBtn = {background:"none",border:"none",color:"#2563eb",fontSize:12,fontWeight:600,cursor:"pointer",padding:"10px 0 0",textDecoration:"underline"};

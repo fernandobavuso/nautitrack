@@ -36,21 +36,56 @@ export default async function handler(req, res) {
       .order('timestamp', { ascending: false })
       .limit(10);
 
+    // Roster del equipo del dueño/gestor (para que elija su nombre en vez de escribirlo)
+    const { data: vesselOwner } = await supabase
+      .from('vessels').select('owner_id').eq('id', vesselId).single();
+
+    let roster = [];
+    if (vesselOwner?.owner_id) {
+      const { data: team } = await supabase
+        .from('fleet_crew')
+        .select('id, name, role')
+        .eq('manager_id', vesselOwner.owner_id)
+        .order('name');
+      roster = team || [];
+    }
+
+    // Tareas pendientes de esta embarcación (para que las complete al salir)
+    const { data: vesselTasks } = await supabase
+      .from('vessels').select('tasks').eq('id', vesselId).single();
+
+    const pendingTasks = (vesselTasks?.tasks || [])
+      .filter(t => t.status !== 'done')
+      .map(t => ({
+        id: t.id,
+        task: t.task || t.name || '',
+        system: t.system || '',
+        equipment: t.equipment || '',
+        assignedTo: t.assignedTo || t.assigned || '',
+        status: t.status || 'pending',
+      }));
+
     return res.status(200).json({
       vessel: { id: vessel.id, name: vessel.name, type: vessel.type, marina: vessel.marina, captain: vessel.captain },
-      recentLogs: lastLogs || []
+      recentLogs: lastLogs || [],
+      roster,
+      pendingTasks,
     });
   }
 
   // POST — registrar check-in o check-out
   if (req.method === 'POST') {
-    const { vesselId, crewName, crewRole, action, locationNote, notes } = req.body;
+    const { vesselId, crewName, crewRole, action, locationNote, notes, taskId } = req.body;
 
     if (!vesselId || !crewName || !action) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
     if (!['checkin', 'checkout'].includes(action)) {
       return res.status(400).json({ error: 'Acción inválida' });
+    }
+    // Al salir, los comentarios son obligatorios: queremos saber qué se hizo
+    if (action === 'checkout' && !String(notes || '').trim()) {
+      return res.status(400).json({ error: 'Al hacer check-out debes escribir qué hiciste.' });
     }
 
     // 1. Guardar en crew_logs
@@ -69,6 +104,44 @@ export default async function handler(req, res) {
       .single();
 
     if (logError) return res.status(500).json({ error: logError.message });
+
+    // 1.b Si al salir se marcó una tarea, completarla y dejar constancia en la bitácora
+    let completedTask = null;
+    if (action === 'checkout' && taskId) {
+      const { data: v } = await supabase
+        .from('vessels').select('tasks, log').eq('id', vesselId).single();
+
+      const tasks = v?.tasks || [];
+      const idx = tasks.findIndex(t => String(t.id) === String(taskId));
+
+      if (idx !== -1) {
+        completedTask = tasks[idx].task || tasks[idx].name || 'Tarea';
+        tasks[idx] = {
+          ...tasks[idx],
+          status: 'done',
+          completedAt: new Date().toISOString(),
+          completedBy: crewName.trim(),
+          completionNotes: String(notes || '').trim(),
+        };
+
+        // Registrar en la bitácora del barco
+        const logEntry = {
+          id: Date.now(),
+          type: 'Servicio',
+          item: completedTask,
+          desc: String(notes || '').trim(),
+          date: new Date().toISOString().slice(0, 10),
+          performedBy: crewName.trim(),
+          photos: [],
+          fromCheckout: true,
+        };
+
+        await supabase
+          .from('vessels')
+          .update({ tasks, log: [...(v?.log || []), logEntry] })
+          .eq('id', vesselId);
+      }
+    }
 
     // 2. Obtener datos del vessel y teléfono del dueño
     const { data: vessel } = await supabase
@@ -117,7 +190,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ success: true, log });
+    return res.status(200).json({ success: true, log, completedTask });
   }
 
   return res.status(405).end();

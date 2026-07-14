@@ -105,7 +105,37 @@ const DEFAULT_SYSTEMS = [
 ];
 
 const LOG_COLOR       = { Inspección:"#16a34a", Servicio:"#2563eb", Combustible:"#d97706", Salida:"#7c3aed", Compra:"#0891b2" };
-const LOG_TYPES       = ["Combustible","Compra","Inspección","Salida","Servicio"];
+// Tipos de bitácora (alfabético). Separados a propósito: cada uno tiene
+// su costo, frecuencia y proveedor distinto — agruparlos perdería el control de costos.
+const LOG_TYPES = [
+  "Buceo / Casco",       // visita de buzo, limpieza de casco, ánodos
+  "Combustible",
+  "Compra",
+  "Detailing",           // pulido, encerado
+  "Inspección",
+  "Lavada",              // wash down
+  "Limpieza interior",   // forros, asientos, tapicería
+  "Reparación",
+  "Salida",
+  "Servicio",
+  "Traslado",
+];
+
+// Traducción de tipos de bitácora
+const LOG_TYPES_EN = {
+  "Buceo / Casco":"Diver / Hull",
+  "Combustible":"Fuel",
+  "Compra":"Purchase",
+  "Detailing":"Detailing",
+  "Inspección":"Inspection",
+  "Lavada":"Wash Down",
+  "Limpieza interior":"Interior Cleaning",
+  "Reparación":"Repair",
+  "Salida":"Departure",
+  "Servicio":"Service",
+  "Traslado":"Transport",
+};
+export const logTypeL = (t, lang) => (lang === "en" ? (LOG_TYPES_EN[t] || t) : t);
 const SERVICE_TYPES   = ["Preventivo","Reactivo","Reparación"];
 const PAYMENT_METHODS = ["Efectivo Bs","Efectivo USD","Pago Móvil","Tarjeta","Transferencia","Zelle"];
 const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Trimestral","Semestral","Anual","Por horas","Por millas"];
@@ -1559,7 +1589,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   );
 }
 function LogPage({ vessel, updateVessel, addLogEntry }) {
-  const { t: tr } = useLang();
+  const { t: tr, lang } = useLang();
   const [showModal, setShowModal]       = useState(false);
   const [editEntry, setEditEntry]       = useState(null);
   const [filter, setFilter]             = useState("Todos");
@@ -1621,7 +1651,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
         <h2 style={s.toolbarTitle}>Bitácora — {vessel.name}</h2>
         <div style={{display:"flex",gap:6,flex:1,alignItems:"center",flexWrap:"wrap"}}>
           {["Todos",...LOG_TYPES].map(f=>(
-            <button key={f} onClick={()=>setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0",fontSize:11}}>{({"Todos":tr("tasks.all"),"Combustible":tr("log.fuel"),"Compra":tr("log.purchase"),"Inspección":tr("log.inspection"),"Salida":tr("log.departure"),"Servicio":tr("log.service")})[f]||f}</button>
+            <button key={f} onClick={()=>setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0",fontSize:11}}>{f==="Todos" ? tr("tasks.all") : logTypeL(f, lang)}</button>
           ))}
           <div style={{flex:1}}/>
           <button style={s.btnPrimary} onClick={()=>{setEditEntry(null);setShowModal(true);}}>＋ {tr("log.new")}</button>
