@@ -1,16 +1,31 @@
 import { useState } from "react";
 import CariveLogo from "./CariveLogo";
 import LocationFields from "./LocationFields.jsx";
+import { IconClipboard, IconBoat, IconAnchor } from "./icons.jsx";
 import { countryName } from "./locations.js";
 
+// Tipos de embarcación (alfabético; "Otro" siempre al final)
 const VESSEL_TYPES = [
-  "Yate Motor","Velero","Catamarán","Lancha","Bote de Pesca",
-  "Barco de Trabajo","Yate de Vela","Otro"
-];
+  "Barco de Trabajo",
+  "Bote de Pesca",
+  "Catamarán",
+  "Center Console",
+  "Crucero",
+  "Lancha",
+  "Motovelero",
+  "Sport Fisherman",
+  "Trawler",
+  "Velero",
+  "Yate a Motor",
+  "Yate de Vela",
+  "Yate Deportivo",
+  "Otro",
+].sort((a, b) => (a === "Otro" ? 1 : b === "Otro" ? -1 : a.localeCompare(b, "es")));
 
 export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
   const [step, setStep]     = useState(1);
   const [loading, setLoading] = useState(false);
+  const [otherType, setOtherType] = useState(false);
   const [form, setForm]     = useState({
     name:"", type:"",
     marinaName:"", city:"", country:"VE",
@@ -90,7 +105,7 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
         {/* Step 1 — Basic info */}
         {step===1&&(
           <div style={s.form}>
-            <div style={s.stepTitle}>📋 Información básica</div>
+            <div style={{...s.stepTitle,display:"flex",alignItems:"center",gap:8}}><IconClipboard size={17} color="#2563eb"/> Información básica</div>
 
             <div>
               <label style={s.label}>Nombre de la embarcación *</label>
@@ -100,17 +115,27 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
 
             <div>
               <label style={s.label}>Tipo de embarcación</label>
-              <div style={s.chipGrid}>
-                {VESSEL_TYPES.map(t=>(
-                  <button key={t} onClick={()=>set("type",t)} style={{
-                    ...s.chip,
-                    background:form.type===t?"#eff6ff":"#f8fafc",
-                    borderColor:form.type===t?"#2563eb":"#e2e8f0",
-                    color:form.type===t?"#2563eb":"#64748b",
-                    fontWeight:form.type===t?600:400,
-                  }}>{t}</button>
-                ))}
-              </div>
+              <select
+                value={VESSEL_TYPES.includes(form.type) ? form.type : (form.type ? "Otro" : "")}
+                onChange={e => {
+                  const v = e.target.value;
+                  set("type", v === "Otro" ? "" : v);
+                  setOtherType(v === "Otro");
+                }}
+                style={s.input}
+              >
+                <option value="">Selecciona el tipo...</option>
+                {VESSEL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              {otherType && (
+                <input
+                  value={form.type}
+                  onChange={e => set("type", e.target.value)}
+                  placeholder="Escribe el tipo de embarcación"
+                  style={{...s.input, marginTop:8}}
+                  autoFocus
+                />
+              )}
             </div>
 
             <button onClick={()=>form.name.trim()&&setStep(2)} style={{...s.btn,opacity:form.name.trim()?1:0.5}}>
@@ -122,7 +147,7 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
         {/* Step 2 — Marca, modelo, eslora */}
         {step===2&&(
           <div style={s.form}>
-            <div style={s.stepTitle}>🛥️ Datos del barco</div>
+            <div style={{...s.stepTitle,display:"flex",alignItems:"center",gap:8}}><IconBoat size={17} color="#2563eb"/> Datos del barco</div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
@@ -159,7 +184,7 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
         {/* Step 3 — Marina y ubicación */}
         {step===3&&(
           <div style={s.form}>
-            <div style={s.stepTitle}>📍 Ubicación del barco</div>
+            <div style={{...s.stepTitle,display:"flex",alignItems:"center",gap:8}}><IconAnchor size={17} color="#2563eb"/> Ubicación del barco</div>
 
             <div>
               <label style={s.label}>Nombre de la marina / puerto base</label>
