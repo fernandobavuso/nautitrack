@@ -1699,6 +1699,20 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const today = todayISO();
   const [type,setType]               = useState(initial?.type||"");
   const [visitType,setVisitType]     = useState(initial?.visitType||"");
+  const [otherPerformed,setOtherPerformed] = useState("");   // si eligió "Otro"
+  const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Mi Equipo
+
+  // Cargar el roster del gestor (Mi Equipo) para el desplegable de "Realizado por"
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!vessel?.owner_id) return;
+      const { data } = await supabase
+        .from("fleet_crew").select("name").eq("manager_id", vessel.owner_id).order("name");
+      if (alive && data) setFleetCrewNames(data.map(c => c.name).filter(Boolean));
+    })();
+    return () => { alive = false; };
+  }, [vessel?.owner_id]);
   const [date,setDate]               = useState(initial?.date||today);
   const [desc,setDesc]               = useState(initial?.desc||"");
   const [performedBy,setPerformedBy] = useState(initial?.performedBy||"");
@@ -1742,9 +1756,11 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const crew2Names    = (vessel.crew2||vessel.crew?.map(c=>typeof c==="string"?{name:c,role:"Marinero"}:c)||[]);
   const crewOptions   = crew2Names.map(c=>`${c.name} (${c.role||"Tripulación"})`).filter(Boolean);
   // Servicio: crew + providers. Rest: crew only
-  const allPerformed  = type==="Servicio"
-    ? [...crewOptions, ...provNames, "Otro"].filter(Boolean)
-    : [...crewOptions, "Otro"].filter(Boolean);
+  // Quién realizó el trabajo: tripulación del barco + Mi Equipo (roster de flota)
+  // + proveedores (si es un servicio técnico) + "Otro" para escribirlo libre.
+  const allPerformed = type === "Servicio"
+    ? [...new Set([...crewOptions, ...fleetCrewNames, ...provNames, "Otro"])].filter(Boolean)
+    : [...new Set([...crewOptions, ...fleetCrewNames, "Otro"])].filter(Boolean);
 
   const validate = () => {
     const e={};
@@ -1764,7 +1780,8 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const handleSave = () => {
     if (!validate()) return;
     const finalEquip = equipment==="Otro"?otherEquip:equipment;
-    const base = {id:initial?.id||Date.now(),date,type,desc,performedBy,photos:photos||[]};
+    const who = performedBy === "Otro" ? (otherPerformed.trim() || "Otro") : performedBy;
+    const base = {id:initial?.id||Date.now(),date,type,desc,performedBy:who,photos:photos||[]};
     let entry = {...base};
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
@@ -1813,23 +1830,26 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             {errors.date&&<div style={s.errMsg}>{errors.date}</div>}
           </div>
 
-          {type==="Inspección"&&(<>
+          {type==="Visita"&&(<>
+            {/* Sistema/equipo solo tiene sentido en inspecciones técnicas */}
+            {visitType==="Inspección" && (
+              <div>
+                <label style={s.label}>Sistema</label>
+                <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");}} style={s.input}>
+                  <option value="">Seleccionar sistema...</option>
+                  {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.label}</option>)}
+                </select>
+              </div>
+            )}
+            {visitType==="Inspección" && systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
+            {visitType==="Inspección" && equipment==="Otro"&&<div><label style={s.label}>Especificar equipo</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder="Nombre del equipo..." style={s.input}/></div>}
             <div>
-              <label style={s.label}>Sistema</label>
-              <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");}} style={s.input}>
-                <option value="">Seleccionar sistema...</option>
-                {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.label}</option>)}
-              </select>
-            </div>
-            {systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
-            {equipment==="Otro"&&<div><label style={s.label}>Especificar equipo</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder="Nombre del equipo..." style={s.input}/></div>}
-            <div>
-              <label style={s.label}>Descripción <span style={{color:"#dc2626"}}>*</span></label>
-              <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
+              <label style={s.label}>Notas <span style={{color:"#dc2626"}}>*</span></label>
+              <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder={visitType==="Lavada"?"Ej: Lavado completo exterior. El gelcoat de proa necesita pulido.":visitType==="Buceo / Casco"?"Ej: Limpieza de casco y cambio de ánodos. Hélice de babor con marca leve.":"Qué se hizo y si viste algo que atender..."} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
-            {/* Engine/Gen hours for inspection */}
-            {(systemId==="motores"||systemId==="generador")&&(
+            {/* Horas de motor/generador (solo en inspecciones técnicas) */}
+            {visitType==="Inspección" && (systemId==="motores"||systemId==="generador")&&(
               <div>
                 <label style={s.label}>Horas actuales del equipo</label>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
@@ -1851,6 +1871,15 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                 <option value="">Seleccionar...</option>
                 {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
               </select>
+              {performedBy==="Otro" && (
+                <input
+                  value={otherPerformed}
+                  onChange={e=>setOtherPerformed(e.target.value)}
+                  placeholder="Escribe quién lo hizo"
+                  style={{...s.input, marginTop:8}}
+                  autoFocus
+                />
+              )}
             </div>
             <PhotoFld photos={photos} setPhotos={setPhotos} err={errors.photos} userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
