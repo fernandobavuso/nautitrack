@@ -535,6 +535,32 @@ export default function App() {
     }
   };
 
+  // Eliminar una embarcación (con confirmación fuerte — es irreversible)
+  const deleteVessel = async (v) => {
+    const ok = window.confirm(
+      `¿Eliminar "${v.name}"?\n\n` +
+      `Se borrarán sus tareas, bitácora, costos, documentos y registros.\n` +
+      `Esta acción NO se puede deshacer.`
+    );
+    if (!ok) return;
+
+    // Segunda confirmación: escribir el nombre del barco
+    const typed = window.prompt(`Para confirmar, escribe el nombre de la embarcación:\n\n${v.name}`);
+    if (typed !== v.name) {
+      if (typed !== null) alert("El nombre no coincide. No se eliminó nada.");
+      return;
+    }
+
+    const { error } = await supabase.from("vessels").delete().eq("id", v.id);
+    if (error) { alert("No se pudo eliminar: " + error.message); return; }
+
+    const rest = vessels.filter(x => x.id !== v.id);
+    setVessels(rest);
+    setVesselId(rest[0]?.id || null);
+    setShowVesselDetails(false);
+    setPage("home");
+  };
+
   // Intentar agregar barco respetando el límite del plan
   const tryAddVessel = () => {
     const plan = getPlan(vessels.find(v=>v.id===vesselId) || vessels[0]);
@@ -674,7 +700,7 @@ export default function App() {
         {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
         {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
-      {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} onClose={() => setShowVesselDetails(false)} />}
+      {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} deleteVessel={deleteVessel} canDelete={vessels.length>0} onClose={() => setShowVesselDetails(false)} />}
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}
       {showQRPanel && <QRPanel vessel={vessel} onClose={() => setShowQRPanel(false)} />}
       {showCaptainManager && <CaptainManagerModal vessel={vessel} user={user} onClose={() => setShowCaptainManager(false)} />}
@@ -3330,7 +3356,7 @@ function VesselField({ editMode, label, value, onChange, placeholder }) {
   );
 }
 
-function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
+function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, canDelete, onClose }) {
   // ── CRITICAL: freeze vessel on mount so parent re-renders don't kill input focus
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
@@ -3706,6 +3732,19 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, onClose }) {
               Para agregar, quitar o cambiar tripulación, usa el botón <strong>Tripulación</strong> en la barra superior. Aquí solo se muestra.
             </div>
           </div>
+
+          {/* Zona de peligro — eliminar embarcación */}
+          {editMode && canDelete && (
+            <div style={{marginTop:28,padding:"16px 18px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#dc2626",marginBottom:4}}>Eliminar esta embarcación</div>
+              <div style={{fontSize:12,color:"#991b1b",marginBottom:12,lineHeight:1.5}}>
+                Se borrarán sus tareas, bitácora, costos, documentos y registros. Esta acción no se puede deshacer.
+              </div>
+              <button onClick={()=>deleteVessel(vessel)} style={{padding:"9px 18px",background:"#fff",border:"1.5px solid #fecaca",borderRadius:9,color:"#dc2626",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                Eliminar {vessel.name}
+              </button>
+            </div>
+          )}
 
         </div>
         <div style={s.modalFooter}>

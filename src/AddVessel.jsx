@@ -1,5 +1,7 @@
 import { useState } from "react";
 import CariveLogo from "./CariveLogo";
+import LocationFields from "./LocationFields.jsx";
+import { countryName } from "./locations.js";
 
 const VESSEL_TYPES = [
   "Yate Motor","Velero","Catamarán","Lancha","Bote de Pesca",
@@ -11,9 +13,9 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm]     = useState({
     name:"", type:"",
-    marinaName:"", city:"", country:"Venezuela",
+    marinaName:"", city:"", country:"VE",
     captain:"",
-    brand:"", model:"", lengthFt:"",
+    brand:"", model:"", lengthFt:"", state:"",
   });
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
 
@@ -36,16 +38,22 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
         gen_hours:    0,
         status:       "ok",
         details: {
-          city:      form.city || "",
-          state:     "",
-          country:   form.country || "Venezuela",
+          // Datos que Mi Embarcación lee directo de details
+          manufacturer: form.brand || "",      // "Fabricante" en Mi Embarcación
+          model:        form.model || "",
+          loa:          form.lengthFt || "",   // eslora
+          city:         form.city || "",
+          state:        form.state || "",
+          country:      countryName(form.country) || "Venezuela",
+          countryCode:  form.country || "VE",
+          homePort:     marinaStr || "",
           _profile: {
             brand:     form.brand || "",
             model:     form.model || "",
             lengthFt:  form.lengthFt || "",
             city:      form.city || "",
-            state:     "",
-            country:   form.country || "Venezuela",
+            state:     form.state || "",
+            country:   countryName(form.country) || "Venezuela",
           }
         },
         crew:         [],
@@ -159,17 +167,15 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
                 placeholder="Ej: Marina Bahía Redonda" style={s.input}/>
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div>
-                <label style={s.label}>Ciudad</label>
-                <input value={form.city} onChange={e=>set("city",e.target.value)}
-                  placeholder="Ej: Puerto La Cruz" style={s.input}/>
-              </div>
-              <div>
-                <label style={s.label}>País</label>
-                <input value={form.country} onChange={e=>set("country",e.target.value)}
-                  placeholder="Venezuela" style={s.input}/>
-              </div>
+            <div style={{display:"grid",gap:10}}>
+              <LocationFields
+                country={form.country}
+                state={form.state}
+                city={form.city}
+                onChange={(loc) => setForm(f => ({ ...f, ...loc }))}
+                labelStyle={s.label}
+                inputStyle={s.input}
+              />
             </div>
 
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#0369a1"}}>
