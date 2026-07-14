@@ -1110,7 +1110,7 @@ function IndicatorsCard({ vessel }) {
         {[
           {Icon:IconFuel,val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:tr("dash.fuel"),color:fc,bar:true},
           {Icon:IconEngine,val:`${vessel.engineHours}h`,lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
-          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
+          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false},
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (
           <div key={ind.lbl} style={s.indBox}>
