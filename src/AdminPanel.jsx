@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 import { activateSubscription } from "./subscriptions.jsx";
 import { notify } from "./notifications.js";
 import { distanceKm, kmToMi } from "./geo.js";
+import { notifyStoreNewOrder } from "./whatsapp.js";
 import { useLang } from "./i18n.jsx";
 
 // Panel de administrador (solo visible para los correos en ADMIN_EMAILS)
@@ -30,6 +31,9 @@ export default function AdminPanel({ user, onClose, asPage }) {
   const [selectedUser, setSelectedUser] = useState(null); // ficha de cuenta
   const [userSearch, setUserSearch] = useState("");
   const [userFilter, setUserFilter] = useState("all"); // all|owner|store|crew|paid|disabled
+  const [waTestPhone, setWaTestPhone] = useState("");
+  const [waTesting, setWaTesting] = useState(false);
+  const [waTestResult, setWaTestResult] = useState(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -212,6 +216,21 @@ export default function AdminPanel({ user, onClose, asPage }) {
     {k:"planes",l:T("adm.plans")},
   ];
 
+  // Prueba de envío de WhatsApp con la plantilla real
+  const testWhatsApp = async () => {
+    if (!waTestPhone.trim()) { setWaTestResult({ ok:false, error:"Escribe un número" }); return; }
+    setWaTesting(true); setWaTestResult(null);
+    const r = await notifyStoreNewOrder(
+      waTestPhone,
+      "Marine Supply Co",
+      "Filtro de aceite Fleetguard FF5052",
+      "Coconut Grove",
+      "12 mi"
+    );
+    setWaTestResult(r);
+    setWaTesting(false);
+  };
+
   const disableUser = async (u) => {
     const action = u.disabled ? "habilitar" : "deshabilitar";
     if (!confirm(`¿Seguro que quieres ${action} la cuenta de ${u.full_name||u.email}?${!u.disabled?" No podrá iniciar sesión hasta que la reactives.":""}`)) return;
@@ -371,8 +390,30 @@ export default function AdminPanel({ user, onClose, asPage }) {
 
         {tab==="pedidos"&&(
           <div>
+            {/* Prueba de WhatsApp automático */}
+            <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"14px 16px",marginBottom:16}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#15803d",marginBottom:6}}>WhatsApp automático</div>
+              <div style={{fontSize:12,color:"#15803d",marginBottom:10,lineHeight:1.5}}>
+                Las tiendas reciben el aviso solas cuando entra un pedido. Prueba que funcione enviando un mensaje de test a tu número.
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                <input value={waTestPhone} onChange={e=>setWaTestPhone(e.target.value)} placeholder="+1 786 257 7645"
+                  style={{flex:1,minWidth:180,padding:"9px 12px",border:"1.5px solid #bbf7d0",borderRadius:8,fontSize:13}}/>
+                <button onClick={testWhatsApp} disabled={waTesting} style={{padding:"9px 18px",background:waTesting?"#94a3b8":"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:waTesting?"default":"pointer",whiteSpace:"nowrap"}}>
+                  {waTesting ? "Enviando..." : "Enviar prueba"}
+                </button>
+              </div>
+              {waTestResult && (
+                <div style={{marginTop:10,fontSize:12,padding:"8px 12px",borderRadius:8,
+                  background: waTestResult.ok ? "#dcfce7" : "#fef2f2",
+                  color: waTestResult.ok ? "#15803d" : "#dc2626"}}>
+                  {waTestResult.ok ? "✓ Mensaje enviado. Revisa tu WhatsApp." : `Error: ${waTestResult.error}`}
+                </div>
+              )}
+            </div>
+
             <div style={{background:"#eff6ff",border:"1px solid #bae6fd",borderRadius:10,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#0369a1",lineHeight:1.5}}>
-              Cuando un dueño publica un pedido, notifica por WhatsApp a las tiendas que califican (por categoría y cercanía). Un clic abre el WhatsApp con el mensaje listo.
+              Si necesitas reforzar manualmente, aquí puedes enviar el WhatsApp con un clic a cada tienda.
             </div>
             {openRequests.length===0 ? (
               <div style={{textAlign:"center",padding:"40px 20px",color:"#94a3b8"}}>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { hasFeature, PremiumLock } from "./plans.jsx";
-import { findCityCoords, distanceKm } from "./geo.js";
+import { findCityCoords, distanceKm, kmToMi } from "./geo.js";
+import { notifyStoreNewOrder, notifyStoreUrgent } from "./whatsapp.js";
 import { useLang } from "./i18n.jsx";
 import { notify } from "./notifications";
 import { loadTiers, computeCommission } from "./commission.jsx";
@@ -520,24 +521,50 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
       } else {
         // Publicar a tiendas que calzan (por categoría y distancia)
         const { data: stores } = await supabase.from("profiles")
-          .select("id,store_categories,store_city,store_ships_nationwide,store_phone,store_lat,store_lng,store_radius_km,store_paused")
+          .select("id,store_name,store_categories,store_city,store_ships_nationwide,store_phone,store_lat,store_lng,store_radius_km,store_paused,notify_whatsapp")
           .eq("role","store").or("store_paused.is.null,store_paused.eq.false");
         const nationalSearch = form.scope === "national";
         let notifiedCount = 0;
+        const waTargets = [];   // tiendas a las que enviaremos WhatsApp
+
         (stores||[]).forEach(st => {
           const cats = (st.store_categories||[]).map(c=>c.toLowerCase());
           const catMatch = cats.includes(form.category.toLowerCase());
           if (!catMatch) return;
-          let geoMatch;
+          let geoMatch, distMi = null;
           if (nationalSearch || st.store_ships_nationwide) geoMatch = true;
           else if (st.store_lat!=null && reqLat!=null) {
             const d = distanceKm(st.store_lat,st.store_lng,reqLat,reqLng);
             geoMatch = d!=null ? d <= (st.store_radius_km||50) : true;
+            if (d!=null) distMi = Math.round(kmToMi(d));
           } else geoMatch = true;
+
           if (geoMatch) {
+            // Notificación dentro de la app
             notify(st.id, { type:"part_request", title:"Nueva solicitud de repuesto", body:`${form.item_name} (${form.category})${city?` en ${city}`:""}`, link:"solicitudes" });
             notifiedCount++;
+            // Preparar WhatsApp (si la tienda tiene número y no lo desactivó)
+            if (st.store_phone && st.notify_whatsapp !== false) {
+              waTargets.push({
+                phone: st.store_phone,
+                name: st.store_name || "tu tienda",
+                distance: distMi!=null ? `${distMi} mi` : (st.store_ships_nationwide ? "envío nacional" : "—"),
+              });
+            }
           }
+        });
+
+        // ── WhatsApp automático a las tiendas que califican ──
+        // Se envía en paralelo y no bloquea: si una falla, las demás siguen.
+        Promise.allSettled(
+          waTargets.map(t =>
+            form.urgent
+              ? notifyStoreUrgent(t.phone, t.name, form.item_name, city || "—")
+              : notifyStoreNewOrder(t.phone, t.name, form.item_name, city || "—", t.distance)
+          )
+        ).then(results => {
+          const sent = results.filter(r => r.status==="fulfilled" && r.value?.ok).length;
+          console.log(`[Carive] WhatsApp: ${sent}/${waTargets.length} tiendas notificadas`);
         });
         // Avisar al admin (Fernando) para reforzar por WhatsApp si quiere
         try {
