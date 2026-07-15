@@ -31,10 +31,10 @@ export default async function handler(req, res) {
     // Último log para saber si ya hay alguien con checkin activo
     const { data: lastLogs } = await supabase
       .from('crew_logs')
-      .select('crew_name, crew_role, action, timestamp')
+      .select('crew_name, crew_role, action, timestamp, task_id')
       .eq('vessel_id', vesselId)
       .order('timestamp', { ascending: false })
-      .limit(10);
+      .limit(20);
 
     // Roster del equipo del dueño/gestor (para que elija su nombre en vez de escribirlo)
     const { data: vesselOwner } = await supabase
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
 
   // POST — registrar check-in o check-out
   if (req.method === 'POST') {
-    const { vesselId, crewName, crewRole, action, locationNote, notes, taskId } = req.body;
+    const { vesselId, crewName, crewRole, action, locationNote, notes, taskId, taskName } = req.body;
 
     if (!vesselId || !crewName || !action) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -98,6 +98,7 @@ export default async function handler(req, res) {
         action,
         location_note: locationNote || '',
         notes:         notes || '',
+        task_id:       taskId || null,
         notified:      false,
       })
       .select()
@@ -166,7 +167,8 @@ export default async function handler(req, res) {
         `🚢 ${vessel?.name || 'Tu embarcación'}\n` +
         `📍 ${vessel?.marina || ''}\n` +
         `🕐 ${timeStr} · ${dateStr}` +
-        (locationNote ? `\n📝 "${locationNote}"` : '');
+        (taskName ? `\n📋 Tarea: ${taskName}` : '') +
+        (action === 'checkout' && notes ? `\n📝 "${notes}"` : (locationNote ? `\n📝 "${locationNote}"` : ''));
 
       try {
         await fetch(`https://graph.facebook.com/v21.0/${process.env.WA_PHONE_ID}/messages`, {

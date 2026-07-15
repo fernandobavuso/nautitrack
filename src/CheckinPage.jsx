@@ -12,6 +12,13 @@ import { useState, useEffect } from "react";
 
 const ROLES = ["Capitán", "Primer Oficial", "Jefe de Máquinas", "Mecánico", "Marinero", "Cocinero", "Camarero", "Otro"];
 
+// Emparejar tareas con la persona (el asignado puede venir como "Nombre (Rol)")
+const normName = (s) => (s||"").replace(/\s*\(.*\)\s*$/,"").trim().toLowerCase();
+const isMyTask = (t, who) => {
+  const a = normName(t.assignedTo), b = normName(who);
+  return !!a && !!b && (a===b || a.includes(b) || b.includes(a));
+};
+
 export default function CheckinPage() {
   const params   = new URLSearchParams(window.location.search);
   const vesselId = params.get("v");
@@ -52,6 +59,21 @@ export default function CheckinPage() {
       .catch(() => { setError("Error de conexión."); setLoading(false); });
   }, [vesselId]);
 
+  // Pre-seleccionar tarea: al ENTRAR, su tarea asignada; al SALIR, la de su check-in abierto
+  useEffect(() => {
+    if (!name) return;
+    if (action === "checkin") {
+      const mt = tasks.filter(t => isMyTask(t, name));
+      if (mt.length === 1) setTaskId(String(mt[0].id));
+    } else if (action === "checkout") {
+      const mine = recentLogs
+        .filter(l => normName(l.crew_name) === normName(name))
+        .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (mine[0]?.action === "checkin" && mine[0].task_id) setTaskId(String(mine[0].task_id));
+      else { const mt = tasks.filter(t => isMyTask(t, name)); if (mt.length === 1) setTaskId(String(mt[0].id)); }
+    }
+  }, [action, name]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   // Al elegir a alguien del roster, tomamos su rol
   const pickPerson = (personName) => {
     setName(personName);
@@ -79,12 +101,14 @@ export default function CheckinPage() {
           crewRole: role,
           action,
           notes: notes.trim(),
-          taskId: action === "checkout" && taskId ? taskId : null,
+          taskId: taskId || null,
+          taskName: taskId ? (tasks.find(t => String(t.id) === String(taskId))?.task || "") : "",
         }),
       });
       const d = await resp.json();
       if (d.error) { setFormError(d.error); setSending(false); return; }
-      setDone({ action, name: name.trim(), role, time: new Date(), completedTask: d.completedTask });
+      const tName = taskId ? (tasks.find(t => String(t.id) === String(taskId))?.task || "") : "";
+      setDone({ action, name: name.trim(), role, time: new Date(), completedTask: d.completedTask, linkedTask: action === "checkin" ? tName : "" });
     } catch {
       setFormError("Error de conexión. Intenta de nuevo.");
     }
@@ -121,6 +145,14 @@ export default function CheckinPage() {
             <div style={{marginTop:18,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"12px 16px"}}>
               <div style={{fontSize:12,fontWeight:700,color:"#15803d"}}>Tarea completada</div>
               <div style={{fontSize:13,color:"#166534",marginTop:2}}>{done.completedTask}</div>
+            </div>
+          )}
+
+          {done.linkedTask && (
+            <div style={{marginTop:18,background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:"12px 16px"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#1e40af"}}>Vienes a hacer</div>
+              <div style={{fontSize:13,color:"#1e3a8a",marginTop:2}}>{done.linkedTask}</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:6}}>Al terminar, vuelve a escanear y haz check-out para marcarla completada.</div>
             </div>
           )}
 
@@ -206,6 +238,35 @@ export default function CheckinPage() {
           </div>
         </Card>
 
+        {/* Si entra: a qué viene (linkea la tarea desde el check-in) */}
+        {action === "checkin" && tasks.length > 0 && (
+          <Card title="¿A qué vienes?">
+            {(() => {
+              const myTasks = tasks.filter(t => isMyTask(t, name));
+              const list = myTasks.length > 0 ? [...myTasks, ...tasks.filter(t => !isMyTask(t, name))] : tasks;
+              return (<>
+                {myTasks.length > 0 && (
+                  <div style={{fontSize:12,color:"#15803d",background:"#f0fdf4",padding:"7px 10px",borderRadius:7,marginBottom:10}}>
+                    Tienes {myTasks.length} tarea(s) asignada(s) en este barco.
+                  </div>
+                )}
+                <label style={lbl}>Tarea (opcional)</label>
+                <select value={taskId} onChange={e => setTaskId(e.target.value)} style={inp}>
+                  <option value="">Trabajo general / otra cosa</option>
+                  {list.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.task}{t.equipment ? ` — ${t.equipment}` : ""}{isMyTask(t, name) ? "  ⭐ asignada a ti" : ""}
+                    </option>
+                  ))}
+                </select>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:4,lineHeight:1.5}}>
+                  Elige la tarea que vienes a hacer. Al salir la podrás marcar como completada.
+                </div>
+              </>);
+            })()}
+          </Card>
+        )}
+
         {/* 3. Si sale: tarea + comentarios obligatorios */}
         {action === "checkout" && (
           <Card title="¿Qué hiciste?">
@@ -214,9 +275,9 @@ export default function CheckinPage() {
                 <label style={lbl}>¿Completaste alguna tarea? (opcional)</label>
                 <select value={taskId} onChange={e => setTaskId(e.target.value)} style={inp}>
                   <option value="">No completé ninguna tarea</option>
-                  {tasks.map(t => (
+                  {[...tasks].sort((a,b) => (isMyTask(b,name)?1:0)-(isMyTask(a,name)?1:0)).map(t => (
                     <option key={t.id} value={t.id}>
-                      {t.task}{t.equipment ? ` — ${t.equipment}` : ""}
+                      {t.task}{t.equipment ? ` — ${t.equipment}` : ""}{isMyTask(t,name) ? "  ⭐" : ""}
                     </option>
                   ))}
                 </select>
