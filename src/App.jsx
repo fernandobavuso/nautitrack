@@ -302,6 +302,8 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
   const [skippedSetup, setSkippedSetup] = useState(() => localStorage.getItem("nt_skipped_setup") === "1");
   const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
+  // Recordar el barco seleccionado entre refrescos
+  useEffect(() => { if (vesselId != null) localStorage.setItem("nt_vessel_id", String(vesselId)); }, [vesselId]);
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
@@ -507,7 +509,11 @@ export default function App() {
         };
       }));
       setVessels(mapped);
-      if (mapped.length > 0) setVesselId(mapped[0].id);
+      if (mapped.length > 0) {
+        const saved = localStorage.getItem("nt_vessel_id");
+        const found = saved && mapped.find(v => String(v.id) === saved);
+        setVesselId(found ? found.id : mapped[0].id);
+      }
     } catch(e) {
       console.error("fetchVessels catch:", e);
     }
