@@ -1561,7 +1561,15 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
 
           <div>
             <label style={s.label}>Nombre de la Tarea <span style={{color:"#dc2626"}}>*</span></label>
-            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Ej: Cambio de aceite y filtro" style={{...s.input,borderColor:errors.name?"#dc2626":"#e2e8f0"}}/>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+              {VISIT_TYPES.map(vt => (
+                <button key={vt} type="button" onClick={()=>setName(vt)}
+                  style={{padding:"5px 10px",borderRadius:16,border:`1px solid ${name===vt?"#2563eb":"#e2e8f0"}`,background:name===vt?"#eff6ff":"#f8fafc",color:name===vt?"#1e40af":"#64748b",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                  {vt}
+                </button>
+              ))}
+            </div>
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="O escribe una (Ej: Cambio de aceite y filtro)" style={{...s.input,borderColor:errors.name?"#dc2626":"#e2e8f0"}}/>
             {errors.name&&<div style={s.errMsg}>{errors.name}</div>}
           </div>
 
