@@ -97,9 +97,9 @@ const DEFAULT_SYSTEMS = [
   { id:"velas",      label:"Velas y Jarcia",           icon:"⛵", trackHours:false,
     equipment:["Vela Mayor","Génova","Spinnaker","Foque","Mesana","Botavara","Mástil","Estay de Proa","Estay de Popa","Obenques","Winches","Enrollador de Génova","Enrollador de Mayor"] },
   { id:"cubierta",   label:"Cubierta y Exterior",      icon:"🏠", trackHours:false,
-    equipment:["Bimini","Toldo","Cockpit","Flybridge","Teak Cubierta","Teak Cockpit","Pulido y Encerado","Canvas / Fundas","Luces Externas","Ancla Principal","Cadena de Ancla","Windlass / Winch Ancla"] },
+    equipment:["Bimini","Toldo","Cockpit","Flybridge","Teak Cubierta","Teak Cockpit","Pulido y Encerado","Canvas / Fundas","Luces Externas","Ancla Principal","Cadena de Ancla","Windlass / Winch Ancla","Buceo / Casco","Detailing","Lavada"] },
   { id:"interior",   label:"Interior y Comodidades",   icon:"🛋️", trackHours:false,
-    equipment:["Cocina / Estufa","Horno","Microondas","Sistema de Audio","Televisores","Iluminación LED","Tapicería","Madera Interior","Ventiladores","Escotillas Internas"] },
+    equipment:["Cocina / Estufa","Horno","Microondas","Sistema de Audio","Televisores","Iluminación LED","Tapicería","Madera Interior","Ventiladores","Escotillas Internas","Limpieza interior"] },
   { id:"dinghy",     label:"Dinghy / Tender",          icon:"🚤", trackHours:true,
     equipment:["Dinghy / Tender","Motor Fuera de Borda","Davit","Inflador","Reparación y Parches"] },
 ];
@@ -250,11 +250,17 @@ const INIT_VESSELS = [
 ];
 
 function getAllSystems(vessel) {
-  // Combinar por id: si hay un sistema custom con el mismo id que uno por defecto,
-  // el custom lo REEMPLAZA (no se duplica). Los sistemas nuevos (id propio) se agregan al final.
+  // Combinar por id: un sistema custom con el mismo id que uno por defecto NO se duplica.
+  // Se unen sus equipos (default + custom, sin repetir), para que las mejoras de la app
+  // lleguen aun a barcos ya personalizados. Los sistemas nuevos (id propio) van al final.
   const custom = vessel.customSystems || [];
-  const byId = new Map(custom.map(s => [s.id, s]));
-  const merged = DEFAULT_SYSTEMS.map(s => byId.get(s.id) || s);
+  const customById = new Map(custom.map(s => [s.id, s]));
+  const merged = DEFAULT_SYSTEMS.map(d => {
+    const c = customById.get(d.id);
+    if (!c) return d;
+    const equipment = [...new Set([...(d.equipment || []), ...(c.equipment || [])])];
+    return { ...d, ...c, equipment };
+  });
   const extra = custom.filter(s => !DEFAULT_SYSTEMS.some(d => d.id === s.id));
   return [...merged, ...extra];
 }
@@ -1561,15 +1567,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
 
           <div>
             <label style={s.label}>Nombre de la Tarea <span style={{color:"#dc2626"}}>*</span></label>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-              {VISIT_TYPES.map(vt => (
-                <button key={vt} type="button" onClick={()=>setName(vt)}
-                  style={{padding:"5px 10px",borderRadius:16,border:`1px solid ${name===vt?"#2563eb":"#e2e8f0"}`,background:name===vt?"#eff6ff":"#f8fafc",color:name===vt?"#1e40af":"#64748b",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                  {vt}
-                </button>
-              ))}
-            </div>
-            <input value={name} onChange={e=>setName(e.target.value)} placeholder="O escribe una (Ej: Cambio de aceite y filtro)" style={{...s.input,borderColor:errors.name?"#dc2626":"#e2e8f0"}}/>
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Ej: Cambio de aceite y filtro" style={{...s.input,borderColor:errors.name?"#dc2626":"#e2e8f0"}}/>
             {errors.name&&<div style={s.errMsg}>{errors.name}</div>}
           </div>
 
