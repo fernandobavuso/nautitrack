@@ -421,6 +421,25 @@ export default function App() {
     }
   }, []);
 
+  const updateTask = useCallback(async (vesselId, taskId, patch) => {
+    const dbPatch = {};
+    if ("status"   in patch) dbPatch.status   = patch.status;
+    if ("nextDue"  in patch) dbPatch.next_due = patch.nextDue;
+    if ("notes"    in patch) dbPatch.notes    = patch.notes;
+    if ("assigned" in patch) dbPatch.assigned = patch.assigned;
+    await supabase.from("tasks").update(dbPatch).eq("id", taskId);
+    setVessels(vs => vs.map(v => v.id === vesselId
+      ? { ...v, tasks: (v.tasks || []).map(t => t.id === taskId ? { ...t, ...patch } : t) }
+      : v));
+  }, []);
+
+  const deleteTask = useCallback(async (vesselId, taskId) => {
+    await supabase.from("tasks").delete().eq("id", taskId);
+    setVessels(vs => vs.map(v => v.id === vesselId
+      ? { ...v, tasks: (v.tasks || []).filter(t => t.id !== taskId) }
+      : v));
+  }, []);
+
   // All hooks must be before any early returns
   const updateVessel = useCallback(async (updated) => {
     // Update local state immediately
@@ -752,7 +771,7 @@ export default function App() {
           </div>
         )}
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
-        {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} />}
+        {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} updateTask={(taskId,patch)=>updateTask(vessel.id,taskId,patch)} deleteTask={(taskId)=>deleteTask(vessel.id,taskId)} />}
         {page==="providers" && <ProvidersModal vessel={vessel} updateVessel={updateVessel} asPage />}
         {page==="admin" && isAdmin(user) && <AdminPanel user={user} asPage />}
         {page==="calendar" && <CalendarPage vessel={vessel} isMobile={isMobile} />}
@@ -1321,7 +1340,7 @@ function WeatherBar({ vessel }) {
     </div>
   );
 }
-function TasksPage({ vessel, updateVessel, addTask }) {
+function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const { t: tr } = useLang();
   const [filter, setFilter]     = useState("Todas");
   const [expanded, setExpanded] = useState(null);
@@ -1386,15 +1405,14 @@ function TasksPage({ vessel, updateVessel, addTask }) {
                         </div>
                         <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
                           <button onClick={()=>{
-                            const updated={...vessel,tasks:(vessel.tasks||[]).map(t=>t.id===task.id?{...t,status:"done"}:t)};
-                            updateVessel(updated);setExpanded(null);
+                            updateTask(task.id,{status:"done"});setExpanded(null);
                           }} style={{padding:"7px 16px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff"}}>Completar</button>
                           <button onClick={()=>{
                             const nd=prompt("Nueva fecha (AAAA-MM-DD):",task.nextDue);
-                            if(nd){const updated={...vessel,tasks:(vessel.tasks||[]).map(t=>t.id===task.id?{...t,nextDue:nd,status:"ok"}:t)};updateVessel(updated);}
+                            if(nd){updateTask(task.id,{nextDue:nd,status:"ok"});}
                           }} style={{padding:"7px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>Reprogramar</button>
                           <button onClick={()=>{
-                            if(confirm("¿Eliminar esta tarea?")){const updated={...vessel,tasks:(vessel.tasks||[]).filter(t=>t.id!==task.id)};updateVessel(updated);setExpanded(null);}
+                            if(confirm("¿Eliminar esta tarea?")){deleteTask(task.id);setExpanded(null);}
                           }} style={{padding:"7px 14px",border:"1.5px solid #fecaca",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>Eliminar</button>
                         </div>
                       </td>
