@@ -14,6 +14,7 @@ export const WA_TEMPLATES = {
   MANTENIMIENTO:  "recordatorio_mantenimiento",   // {{1}} dueño, {{2}} barco, {{3}} tarea, {{4}} vence
   REGISTRO_ABORDO:"registro_abordo",           // {{1}} dueño, {{2}} movimiento, {{3}} barco, {{4}} persona, {{5}} rol, {{6}} hora
   OFERTA_TRABAJO: "oferta_trabajo_tripulante", // {{1}} tripulante, {{2}} rol, {{3}} zona
+  TAREA_ASIGNADA: "tarea_asignada",            // {{1}} nombre, {{2}} barco, {{3}} tarea, {{4}} fecha (UTILITY)
 };
 
 /**
@@ -63,3 +64,6 @@ export const notifyOwnerQuotes = (phone, ownerName, product, count) =>
 
 export const notifyOwnerCheckin = (phone, ownerName, movement, vessel, person, role, time) =>
   sendWhatsApp(phone, WA_TEMPLATES.REGISTRO_ABORDO, [ownerName, movement, vessel, person, role, time]);
+
+export const notifyTaskAssigned = (phone, name, boat, task, date) =>
+  sendWhatsApp(phone, WA_TEMPLATES.TAREA_ASIGNADA, [name, boat, task, date]);

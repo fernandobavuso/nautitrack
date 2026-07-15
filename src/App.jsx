@@ -6,6 +6,7 @@ import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
 import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle, SystemIcon, IconUser, IconCard, IconLogout } from "./icons.jsx";
 import QRPanel from "./QRPanel";
+import { notifyTaskAssigned } from "./whatsapp.js";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
@@ -358,6 +359,15 @@ export default function App() {
     if (data) {
       const mapped = { ...task, id: data.id };
       setVessels(vs => vs.map(v => v.id === vesselId ? { ...v, tasks: [...(v.tasks||[]), mapped] } : v));
+      // Avisar al asignado por WhatsApp si tiene teléfono en Mi Equipo
+      if (task.assigneePhone) {
+        const dateStr = task.nextDue
+          ? new Date(task.nextDue + "T00:00:00").toLocaleDateString("es", { day:"numeric", month:"short", year:"numeric" })
+          : "sin fecha";
+        const cleanName = (task.assigned || "").replace(/\s*\(.*\)$/, "").trim();
+        notifyTaskAssigned(task.assigneePhone, cleanName, task.boatName || "", task.name || "", dateStr)
+          .then(r => console.log(r.ok ? "[Carive] Aviso de tarea enviado a " + task.assigneePhone : "[Carive] Aviso de tarea NO enviado: " + r.error));
+      }
     }
   }, []);
 
@@ -1440,12 +1450,16 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
   const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Mi Equipo (flota)
+  const [fleetCrewDir,setFleetCrewDir]     = useState([]);   // directorio con teléfonos {name, phone}
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!vessel?.owner_id) return;
-      const { data } = await supabase.from("fleet_crew").select("name").eq("manager_id", vessel.owner_id).order("name");
-      if (alive && data) setFleetCrewNames(data.map(c => c.name).filter(Boolean));
+      const { data } = await supabase.from("fleet_crew").select("name, phone").eq("manager_id", vessel.owner_id).order("name");
+      if (alive && data) {
+        setFleetCrewNames(data.map(c => c.name).filter(Boolean));
+        setFleetCrewDir(data.map(c => ({ name: c.name, phone: c.phone })).filter(c => c.name));
+      }
     })();
     return () => { alive = false; };
   }, [vessel?.owner_id]);
@@ -1511,6 +1525,9 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     if (!validate()) return;
     const finalEquip = equipment==="Otro"?otherEquip:equipment;
     if (equipment==="Otro"&&otherEquip.trim()) saveCustomEquip(systemId, otherEquip.trim());
+    const _norm = (s)=>(s||"").replace(/\s*\(.*\)$/,"").trim().toLowerCase();
+    const assigneePhone = fleetCrewDir.find(c => _norm(c.name) === _norm(assigned))?.phone || null;
+    const boatName = vessel.name || "";
     if (interval==="Por horas") {
       // Recordatorio por horas de motor
       const currentHours = Number(vessel.engineHours)||0;
@@ -1518,11 +1535,11 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
       const remaining = target - currentHours;
       let status="ok"; if(remaining<=0)status="overdue"; else if(remaining<=20)status="due";
       onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,
-        dueHours:target, everyHours:Number(everyHours)||null, nextDue:null, status,notes,photos:[]});
+        dueHours:target, everyHours:Number(everyHours)||null, nextDue:null, status,notes,photos:[],assigneePhone,boatName});
     } else {
       const today=new Date(),nd=new Date(nextDue),diff=Math.round((nd-today)/(1000*60*60*24));
       let status="ok"; if(diff<0)status="overdue"; else if(diff<=14)status="due";
-      onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,nextDue,status,notes,photos:[]});
+      onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,nextDue,status,notes,photos:[],assigneePhone,boatName});
     }
   };
 
@@ -1603,6 +1620,11 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
                 {allAssigned.map(p=><option key={p} value={p}>{p}</option>)}
                 <option value="Otro">Otro</option>
               </select>
+              {(() => {
+                const _n=(s)=>(s||"").replace(/\s*\(.*\)$/,"").trim().toLowerCase();
+                const d=fleetCrewDir.find(c=>_n(c.name)===_n(assigned)&&c.phone);
+                return d ? <div style={{fontSize:11,color:"#15803d",marginTop:4}}>📱 Se le avisará por WhatsApp ({d.phone})</div> : null;
+              })()}
             </div>
             <div>
               <label style={s.label}>Intervalo <span style={{color:"#dc2626"}}>*</span></label>
