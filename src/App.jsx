@@ -250,7 +250,13 @@ const INIT_VESSELS = [
 ];
 
 function getAllSystems(vessel) {
-  return [...DEFAULT_SYSTEMS, ...(vessel.customSystems || [])];
+  // Combinar por id: si hay un sistema custom con el mismo id que uno por defecto,
+  // el custom lo REEMPLAZA (no se duplica). Los sistemas nuevos (id propio) se agregan al final.
+  const custom = vessel.customSystems || [];
+  const byId = new Map(custom.map(s => [s.id, s]));
+  const merged = DEFAULT_SYSTEMS.map(s => byId.get(s.id) || s);
+  const extra = custom.filter(s => !DEFAULT_SYSTEMS.some(d => d.id === s.id));
+  return [...merged, ...extra];
 }
 function getEquipmentList(vessel, systemId) {
   const all = getAllSystems(vessel);
