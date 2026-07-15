@@ -50,18 +50,21 @@ export default async function handler(req, res) {
       roster = team || [];
     }
 
-    // Tareas pendientes de esta embarcación (para que las complete al salir)
-    const { data: vesselTasks } = await supabase
-      .from('vessels').select('tasks').eq('id', vesselId).single();
+    // Tareas pendientes de esta embarcación (tabla `tasks` real)
+    const { data: taskRows } = await supabase
+      .from('tasks')
+      .select('id, name, system_name, equipment, assigned, status')
+      .eq('vessel_id', vesselId)
+      .order('created_at');
 
-    const pendingTasks = (vesselTasks?.tasks || [])
+    const pendingTasks = (taskRows || [])
       .filter(t => t.status !== 'done')
       .map(t => ({
         id: t.id,
-        task: t.task || t.name || '',
-        system: t.system || '',
+        task: t.name || '',
+        system: t.system_name || '',
         equipment: t.equipment || '',
-        assignedTo: t.assignedTo || t.assigned || '',
+        assignedTo: t.assigned || '',
         status: t.status || 'pending',
       }));
 
@@ -106,41 +109,37 @@ export default async function handler(req, res) {
 
     if (logError) return res.status(500).json({ error: logError.message });
 
-    // 1.b Si al salir se marcó una tarea, completarla y dejar constancia en la bitácora
+    // 1.b Si al salir se marcó una tarea, completarla (tabla `tasks`) y registrar en la bitácora (`log_entries`)
     let completedTask = null;
     if (action === 'checkout' && taskId) {
-      const { data: v } = await supabase
-        .from('vessels').select('tasks, log').eq('id', vesselId).single();
+      const { data: taskRow } = await supabase
+        .from('tasks')
+        .select('id, name, system_id, system_name, equipment, owner_id')
+        .eq('id', taskId)
+        .single();
 
-      const tasks = v?.tasks || [];
-      const idx = tasks.findIndex(t => String(t.id) === String(taskId));
+      if (taskRow) {
+        completedTask = taskRow.name || 'Tarea';
 
-      if (idx !== -1) {
-        completedTask = tasks[idx].task || tasks[idx].name || 'Tarea';
-        tasks[idx] = {
-          ...tasks[idx],
-          status: 'done',
-          completedAt: new Date().toISOString(),
-          completedBy: crewName.trim(),
-          completionNotes: String(notes || '').trim(),
-        };
-
-        // Registrar en la bitácora del barco
-        const logEntry = {
-          id: Date.now(),
-          type: 'Servicio',
-          item: completedTask,
-          desc: String(notes || '').trim(),
-          date: new Date().toISOString().slice(0, 10),
-          performedBy: crewName.trim(),
-          photos: [],
-          fromCheckout: true,
-        };
-
+        // Marcar la tarea como completada
         await supabase
-          .from('vessels')
-          .update({ tasks, log: [...(v?.log || []), logEntry] })
-          .eq('id', vesselId);
+          .from('tasks')
+          .update({ status: 'done' })
+          .eq('id', taskId);
+
+        // Dejar constancia en la bitácora del barco
+        await supabase.from('log_entries').insert({
+          vessel_id:    vesselId,
+          owner_id:     taskRow.owner_id,
+          date:         new Date().toISOString().slice(0, 10),
+          type:         'Servicio',
+          system_id:    taskRow.system_id || null,
+          equipment:    taskRow.equipment || null,
+          description:  String(notes || '').trim(),
+          performed_by: crewName.trim(),
+          item:         completedTask,
+          photos:       [],
+        });
       }
     }
 
