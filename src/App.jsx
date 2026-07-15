@@ -138,6 +138,25 @@ export const visitTypeL = (t, lang) => (lang === "en" ? (VISIT_TYPES_EN[t] || t)
 const SERVICE_TYPES   = ["Preventivo","Reactivo","Reparación"];
 const PAYMENT_METHODS = ["Efectivo Bs","Efectivo USD","Pago Móvil","Tarjeta","Transferencia","Zelle"];
 const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Trimestral","Semestral","Anual","Por horas","Por millas"];
+
+// Pool unificado de personas de un barco: capitán + tripulación (crew y crew2),
+// deduplicado por nombre. "Mi Equipo" (flota) se combina aparte donde haga falta.
+function getVesselPeople(vessel) {
+  const out = [];
+  if (vessel?.captain) out.push(`${vessel.captain} (Capitán)`);
+  (vessel?.crew2 || []).forEach(c => {
+    const name = typeof c === "string" ? c : c?.name;
+    const role = typeof c === "string" ? "Tripulación" : (c?.role || "Tripulación");
+    if (name) out.push(`${name} (${role})`);
+  });
+  (vessel?.crew || []).forEach(c => { if (typeof c === "string" && c) out.push(c); });
+  const seen = new Set();
+  return out.filter(label => {
+    const base = label.replace(/\s*\(.*\)$/, "").trim().toLowerCase();
+    if (seen.has(base)) return false;
+    seen.add(base); return true;
+  });
+}
 const SEGMENTS        = ["A/C y Refrigeración","Broker","Buceo","Eléctrico","Electrónica","Gestión","Grúa / Transporte","Hidráulicos","Mecánica","Pintura","Surveyor","Teak / Fibra","Otro"];
 
 // Helper: get motor/generator labels from vessel propulsion config
@@ -1384,12 +1403,22 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   const { t: tr } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
+  const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Mi Equipo (flota)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!vessel?.owner_id) return;
+      const { data } = await supabase.from("fleet_crew").select("name").eq("manager_id", vessel.owner_id).order("name");
+      if (alive && data) setFleetCrewNames(data.map(c => c.name).filter(Boolean));
+    })();
+    return () => { alive = false; };
+  }, [vessel?.owner_id]);
   const allSystems = getAllSystems(vessel);
   const [systemId, setSystemId]       = useState("");
   const [equipment, setEquipment]     = useState("");
   const [otherEquip, setOtherEquip]   = useState("");
   const [name, setName]               = useState("");
-  const [assigned, setAssigned]       = useState(vessel.captain||vessel.captain||'');
+  const [assigned, setAssigned]       = useState(vessel.captain ? `${vessel.captain} (Capitán)` : "");
   const [interval, setInterval]       = useState("");
   const [nextDue, setNextDue]         = useState("");
   const [dueHours, setDueHours]       = useState("");      // horas de motor a las que toca
@@ -1404,10 +1433,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
 
   const selectedSystem = allSystems.find(s => s.id===systemId);
   const equipList      = systemId ? getEquipmentList(vessel, systemId) : [];
-  const crew2Names     = (vessel.crew2||vessel.crew?.map(c=>typeof c==="string"?{name:c,role:"Marinero"}:c)||[]);
-  const allAssigned    = crew2Names.length > 0
-    ? crew2Names.map(c=>`${c.name} (${c.role||"Tripulación"})`)
-    : vessel.captain ? [vessel.captain] : [];
+  const allAssigned    = [...new Set([...getVesselPeople(vessel), ...fleetCrewNames])].filter(Boolean);
 
   const addCustomSystem = () => {
     if (!newSysLabel.trim()||!newSysEquip.trim()) return;
@@ -1759,14 +1785,14 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const equipList     = systemId ? getEquipmentList(vessel, systemId) : [];
   const needsHours    = selectedSys?.trackHours && equipment && equipment!=="Otro";
   const provNames     = (vessel.providers||[]).map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
-  const crew2Names    = (vessel.crew2||vessel.crew?.map(c=>typeof c==="string"?{name:c,role:"Marinero"}:c)||[]);
-  const crewOptions   = crew2Names.map(c=>`${c.name} (${c.role||"Tripulación"})`).filter(Boolean);
+  const crewOptions   = getVesselPeople(vessel);
   // Servicio: crew + providers. Rest: crew only
   // Quién realizó el trabajo: tripulación del barco + Mi Equipo (roster de flota)
   // + proveedores (si es un servicio técnico) + "Otro" para escribirlo libre.
   const allPerformed = type === "Servicio"
     ? [...new Set([...crewOptions, ...fleetCrewNames, ...provNames, "Otro"])].filter(Boolean)
     : [...new Set([...crewOptions, ...fleetCrewNames, "Otro"])].filter(Boolean);
+  const aboardPeople = [...new Set([...crewOptions, ...fleetCrewNames])].filter(Boolean);
 
   const validate = () => {
     const e={};
@@ -1996,9 +2022,9 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                 <div><label style={s.label}>Dueño a bordo</label><div style={{display:"flex",gap:8,marginTop:4}}>{[true,false].map(v=><button key={String(v)} onClick={()=>setOwnerAboard(v)} style={{...s.typeChip,background:ownerAboard===v?"#2563eb22":"#f8fafc",borderColor:ownerAboard===v?"#2563eb":"#e2e8f0",color:ownerAboard===v?"#2563eb":"#64748b",fontWeight:ownerAboard===v?700:400}}>{v?"Sí":"No"}</button>)}</div></div>
                 <div>
                   <label style={s.label}>Tripulación a bordo</label>
-                  {(vessel.crew||[]).length>0 ? (
+                  {aboardPeople.length>0 ? (
                     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
-                      {(vessel.crew||[]).map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}
+                      {aboardPeople.map(c=><button key={c} onClick={()=>setCrewSel(cs=>cs.includes(c)?cs.filter(x=>x!==c):[...cs,c])} style={{...s.typeChip,background:crewSel.includes(c)?"#2563eb22":"#f8fafc",borderColor:crewSel.includes(c)?"#2563eb":"#e2e8f0",color:crewSel.includes(c)?"#2563eb":"#64748b",fontWeight:crewSel.includes(c)?700:400}}>{c}</button>)}
                     </div>
                   ) : (
                     <div style={{fontSize:11,color:"#94a3b8",marginTop:4,marginBottom:6}}>No tienes tripulación cargada en este barco. Agrégala abajo o en "Mi Tripulación".</div>
@@ -2009,9 +2035,9 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                     <button onClick={()=>{if(crewInput.trim()){setCrewSel(cs=>[...cs,crewInput.trim()]);setCrewInput("");}}} style={{...s.typeChip,background:"#eff6ff",borderColor:"#2563eb",color:"#2563eb",fontWeight:700,whiteSpace:"nowrap"}}>Agregar</button>
                   </div>
                   {/* Tripulantes seleccionados por nombre libre (no en vessel.crew) */}
-                  {crewSel.filter(c=>!(vessel.crew||[]).includes(c)).length>0 && (
+                  {crewSel.filter(c=>!aboardPeople.includes(c)).length>0 && (
                     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
-                      {crewSel.filter(c=>!(vessel.crew||[]).includes(c)).map(c=>(
+                      {crewSel.filter(c=>!aboardPeople.includes(c)).map(c=>(
                         <span key={c} style={{fontSize:11,background:"#eff6ff",color:"#2563eb",padding:"4px 10px",borderRadius:12,fontWeight:600,display:"inline-flex",alignItems:"center",gap:6}}>
                           {c}<button onClick={()=>setCrewSel(cs=>cs.filter(x=>x!==c))} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",padding:0,fontWeight:700}}>×</button>
                         </span>
