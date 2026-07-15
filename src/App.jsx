@@ -1155,7 +1155,7 @@ function LogCard({ vessel, setPage }) {
       <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBook size={17} color="#2563eb"/> Bitácora Reciente</span><button onClick={() => setPage("log")} style={s.linkBtn}>Ver todo →</button></div>
       {(vessel.log||[]).slice(0,4).map((e,i) => (
         <div key={i} style={s.logRow}>
-          <span style={{...s.logBadge,background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type]}}>{e.visitType||e.type}</span>
+          <span style={{...s.logBadge,background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type]}}>{(e.visitTypes&&e.visitTypes.length)?e.visitTypes.join(", "):(e.visitType||e.type)}</span>
           <span style={{fontSize:12,color:"#334155",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             {e.type==="Salida"?`${e.dest} · ${e.persons}p`:e.type==="Compra"?e.item:(e.desc||"").slice(0,50)}
           </span>
@@ -1665,7 +1665,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
             {filtered.map((e,i)=>(
               <tr key={i} style={{...s.trow,":hover":{background:"#f8fafc"}}}>
                 <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>
-                <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{logTypeL(e.type, lang)}{e.serviceType?` · ${e.serviceType}`:""}{e.visitType?` · ${visitTypeL(e.visitType, lang)}`:""}</span></td>
+                <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{logTypeL(e.type, lang)}{e.serviceType?` · ${e.serviceType}`:""}{(e.visitTypes&&e.visitTypes.length)?` · ${e.visitTypes.map(v=>visitTypeL(v,lang)).join(", ")}`:(e.visitType?` · ${visitTypeL(e.visitType, lang)}`:"")}</span></td>
                 <td style={{...s.td,color:"#334155",maxWidth:320}}>
                   {e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||"Pendiente"}`:e.type==="Compra"?`${e.item||""} · $${e.costUSD||0}`:e.desc||""}
                 </td>
@@ -1701,7 +1701,8 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const vessel = vesselRef.current;
   const today = todayISO();
   const [type,setType]               = useState(initial?.type||"");
-  const [visitType,setVisitType]     = useState(initial?.visitType||"");
+  const [visitTypes,setVisitTypes] = useState(initial?.visitTypes || (initial?.visitType ? [initial.visitType] : []));
+  const hasVisit = (t) => visitTypes.includes(t);
   const [otherPerformed,setOtherPerformed] = useState("");   // si eligió "Otro"
   const [supervised,setSupervised]         = useState(initial?.supervised||"");       // técnico supervisado
   const [otherSupervised,setOtherSupervised] = useState("");
@@ -1770,7 +1771,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const validate = () => {
     const e={};
     if (!type) e.type="Selecciona un tipo";
-    if (type==="Visita" && !visitType) e.type="Indica qué tipo de visita fue";
+    if (type==="Visita" && visitTypes.length===0) e.type="Indica qué tipo de visita fue";
     if (!date) e.date="Requerido";
     if (type==="Servicio"&&!serviceType) e.serviceType="Requerido";
     if (type==="Servicio"&&!systemId)    e.system="Requerido";
@@ -1795,10 +1796,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     // Visita: guardar el subtipo (qué clase de visita fue)
     if (type==="Visita") {
       const sup = supervised === "Otro" ? (otherSupervised.trim() || "Otro") : supervised;
-      entry={...entry, visitType, systemId, equipment:finalEquip, ...(sup && {supervised: sup})};
+      entry={...entry, visitTypes, visitType:visitTypes[0]||"", systemId, equipment:finalEquip, ...(sup && {supervised: sup})};
     }
     // Actualizar horas si la visita fue una inspección de motores/generador
-    if (type==="Visita" && visitType==="Inspección" && (systemId==="motores"||systemId==="generador")) {
+    if (type==="Visita" && visitTypes.includes("Inspección") && (systemId==="motores"||systemId==="generador")) {
       entry={...entry,engineHrsOut:engOut,genHrsOut:genOut};
     }
     onSave(entry);
@@ -1816,17 +1817,27 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
           <div>
             <label style={s.label}>Tipo <span style={{color:"#dc2626"}}>*</span></label>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
-              {LOG_TYPES.map(t=><button key={t} onClick={()=>{setType(t); if(t!=="Visita") setVisitType("");}} style={{...s.typeChip,background:type===t?LOG_COLOR[t]+"22":"#f8fafc",borderColor:type===t?LOG_COLOR[t]:"#e2e8f0",color:type===t?LOG_COLOR[t]:"#64748b",fontWeight:type===t?700:400}}>{logTypeL(t, lang)}</button>)}
+              {LOG_TYPES.map(t=><button key={t} onClick={()=>{setType(t); if(t!=="Visita") setVisitTypes([]);}} style={{...s.typeChip,background:type===t?LOG_COLOR[t]+"22":"#f8fafc",borderColor:type===t?LOG_COLOR[t]:"#e2e8f0",color:type===t?LOG_COLOR[t]:"#64748b",fontWeight:type===t?700:400}}>{logTypeL(t, lang)}</button>)}
             </div>
             {errors.type&&<div style={s.errMsg}>{errors.type}</div>}
 
             {/* Subtipo: qué clase de visita fue */}
             {type==="Visita" && (
               <div style={{marginTop:12}}>
-                <label style={s.label}>{lang==="es"?"¿Qué tipo de visita?":"What kind of visit?"} <span style={{color:"#dc2626"}}>*</span></label>
-                <select value={visitType} onChange={e=>setVisitType(e.target.value)} style={s.input}>
-                  <option value="">{lang==="es"?"Selecciona...":"Select..."}</option>
-                  {VISIT_TYPES.map(v=><option key={v} value={v}>{visitTypeL(v, lang)}</option>)}
+                <label style={s.label}>{lang==="es"?"¿Qué tipo de visita? (puedes elegir varios)":"What kind of visit? (pick one or more)"} <span style={{color:"#dc2626"}}>*</span></label>
+                {visitTypes.length>0 && (
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                    {visitTypes.map(v=>(
+                      <span key={v} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#1e40af",border:"1px solid #bfdbfe",borderRadius:20,padding:"4px 10px",fontSize:12,fontWeight:600}}>
+                        {visitTypeL(v, lang)}
+                        <button type="button" onClick={()=>setVisitTypes(visitTypes.filter(x=>x!==v))} style={{background:"none",border:"none",color:"#1e40af",cursor:"pointer",fontSize:15,lineHeight:1,padding:0}}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <select value="" onChange={e=>{const v=e.target.value; if(v&&!visitTypes.includes(v)) setVisitTypes([...visitTypes,v]); e.target.value="";}} style={s.input}>
+                  <option value="">{visitTypes.length ? (lang==="es"?"＋ Agregar otro tipo...":"＋ Add another type...") : (lang==="es"?"Selecciona...":"Select...")}</option>
+                  {VISIT_TYPES.filter(v=>!visitTypes.includes(v)).map(v=><option key={v} value={v}>{visitTypeL(v, lang)}</option>)}
                 </select>
               </div>
             )}
@@ -1840,7 +1851,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
 
           {type==="Visita"&&(<>
             {/* Sistema/equipo solo tiene sentido en inspecciones técnicas */}
-            {visitType==="Inspección" && (
+            {hasVisit("Inspección") && (
               <div>
                 <label style={s.label}>Sistema</label>
                 <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");}} style={s.input}>
@@ -1849,10 +1860,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                 </select>
               </div>
             )}
-            {visitType==="Inspección" && systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
-            {visitType==="Inspección" && equipment==="Otro"&&<div><label style={s.label}>Especificar equipo</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder="Nombre del equipo..." style={s.input}/></div>}
+            {hasVisit("Inspección") && systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
+            {hasVisit("Inspección") && equipment==="Otro"&&<div><label style={s.label}>Especificar equipo</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder="Nombre del equipo..." style={s.input}/></div>}
             {/* En una supervisión, registrar a quién se supervisó */}
-            {visitType==="Supervisión de técnico" && (
+            {hasVisit("Supervisión de técnico") && (
               <div>
                 <label style={s.label}>Técnico / empresa supervisada</label>
                 <select value={supervised} onChange={e=>setSupervised(e.target.value)} style={s.input}>
@@ -1871,11 +1882,11 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             )}
             <div>
               <label style={s.label}>Notas <span style={{color:"#dc2626"}}>*</span></label>
-              <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder={visitType==="Lavada"?"Ej: Lavado completo exterior. El gelcoat de proa necesita pulido.":visitType==="Buceo / Casco"?"Ej: Limpieza de casco y cambio de ánodos. Hélice de babor con marca leve.":visitType==="Supervisión de técnico"?"Ej: Supervisé el cambio de impeller del motor de babor. Técnico: Marine Tech. Trabajo conforme.":"Qué se hizo y si viste algo que atender..."} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
+              <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder={hasVisit("Supervisión de técnico")?"Ej: Supervisé el cambio de impeller del motor de babor. Técnico: Marine Tech. Trabajo conforme.":hasVisit("Buceo / Casco")?"Ej: Limpieza de casco y cambio de ánodos. Hélice de babor con marca leve.":hasVisit("Lavada")?"Ej: Lavado completo exterior. El gelcoat de proa necesita pulido.":"Qué se hizo y si viste algo que atender..."} style={{...s.input,resize:"vertical",borderColor:errors.desc?"#dc2626":"#e2e8f0"}}/>
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
             {/* Horas de motor/generador (solo en inspecciones técnicas) */}
-            {visitType==="Inspección" && (systemId==="motores"||systemId==="generador")&&(
+            {hasVisit("Inspección") && (systemId==="motores"||systemId==="generador")&&(
               <div>
                 <label style={s.label}>Horas actuales del equipo</label>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
