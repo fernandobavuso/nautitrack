@@ -1381,6 +1381,7 @@ function TasksPage({ vessel, updateVessel, addTask }) {
 }
 
 function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
+  const { t: tr } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
   const allSystems = getAllSystems(vessel);
