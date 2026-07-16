@@ -59,7 +59,7 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
           loa:          form.lengthFt || "",   // eslora
           city:         form.city || "",
           state:        form.state || "",
-          country:      countryName(form.country) || "Venezuela",
+          country:      countryName(form.country) || "",
           countryCode:  form.country || "VE",
           homePort:     marinaStr || "",
           _profile: {
@@ -68,7 +68,7 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
             lengthFt:  form.lengthFt || "",
             city:      form.city || "",
             state:     form.state || "",
-            country:   countryName(form.country) || "Venezuela",
+            country:   countryName(form.country) || "",
           }
         },
         crew:         [],

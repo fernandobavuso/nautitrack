@@ -165,6 +165,15 @@ const SEGMENTS        = ["A/C y Refrigeración","Broker","Buceo","Eléctrico","E
 
 // Helper: get motor/generator labels from vessel propulsion config
 function getMotorLabels(vessel) { return vessel.motors || ["Motor Estribor","Motor Babor"]; }
+// Lectura de horas: acepta número o un objeto por-motor {motor: horas} y devuelve la más alta.
+function maxHrs(val) {
+  if (val == null) return null;
+  if (typeof val === "object") {
+    const nums = Object.values(val).map(Number).filter(n => !isNaN(n));
+    return nums.length ? Math.max(...nums) : null;
+  }
+  const n = Number(val); return isNaN(n) ? null : n;
+}
 function getGenLabels(vessel)   { return vessel.generators || ["Generador Principal"]; }
 const STATUS_CFG      = {
   ok:      { label:"Al día",    color:"#16a34a", bg:"#dcfce7", dot:"#16a34a" },
@@ -413,10 +422,13 @@ export default function App() {
           updated.fuel = entry.fuelQty;
           updated.fuelUnit = entry.fuelUnit || v.fuelUnit;
         }
-        // Si la salida trae horas finales de motor/generador, actualizarlas
-        if (entry.type === "Salida") {
-          if (entry.engineHrsIn != null && !isNaN(Number(entry.engineHrsIn))) updated.engineHours = Number(entry.engineHrsIn);
-          if (entry.genHrsIn != null && !isNaN(Number(entry.genHrsIn))) updated.genHours = Number(entry.genHrsIn);
+        // Actualizar horas del motor/generador desde cualquier registro que las traiga
+        // (Salida o Inspección de motores). Las horas se guardan por motor: tomamos la más alta.
+        const engReading = maxHrs(entry.engineHrsIn) ?? maxHrs(entry.engineHrsOut);
+        const genReading = maxHrs(entry.genHrsIn)    ?? maxHrs(entry.genHrsOut);
+        if (engReading != null || genReading != null) {
+          if (engReading != null) updated.engineHours = engReading;
+          if (genReading != null) updated.genHours    = genReading;
           // Recalcular estado de tareas por horas de motor
           const eng = Number(updated.engineHours)||0;
           updated.tasks = (updated.tasks||[]).map(t => {
@@ -3143,9 +3155,6 @@ function DocsPage({ vessel, user }) {
                 </div>
               </div>
               <div style={{padding:"20px 24px",whiteSpace:"pre-wrap",fontSize:13,lineHeight:1.9,color:"#1e293b",maxHeight:500,overflowY:"auto"}}>{aiResult}</div>
-              <div style={{background:"#fefce8",padding:"12px 20px",borderTop:"1px solid #fde68a",fontSize:12,color:"#92400e"}}>
-                💡 <strong>Servicio de Procura Carive:</strong> Ordenamos estos repuestos desde USA y coordinamos el envío a Venezuela.
-              </div>
             </div>
           )}
 
@@ -3574,7 +3583,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
     marina:       vessel.marina  || "",
     city:         vessel.details?.city         || "",
     state:        vessel.details?.state        || "",
-    country:      vessel.details?.country      || "Venezuela",
+    country:      vessel.details?.country      || "",
     notifyPhone:  vessel.details?.notify_phone  || "",
     captain:      vessel.captain || "",
     manufacturer: d.manufacturer || "",
@@ -3747,7 +3756,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
             <VesselField key="marina" editMode={editMode} label="Nombre de la Marina" value={gen.marina} onChange={v=>setGen(g=>({...g,marina:v}))} placeholder="Ej: Marina Morrocoy, Club Náutico"/>
             <VesselField key="city"    editMode={editMode} label="Ciudad 🌤"  value={gen.city}    onChange={v=>setGen(g=>({...g,city:v}))}    placeholder="Ej: Tucacas, Miami, Porlamar"/>
             <VesselField key="state"   editMode={editMode} label="Estado"     value={gen.state}   onChange={v=>setGen(g=>({...g,state:v}))}   placeholder="Ej: Falcón, Florida, Nueva Esparta"/>
-            <VesselField key="country" editMode={editMode} label="País"       value={gen.country} onChange={v=>setGen(g=>({...g,country:v}))} placeholder="Ej: Venezuela, USA"/>
+            <VesselField key="country" editMode={editMode} label="País"       value={gen.country} onChange={v=>setGen(g=>({...g,country:v}))} placeholder="Ej: USA, España, México"/>
             <VesselField key="notifyPhone" editMode={editMode} label="📲 WhatsApp Alertas" value={gen.notifyPhone} onChange={v=>setGen(g=>({...g,notifyPhone:v}))} placeholder="Ej: +584141234567 o +13051234567"/>
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
             <VesselField key="boatOwnerName" editMode={editMode} label="Dueño del barco" value={gen.boatOwnerName} onChange={v=>setGen(g=>({...g,boatOwnerName:v}))} placeholder="A quién se le envían los reportes"/>
