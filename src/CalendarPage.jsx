@@ -27,9 +27,11 @@ export default function CalendarPage({ vessel, isMobile }) {
 
   // Construir lista de eventos combinada
   const events = [];
+  const shiftTaskIds = new Set(shifts.map(s => String(s.task_id)).filter(x => x && x !== "null"));
   if (filter === "todo" || filter === "tareas") {
     (vessel.tasks || []).forEach(t => {
       if (!t.nextDue) return;
+      if (shiftTaskIds.has(String(t.id))) return; // ya se muestra como turno
       events.push({
         kind: "task", date: t.nextDue.slice(0, 10),
         title: t.name || "Tarea", sub: [t.system, t.equipment].filter(Boolean).join(" · "),

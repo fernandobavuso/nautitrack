@@ -373,6 +373,22 @@ export default function App() {
     if (data) {
       const mapped = { ...task, id: data.id };
       setVessels(vs => vs.map(v => v.id === vesselId ? { ...v, tasks: [...(v.tasks||[]), mapped] } : v));
+      // Si la tarea tiene persona y fecha, crear también un turno en la Agenda (aparece en el calendario)
+      if (task.assigned && task.assigned !== "Otro" && task.nextDue) {
+        const cleanName = task.assigned.replace(/\s*\(.*\)$/, "").trim();
+        supabase.from("work_shifts").insert({
+          manager_id: ownerId,
+          person_name: cleanName,
+          vessel_name: task.boatName || null,
+          shift_date: task.nextDue,
+          description: task.name || null,
+          hours: null,
+          rate: task.assigneeRate ?? null,
+          work_status: "Agendado",
+          payment_status: "Pendiente",
+          task_id: String(data.id),
+        }).then(() => {});
+      }
       // Avisar al asignado por WhatsApp si tiene teléfono en Mi Equipo
       if (task.assigneePhone) {
         const dateStr = task.nextDue
@@ -1490,10 +1506,10 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     let alive = true;
     (async () => {
       if (!vessel?.owner_id) return;
-      const { data } = await supabase.from("fleet_crew").select("name, phone").eq("manager_id", vessel.owner_id).order("name");
+      const { data } = await supabase.from("fleet_crew").select("name, phone, rate").eq("manager_id", vessel.owner_id).order("name");
       if (alive && data) {
         setFleetCrewNames(data.map(c => c.name).filter(Boolean));
-        setFleetCrewDir(data.map(c => ({ name: c.name, phone: c.phone })).filter(c => c.name));
+        setFleetCrewDir(data.map(c => ({ name: c.name, phone: c.phone, rate: c.rate })).filter(c => c.name));
       }
     })();
     return () => { alive = false; };
@@ -1564,6 +1580,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     const _norm = (s)=>(s||"").replace(/\s*\(.*\)$/,"").trim().toLowerCase();
     const _peopleDir = [...fleetCrewDir, ...((vessel.crewRoster||[]).filter(c=>c&&c.phone).map(c=>({name:c.name,phone:c.phone})))];
     const assigneePhone = _peopleDir.find(c => _norm(c.name) === _norm(assigned))?.phone || null;
+    const assigneeRate = fleetCrewDir.find(c => _norm(c.name) === _norm(assigned))?.rate ?? null;
     const boatName = vessel.name || "";
     if (interval==="Por horas") {
       // Recordatorio por horas de motor (contra el motor elegido)
@@ -1572,11 +1589,11 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
       const remaining = target - currentHours;
       let status="ok"; if(remaining<=0)status="overdue"; else if(remaining<=20)status="due";
       onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,
-        dueHours:target, everyHours:Number(everyHours)||null, motorName:taskMotor, nextDue:null, status,notes,photos:[],assigneePhone,boatName});
+        dueHours:target, everyHours:Number(everyHours)||null, motorName:taskMotor, nextDue:null, status,notes,photos:[],assigneePhone,boatName,assigneeRate});
     } else {
       const today=new Date(),nd=new Date(nextDue),diff=Math.round((nd-today)/(1000*60*60*24));
       let status="ok"; if(diff<0)status="overdue"; else if(diff<=14)status="due";
-      onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,nextDue,status,notes,photos:[],assigneePhone,boatName});
+      onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,nextDue,status,notes,photos:[],assigneePhone,boatName,assigneeRate});
     }
   };
 
