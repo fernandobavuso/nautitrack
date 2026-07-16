@@ -145,6 +145,9 @@ const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Tri
 function getVesselPeople(vessel) {
   const out = [];
   if (vessel?.captain) out.push(`${vessel.captain} (Capitán)`);
+  (vessel?.crewRoster || []).forEach(c => {
+    if (c?.name) out.push(`${c.name} (${c.role || "Tripulación"})`);
+  });
   (vessel?.crew2 || []).forEach(c => {
     const name = typeof c === "string" ? c : c?.name;
     const role = typeof c === "string" ? "Tripulación" : (c?.role || "Tripulación");
@@ -478,6 +481,7 @@ export default function App() {
         _profile:      updated.profile      || {},
         _config:       updated.config       || {},
         _subscription: updated.subscription || {},
+        crew_roster:   updated.crewRoster   || [],
       },
     };
     // Remove frontend-only keys that don't exist in DB
@@ -512,6 +516,7 @@ export default function App() {
           config:       d._config       || { distUnit:"nm", speedUnit:"kn", fuelUnit:"gal", tempUnit:"C" },
           subscription: d._subscription || { plan:"Pro", price:79, currency:"USD", cycle:"Mensual" },
           details:      d,
+          crewRoster:   d.crew_roster || [],
           tasks, log,
           records: [],
           alerts: tasks.filter(t => t.status === "overdue").length,
@@ -1526,7 +1531,8 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     const finalEquip = equipment==="Otro"?otherEquip:equipment;
     if (equipment==="Otro"&&otherEquip.trim()) saveCustomEquip(systemId, otherEquip.trim());
     const _norm = (s)=>(s||"").replace(/\s*\(.*\)$/,"").trim().toLowerCase();
-    const assigneePhone = fleetCrewDir.find(c => _norm(c.name) === _norm(assigned))?.phone || null;
+    const _peopleDir = [...fleetCrewDir, ...((vessel.crewRoster||[]).filter(c=>c&&c.phone).map(c=>({name:c.name,phone:c.phone})))];
+    const assigneePhone = _peopleDir.find(c => _norm(c.name) === _norm(assigned))?.phone || null;
     const boatName = vessel.name || "";
     if (interval==="Por horas") {
       // Recordatorio por horas de motor
@@ -1622,7 +1628,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
               </select>
               {(() => {
                 const _n=(s)=>(s||"").replace(/\s*\(.*\)$/,"").trim().toLowerCase();
-                const d=fleetCrewDir.find(c=>_n(c.name)===_n(assigned)&&c.phone);
+                const d=[...fleetCrewDir,...((vessel.crewRoster||[]).filter(x=>x&&x.phone).map(x=>({name:x.name,phone:x.phone})))].find(c=>_n(c.name)===_n(assigned)&&c.phone);
                 return d ? <div style={{fontSize:11,color:"#15803d",marginTop:4}}>📱 Se le avisará por WhatsApp ({d.phone})</div> : null;
               })()}
             </div>
@@ -3617,9 +3623,10 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
   const [dinghyList, setDinghyList] = useState(d.dinghyList||[{type:"Dinghy",make:"Zodiac",model:"Pro 310",hullSerial:"",motorSerial:"",motorMake:"Yamaha",motorModel:"15 HP"}]);
 
   // Crew
-  const [crew, setCrew]         = useState(vessel.crew2 || vessel.crew?.map(c=>({name:c,role:"Marinero",primary:false}))||[]);
+  const [crew, setCrew]         = useState(vessel.crewRoster || vessel.crew2 || vessel.crew?.map(c=>({name:c,role:"Marinero",primary:false}))||[]);
   const [newCrew, setNewCrew]   = useState("");
   const [newRole, setNewRole]   = useState("Marinero");
+  const [newPhone, setNewPhone] = useState("");
 
   // Vessel photo
   const [vesselPhoto, setVesselPhoto] = useState(vessel.photo||null);
@@ -3629,10 +3636,11 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
 
   const addCrew = () => {
     if (!newCrew.trim()) return;
-    const u = [...crew,{name:newCrew.trim(),role:newRole,primary:false}];
-    setCrew(u); setNewCrew("");
+    const u = [...crew,{name:newCrew.trim(),role:newRole,primary:false,phone:newPhone.trim()||null}];
+    setCrew(u); setNewCrew(""); setNewPhone("");
   };
   const rmCrew     = (i) => setCrew(crew.filter((_,j)=>j!==i));
+  const setCrewPhone= (i,p)=> setCrew(crew.map((c,j)=>j===i?{...c,phone:p}:c));
   const setPrimary = (i) => setCrew(crew.map((c,j)=>({...c,primary:j===i?!c.primary:false})));
   const setCrewRole= (i,r)=> setCrew(crew.map((c,j)=>j===i?{...c,role:r}:c));
 
@@ -3672,6 +3680,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
       captain:    gen.captain || vessel.captain || "",
       photo:      vesselPhoto,
       crew2:      crew,
+      crewRoster: crew,
       crew:       crew.map(x => x.name),
       motors:     motors.slice(0, numMotors).map(m => m.name),
       generators: gens.slice(0, numGens).map(g => g.name).filter(Boolean),
@@ -3915,21 +3924,44 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
             ))}
           </div>
 
-          {/* TRIPULACIÓN (solo lectura — se gestiona en el tab Tripulación) */}
+          {/* TRIPULACIÓN DEL BARCO — editable con teléfono */}
           <div style={{marginBottom:18}}>
-            <div style={s.secTitle}>Tripulación</div>
+            <div style={s.secTitle}>Tripulación del barco</div>
             {crew.length===0 ? (
-              <div style={{fontSize:12,color:"#94a3b8",padding:"10px 0"}}>Sin tripulación asignada.</div>
+              <div style={{fontSize:12,color:"#94a3b8",padding:"6px 0"}}>Sin tripulación asignada.{editMode?" Agrégala abajo.":""}</div>
             ) : crew.map((c,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:c.primary?"#f0f9ff":"#f8fafc",borderRadius:8,marginBottom:6,border:`1px solid ${c.primary?"#bae6fd":"#e2e8f0"}`}}>
-                <span style={{flex:1,fontWeight:600,fontSize:13,color:"#0f172a"}}>{c.name}</span>
-                <span style={{fontSize:11,color:"#64748b",background:"#e2e8f0",padding:"2px 8px",borderRadius:20}}>{c.role}</span>
-                {c.primary&&<span title="Principal" style={{fontSize:14,color:"#f59e0b"}}>★</span>}
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:c.primary?"#f0f9ff":"#f8fafc",borderRadius:8,marginBottom:6,border:`1px solid ${c.primary?"#bae6fd":"#e2e8f0"}`}}>
+                <span style={{flex:1,minWidth:0,fontWeight:600,fontSize:13,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</span>
+                {editMode ? (<>
+                  <select value={c.role} onChange={e=>setCrewRole(i,e.target.value)} style={{fontSize:11,padding:"3px 6px",borderRadius:6,border:"1px solid #e2e8f0",background:"#fff"}}>
+                    {["Capitán","Primer Oficial","Jefe de Máquinas","Mecánico","Marinero","Cocinero","Camarero","Otro"].map(r=><option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <input value={c.phone||""} onChange={e=>setCrewPhone(i,e.target.value)} placeholder="+1 786..." style={{width:100,fontSize:11,padding:"4px 6px",borderRadius:6,border:"1px solid #e2e8f0"}}/>
+                  <button onClick={()=>setPrimary(i)} title="Principal" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:c.primary?"#f59e0b":"#cbd5e1"}}>★</button>
+                  <button onClick={()=>rmCrew(i)} title="Quitar" style={{background:"none",border:"none",cursor:"pointer",color:"#ef4444",fontSize:15}}>✕</button>
+                </>) : (<>
+                  <span style={{fontSize:11,color:"#64748b",background:"#e2e8f0",padding:"2px 8px",borderRadius:20}}>{c.role}</span>
+                  {c.phone && <span style={{fontSize:11,color:"#16a34a"}}>📱 {c.phone}</span>}
+                  {c.primary&&<span title="Principal" style={{fontSize:14,color:"#f59e0b"}}>★</span>}
+                </>)}
               </div>
             ))}
-            <div style={{fontSize:11,color:"#94a3b8",marginTop:8,background:"#f8fafc",borderRadius:8,padding:"8px 10px",lineHeight:1.5}}>
-              Para agregar, quitar o cambiar tripulación, usa el botón <strong>Tripulación</strong> en la barra superior. Aquí solo se muestra.
-            </div>
+            {editMode && (<>
+              <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+                <input value={newCrew} onChange={e=>setNewCrew(e.target.value)} placeholder="Nombre" style={{flex:2,minWidth:120,fontSize:12,padding:"8px 10px",borderRadius:7,border:"1px solid #e2e8f0"}}/>
+                <select value={newRole} onChange={e=>setNewRole(e.target.value)} style={{fontSize:12,padding:"8px 6px",borderRadius:7,border:"1px solid #e2e8f0",background:"#fff"}}>
+                  {["Capitán","Primer Oficial","Jefe de Máquinas","Mecánico","Marinero","Cocinero","Camarero","Otro"].map(r=><option key={r} value={r}>{r}</option>)}
+                </select>
+                <input value={newPhone} onChange={e=>setNewPhone(e.target.value)} placeholder="+1 786... (opcional)" style={{flex:1,minWidth:120,fontSize:12,padding:"8px 10px",borderRadius:7,border:"1px solid #e2e8f0"}}/>
+                <button onClick={addCrew} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>＋ Agregar</button>
+              </div>
+              <div style={{fontSize:11,color:"#15803d",marginTop:8,lineHeight:1.5}}>
+                📱 El teléfono permite avisar por WhatsApp a esa persona cuando le asignas una tarea. No olvides "Guardar Cambios" abajo.
+              </div>
+            </>)}
+            {!editMode && (
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Usa "✏️ Editar" arriba para agregar o cambiar tripulación y sus teléfonos.</div>
+            )}
           </div>
 
           {/* Zona de peligro — eliminar embarcación */}
