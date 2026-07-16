@@ -71,8 +71,7 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
   });
 
   // Totales por moneda
-  const totalUSD = filtered.filter(e=>e.currency==="USD").reduce((a,e)=>a+Number(e.amount),0);
-  const totalVES = filtered.filter(e=>e.currency==="VES").reduce((a,e)=>a+Number(e.amount),0);
+  const totalUSD = filtered.filter(e=>e.currency!=="VES").reduce((a,e)=>a+Number(e.amount),0);
 
   // Desglose por categoría (solo USD para el gráfico, simplificado)
   const byCat = {};
@@ -124,15 +123,11 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
         ))}
       </div>
 
-      {/* Totales */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+      {/* Total */}
+      <div style={{marginBottom:20}}>
         <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18}}>
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>TOTAL EN DÓLARES</div>
-          <div style={{fontSize:26,fontWeight:800,color:"#0f172a"}}>$ {totalUSD.toLocaleString("es-VE",{maximumFractionDigits:2})}</div>
-        </div>
-        <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18}}>
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>TOTAL EN BOLÍVARES</div>
-          <div style={{fontSize:26,fontWeight:800,color:"#0f172a"}}>Bs. {totalVES.toLocaleString("es-VE",{maximumFractionDigits:2})}</div>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>TOTAL</div>
+          <div style={{fontSize:26,fontWeight:800,color:"#0f172a"}}>$ {totalUSD.toLocaleString("en-US",{maximumFractionDigits:2})}</div>
         </div>
       </div>
 
@@ -174,7 +169,7 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
               <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("es-VE")}</div>
             </div>
             <div style={{fontSize:14,fontWeight:800,color:"#0f172a",whiteSpace:"nowrap"}}>
-              {e.currency==="USD"?"$":"Bs."} {Number(e.amount).toLocaleString("es-VE",{maximumFractionDigits:2})}
+              $ {Number(e.amount).toLocaleString("en-US",{maximumFractionDigits:2})}
             </div>
             <button onClick={()=>del(e.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#cbd5e1",fontSize:16}}>×</button>
           </div>
@@ -196,18 +191,9 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
               <label style={lbl}>Descripción</label>
               <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Ej: Cambio de aceite motor estribor" style={inp}/>
             </div>
-            <div style={{display:"flex",gap:8,marginBottom:10}}>
-              <div style={{flex:1}}>
-                <label style={lbl}>Monto</label>
-                <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0" style={inp}/>
-              </div>
-              <div style={{width:120}}>
-                <label style={lbl}>Moneda</label>
-                <select value={form.currency} onChange={e=>setForm({...form,currency:e.target.value})} style={inp}>
-                  <option value="USD">Dólares ($)</option>
-                  <option value="VES">Bolívares (Bs.)</option>
-                </select>
-              </div>
+            <div style={{marginBottom:10}}>
+              <label style={lbl}>Monto (USD)</label>
+              <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0" style={inp}/>
             </div>
             <div style={{marginBottom:10}}>
               <label style={lbl}>Fecha</label>

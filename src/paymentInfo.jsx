@@ -23,11 +23,4 @@ export const PAYMENT_METHODS_INFO = [
     note: "Para transferencias ACH / wire en EE.UU.",
     currency: "USD",
   },
-  {
-    id: "usdt",
-    name: "USDT / Binance (Venezuela)",
-    detail: "Binance Pay ID / wallet USDT — pídelo por WhatsApp: 305-799-7996",
-    note: "Red TRC-20. Ideal para pagos desde Venezuela.",
-    currency: "USDT",
-  },
 ];

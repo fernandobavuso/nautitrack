@@ -137,7 +137,7 @@ const VISIT_TYPES_EN = {
 export const logTypeL   = (t, lang) => (lang === "en" ? (LOG_TYPES_EN[t]   || t) : t);
 export const visitTypeL = (t, lang) => (lang === "en" ? (VISIT_TYPES_EN[t] || t) : t);
 const SERVICE_TYPES   = ["Preventivo","Reactivo","Reparación"];
-const PAYMENT_METHODS = ["Efectivo Bs","Efectivo USD","Pago Móvil","Tarjeta","Transferencia","Zelle"];
+const PAYMENT_METHODS = ["Efectivo","Tarjeta","Transferencia","PayPal","Cheque","Otro"];
 const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Trimestral","Semestral","Anual","Por horas","Por millas"];
 
 // Pool unificado de personas de un barco: capitán + tripulación (crew y crew2),
@@ -405,7 +405,6 @@ export default function App() {
         const baseDesc = entry.item || entry.equipment || entry.desc || entry.type;
         const desc = entry.performedBy ? `${baseDesc} · por ${entry.performedBy}` : baseDesc;
         if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log" }).then(()=>{});
-        if (costBs>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costBs, currency:"VES", expense_date:entry.date, source:"log" }).then(()=>{});
       }
       setVessels(vs => vs.map(v => {
         if (v.id !== vesselId) return v;
@@ -2162,10 +2161,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               <div><label style={s.label}>Modelo</label><input value={model2} onChange={e=>setModel2(e.target.value)} placeholder="Ej: FF5052" style={s.input}/></div>
             </div>
             <div><label style={s.label}>Número de Parte</label><input value={partNum} onChange={e=>setPartNum(e.target.value)} placeholder="Ej: FF5052-A" style={s.input}/></div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={s.label}>Costo USD</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
-              <div><label style={s.label}>Costo Bs</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>Bs</span><input type="number" value={costBs} onChange={e=>setCostBs(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
-            </div>
+            <div><label style={s.label}>Costo (USD)</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
             <div><label style={s.label}>¿Quién hizo la compra?</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option><option value="Dueño">Dueño</option><option value="Capitán">Capitán</option>{crewOptions.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
             <div><label style={s.label}>Notas adicionales</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
@@ -2281,7 +2277,7 @@ function RecordsPage({ vessel }) {
       {mainFilter==="Combustible"&&<RecordTable rows={fuelLog.map(e=>({Fecha:e.date,Cantidad:`${e.fuelQty} ${e.fuelUnit}`,Notas:e.desc||"—","Registrado por":e.performedBy}))}/>}
       {mainFilter==="Compras"&&(<>
         <div style={{marginBottom:12,padding:"10px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,fontSize:13}}>Total: <strong style={{color:"#16a34a"}}>${totalPurch.toFixed(2)} USD</strong></div>
-        <RecordTable rows={purchaseLog.map(e=>({Fecha:e.date,Descripción:e.item||"—",Marca:e.brand||"—",Modelo:e.model2||"—","N° Parte":e.partNum||"—",USD:`$${e.costUSD||0}`,Bs:e.costBs?`Bs ${e.costBs}`:"—",Pago:e.payment&&e.payment.startsWith("P:")?"—":e.payment||"—",Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>
+        <RecordTable rows={purchaseLog.map(e=>({Fecha:e.date,Descripción:e.item||"—",Marca:e.brand||"—",Modelo:e.model2||"—","N° Parte":e.partNum||"—",USD:`$${e.costUSD||0}`,Pago:e.payment&&e.payment.startsWith("P:")?"—":e.payment||"—",Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>
       </>)}
       {mainFilter==="Historico"&&(<>
         <div style={{marginBottom:12,padding:"10px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,fontSize:13}}>Costo total histórico: <strong style={{color:"#16a34a"}}>${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}</strong></div>
@@ -3534,7 +3530,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
                 ))}
               </div>
               <div style={{padding:"12px 14px",background:"#fefce8",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e"}}>
-                💡 <strong>Pagos en Venezuela:</strong> Aceptamos Zelle, transferencia USD, pago móvil y efectivo.
+                💡 <strong>Métodos de pago:</strong> Aceptamos PayPal, tarjeta, transferencia bancaria y efectivo.
               </div>
             </div>
           )}

@@ -284,7 +284,6 @@ export default function DayTripsOwner({ vessel, user }) {
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <select value={form.pay_currency} onChange={e=>setForm({...form,pay_currency:e.target.value})} style={{...inp,width:110,flexShrink:0}}>
                   <option value="USD">Dólares ($)</option>
-                  <option value="VES">Bolívares (Bs.)</option>
                 </select>
                 <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder="Ej: 50" style={{...inp,flex:1}}/>
                 <span style={{fontSize:13,color:"#64748b",whiteSpace:"nowrap"}}>

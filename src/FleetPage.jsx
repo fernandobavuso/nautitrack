@@ -68,11 +68,7 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
         </div>
         <div style={card}>
           <div style={cardLbl}>GASTO MES (USD)</div>
-          <div style={cardVal}>$ {totalUSD.toLocaleString("es-VE",{maximumFractionDigits:0})}</div>
-        </div>
-        <div style={card}>
-          <div style={cardLbl}>GASTO MES (Bs.)</div>
-          <div style={cardVal}>Bs. {totalVES.toLocaleString("es-VE",{maximumFractionDigits:0})}</div>
+          <div style={cardVal}>$ {totalUSD.toLocaleString("en-US",{maximumFractionDigits:0})}</div>
         </div>
       </div>
 
@@ -105,10 +101,7 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 10px",gridColumn:"1 / -1"}}>
                   <div style={{color:"#94a3b8",marginBottom:2}}>Gasto este mes</div>
                   <div style={{fontWeight:700,color:"#0f172a"}}>
-                    {c.usd>0&&`$ ${c.usd.toLocaleString("es-VE",{maximumFractionDigits:0})}`}
-                    {c.usd>0&&c.ves>0&&" · "}
-                    {c.ves>0&&`Bs. ${c.ves.toLocaleString("es-VE",{maximumFractionDigits:0})}`}
-                    {c.usd===0&&c.ves===0&&"Sin gastos"}
+                    {c.usd>0?`$ ${c.usd.toLocaleString("en-US",{maximumFractionDigits:0})}`:"Sin gastos"}
                   </div>
                 </div>
               </div>

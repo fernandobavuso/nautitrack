@@ -654,7 +654,6 @@ function RespondModal({ request, store, user, onClose, onDone }) {
             <div style={{display:"flex",gap:8}}>
               <select value={currency} onChange={e=>setCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
                 <option value="USD">$ USD</option>
-                <option value="VES">Bs.</option>
               </select>
               <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder={L("Tu mejor precio","Your best price")} style={{...inp,flex:1}}/>
             </div>

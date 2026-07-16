@@ -244,7 +244,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
                                 {isWinner&&<span style={{marginLeft:6,fontSize:9,background:"#dcfce7",color:"#16a34a",padding:"2px 7px",borderRadius:10,fontWeight:700}}>Elegida</span>}
                               </div>
                               <div style={{fontSize:12,marginTop:2,fontWeight:600,color:rp.response_type==="have"?"#16a34a":rp.response_type==="have_questions"?"#d97706":"#94a3b8"}}>
-                                {rp.response_type==="have"?`${rp.currency==="USD"?"$":"Bs."} ${rp.price}`:rp.response_type==="have_questions"?"Disponible, tiene preguntas":"No disponible"}
+                                {rp.response_type==="have"?`$ ${rp.price}`:rp.response_type==="have_questions"?"Disponible, tiene preguntas":"No disponible"}
                               </div>
                               {rp.message&&<div style={{fontSize:12,color:"#475569",marginTop:3}}>{rp.message}</div>}
                             </div>

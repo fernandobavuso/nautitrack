@@ -211,7 +211,6 @@ export default function DayTripsCrew({ user, profile }) {
                 <div style={{display:"flex",gap:8}}>
                   <select value={proposedCurrency} onChange={e=>setProposedCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
                     <option value="USD">$ USD</option>
-                    <option value="VES">Bs.</option>
                   </select>
                   <input type="number" value={proposedPay} onChange={e=>setProposedPay(e.target.value)} placeholder="Ej: 60" style={{...inp,flex:1}}/>
                 </div>
