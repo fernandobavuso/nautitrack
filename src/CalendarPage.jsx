@@ -7,17 +7,22 @@ const DIAS = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
 const STATUS_COLOR = {
   overdue: "#ef4444", due: "#f59e0b", ok: "#22c55e", done: "#64748b",
 };
+const SHIFT_COLOR = { "Agendado":"#d97706", "En proceso":"#2563eb", "Completado":"#16a34a" };
 
 export default function CalendarPage({ vessel, isMobile }) {
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [filter, setFilter] = useState("todo"); // todo | tareas | viajes
   const [trips, setTrips] = useState([]);
+  const [shifts, setShifts] = useState([]);
   const [selected, setSelected] = useState(null); // evento seleccionado
 
   useEffect(() => {
     if (!vessel?.id || vessel.id === "__empty__") { setTrips([]); return; }
     supabase.from("day_trips").select("*").eq("vessel_id", vessel.id).then(({ data }) => setTrips(data || []));
+    if (vessel.owner_id) {
+      supabase.from("work_shifts").select("*").eq("manager_id", vessel.owner_id).eq("vessel_name", vessel.name).then(({ data }) => setShifts(data || []));
+    }
   }, [vessel?.id]);
 
   // Construir lista de eventos combinada
@@ -29,6 +34,16 @@ export default function CalendarPage({ vessel, isMobile }) {
         kind: "task", date: t.nextDue.slice(0, 10),
         title: t.name || "Tarea", sub: [t.system, t.equipment].filter(Boolean).join(" · "),
         color: STATUS_COLOR[t.status] || "#2563eb", raw: t,
+      });
+    });
+  }
+  if (filter === "todo" || filter === "turnos") {
+    shifts.forEach(sh => {
+      if (!sh.shift_date) return;
+      events.push({
+        kind: "shift", date: sh.shift_date.slice(0, 10),
+        title: sh.person_name, sub: [sh.description, sh.hours ? `${sh.hours}h` : null].filter(Boolean).join(" · "),
+        color: SHIFT_COLOR[sh.work_status] || "#d97706", raw: sh,
       });
     });
   }
@@ -83,7 +98,7 @@ export default function CalendarPage({ vessel, isMobile }) {
 
       {/* Filtro */}
       <div style={{display:"flex",gap:8,marginBottom:14}}>
-        {[{k:"todo",l:"Todo"},{k:"tareas",l:"Tareas"},{k:"viajes",l:"Day trips"}].map(f=>(
+        {[{k:"todo",l:"Todo"},{k:"tareas",l:"Tareas"},{k:"turnos",l:"Turnos"},{k:"viajes",l:"Day trips"}].map(f=>(
           <button key={f.k} onClick={()=>setFilter(f.k)} style={{padding:"7px 16px",borderRadius:20,border:"none",cursor:"pointer",fontSize:13,fontWeight:filter===f.k?700:500,background:filter===f.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#f1f5f9",color:filter===f.k?"#fff":"#64748b"}}>{f.l}</button>
         ))}
       </div>
@@ -125,6 +140,7 @@ export default function CalendarPage({ vessel, isMobile }) {
         <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#ef4444"}}/>Tarea vencida</span>
         <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#f59e0b"}}/>Tarea por vencer</span>
         <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#22c55e"}}/>Tarea al día</span>
+        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#d97706"}}/>Turno</span>
         <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#0ea5e9"}}/>Day trip</span>
       </div>
 
@@ -135,13 +151,15 @@ export default function CalendarPage({ vessel, isMobile }) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{width:12,height:12,borderRadius:4,background:selected.color}}/>
-                <span style={{fontSize:11,fontWeight:700,color:"#94a3b8",textTransform:"uppercase"}}>{selected.kind==="task"?"Tarea":"Day trip"}</span>
+                <span style={{fontSize:11,fontWeight:700,color:"#94a3b8",textTransform:"uppercase"}}>{selected.kind==="task"?"Tarea":selected.kind==="shift"?"Turno":"Day trip"}</span>
               </div>
               <button onClick={()=>setSelected(null)} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:20}}>×</button>
             </div>
             <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:6}}>{selected.title}</div>
             {selected.sub && <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>{selected.sub}</div>}
             <div style={{fontSize:13,color:"#475569"}}>📅 {new Date(selected.date+"T12:00:00").toLocaleDateString("es-VE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+            {selected.kind==="shift" && selected.raw.hours && <div style={{fontSize:13,color:"#475569",marginTop:4}}>⏱️ {selected.raw.hours}h × ${selected.raw.rate||0} = ${((Number(selected.raw.hours)||0)*(Number(selected.raw.rate)||0)).toLocaleString("en-US")}</div>}
+            {selected.kind==="shift" && <div style={{fontSize:13,color:"#475569",marginTop:4}}>📌 {selected.raw.work_status} · {selected.raw.payment_status}</div>}
             {selected.kind==="trip" && selected.raw.departure_time && <div style={{fontSize:13,color:"#475569",marginTop:4}}>🕐 Salida: {selected.raw.departure_time}</div>}
             {selected.kind==="trip" && selected.raw.meeting_point && <div style={{fontSize:13,color:"#475569",marginTop:4}}>📍 {selected.raw.meeting_point}</div>}
           </div>
