@@ -143,6 +143,34 @@ export default async function handler(req, res) {
       }
     }
 
+    // 1.c Conectar con la Agenda: mover el estado del turno agendado
+    try {
+      const { data: v2 } = await supabase.from('vessels').select('owner_id, name').eq('id', vesselId).single();
+      if (v2?.owner_id) {
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: todayShifts } = await supabase
+          .from('work_shifts')
+          .select('id, person_name, vessel_name, work_status')
+          .eq('manager_id', v2.owner_id)
+          .eq('shift_date', today);
+        const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const cn = norm(crewName);
+        const match = (todayShifts || []).find(sh => {
+          const pn = norm(sh.person_name);
+          const nameOk = pn === cn || pn.includes(cn) || cn.includes(pn);
+          const vesselOk = !sh.vessel_name || norm(sh.vessel_name) === norm(v2.name);
+          return nameOk && vesselOk;
+        });
+        if (match) {
+          if (action === 'checkin' && match.work_status !== 'Completado') {
+            await supabase.from('work_shifts').update({ work_status: 'En proceso' }).eq('id', match.id);
+          } else if (action === 'checkout') {
+            await supabase.from('work_shifts').update({ work_status: 'Completado' }).eq('id', match.id);
+          }
+        }
+      }
+    } catch (e) { /* no romper el check-in si la agenda falla */ }
+
     // 2. Obtener datos del vessel y teléfono del dueño
     const { data: vessel } = await supabase
       .from('vessels')

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { notifySchedule } from "./whatsapp.js";
 
 // ─────────────────────────────────────────────────────────────
 // Agenda — horario de trabajo del equipo de flota.
@@ -43,7 +44,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const load = async () => {
     const [{ data: sh }, { data: tm }] = await Promise.all([
       supabase.from("work_shifts").select("*").eq("manager_id", user.id).order("shift_date", { ascending: true }),
-      supabase.from("fleet_crew").select("id,name,rate").eq("manager_id", user.id).order("name"),
+      supabase.from("fleet_crew").select("id,name,rate,phone").eq("manager_id", user.id).order("name"),
     ]);
     setShifts(sh || []); setTeam(tm || []); setLoading(false);
   };
@@ -86,6 +87,25 @@ export default function Schedule({ user, vessels = [], onClose }) {
     if (!window.confirm(L("¿Eliminar este turno?", "Delete this shift?"))) return;
     setShifts(s => s.filter(x => x.id !== id));
     await supabase.from("work_shifts").delete().eq("id", id);
+  };
+
+  const sendSchedule = async (personName) => {
+    const p = team.find(t => t.name === personName);
+    if (!p || !p.phone) { flash(L("Esa persona no tiene teléfono en Mi Equipo", "That person has no phone in My Team")); return; }
+    const upcoming = shifts
+      .filter(x => x.person_name === personName && x.shift_date >= today)
+      .sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1));
+    if (upcoming.length === 0) { flash(L("No hay turnos próximos para esa persona", "No upcoming shifts for that person")); return; }
+    const list = upcoming.map(x => {
+      const d = new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es", { weekday:"short", day:"numeric", month:"short" });
+      const parts = [d];
+      if (x.vessel_name) parts.push(x.vessel_name);
+      if (x.description) parts.push(x.description);
+      if (x.hours)       parts.push(`${x.hours}h`);
+      return "• " + parts.join(" · ");
+    }).join("\n");
+    const r = await notifySchedule(p.phone, personName, list);
+    flash(r.ok ? L("Horario enviado por WhatsApp", "Schedule sent via WhatsApp") : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
   };
 
   const total  = (s) => (Number(s.hours) || 0) * (Number(s.rate) || 0);
@@ -202,6 +222,12 @@ export default function Schedule({ user, vessels = [], onClose }) {
             <input type="date" value={from} onChange={e => setFrom(e.target.value)} title={L("Desde","From")} style={{...inp,width:140,marginTop:0}}/>
             <input type="date" value={to} onChange={e => setTo(e.target.value)} title={L("Hasta","To")} style={{...inp,width:140,marginTop:0}}/>
           </div>
+
+          {filterPerson && (
+            <button onClick={() => sendSchedule(filterPerson)} style={{width:"100%",padding:"10px",background:"#f0fdf4",border:"1.5px solid #16a34a",borderRadius:9,color:"#15803d",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:14}}>
+              📱 {L(`Enviar horario a ${filterPerson}`, `Send schedule to ${filterPerson}`)}
+            </button>
+          )}
 
           {/* Resumen de totales */}
           {filtered.length > 0 && (
