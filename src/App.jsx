@@ -334,7 +334,7 @@ export default function App() {
       equipment: t.equipment, name: t.name, assigned: t.assigned,
       interval: t.interval, nextDue: t.next_due, status: t.status,
       notes: t.notes, photos: t.photos || [],
-      dueHours: t.due_hours, everyHours: t.every_hours,
+      dueHours: t.due_hours, everyHours: t.every_hours, motorName: t.motor,
       createdByName: t.created_by_name, createdByRole: t.created_by_role,
     }));
   };
@@ -365,7 +365,7 @@ export default function App() {
       assigned: task.assigned, interval: task.interval,
       next_due: task.nextDue, status: task.status,
       notes: task.notes, photos: task.photos || [],
-      due_hours: task.dueHours ?? null, every_hours: task.everyHours ?? null,
+      due_hours: task.dueHours ?? null, every_hours: task.everyHours ?? null, motor: task.motorName || null,
       created_by: ownerId, created_by_name: user?.full_name || user?.email || "Dueño", created_by_role: "owner",
     }).select().single();
     if (data) {
@@ -426,21 +426,32 @@ export default function App() {
         // (Salida o Inspección de motores). Las horas se guardan por motor: tomamos la más alta.
         const engReading = maxHrs(entry.engineHrsIn) ?? maxHrs(entry.engineHrsOut);
         const genReading = maxHrs(entry.genHrsIn)    ?? maxHrs(entry.genHrsOut);
-        if (engReading != null || genReading != null) {
+        // Horas POR MOTOR (objeto {motor: horas}) — de esta entrada (la más reciente)
+        const engObj = (entry.engineHrsIn && typeof entry.engineHrsIn === "object") ? entry.engineHrsIn
+                     : (entry.engineHrsOut && typeof entry.engineHrsOut === "object") ? entry.engineHrsOut : null;
+        if (engObj) {
+          const mh = { ...(updated.motorHours || {}) };
+          Object.entries(engObj).forEach(([m, h]) => { const n = Number(h); if (!isNaN(n)) mh[m] = n; });
+          updated.motorHours = mh;
+        }
+        if (engReading != null || genReading != null || engObj) {
           if (engReading != null) updated.engineHours = engReading;
           if (genReading != null) updated.genHours    = genReading;
-          // Recalcular estado de tareas por horas de motor
-          const eng = Number(updated.engineHours)||0;
+          // Recalcular tareas por horas: cada una contra SU motor (o el máximo si no tiene motor asignado)
+          const mh = updated.motorHours || {};
+          const maxEng = Number(updated.engineHours)||0;
           updated.tasks = (updated.tasks||[]).map(t => {
             if (t.interval==="Por horas" && t.dueHours!=null && t.status!=="done") {
-              const remaining = Number(t.dueHours) - eng;
+              const cur = (t.motorName && mh[t.motorName]!=null) ? Number(mh[t.motorName]) : maxEng;
+              const remaining = Number(t.dueHours) - cur;
               let status="ok"; if(remaining<=0)status="overdue"; else if(remaining<=20)status="due";
+              if (status!==t.status) supabase.from("tasks").update({ status }).eq("id", t.id).then(()=>{});
               return {...t, status};
             }
             return t;
           });
-          // Persistir horas en la BD
-          supabase.from("vessels").update({ engine_hours: updated.engineHours, gen_hours: updated.genHours }).eq("id", vesselId).then(()=>{});
+          updated.details = { ...(updated.details||{}), motor_hours: updated.motorHours || {} };
+          supabase.from("vessels").update({ engine_hours: updated.engineHours, gen_hours: updated.genHours, details: updated.details }).eq("id", vesselId).then(()=>{});
         }
         return updated;
       }));
@@ -493,6 +504,7 @@ export default function App() {
         _config:       updated.config       || {},
         _subscription: updated.subscription || {},
         crew_roster:   updated.crewRoster   || [],
+        motor_hours:   updated.motorHours   || {},
       },
     };
     // Remove frontend-only keys that don't exist in DB
@@ -528,6 +540,7 @@ export default function App() {
           subscription: d._subscription || { plan:"Pro", price:79, currency:"USD", cycle:"Mensual" },
           details:      d,
           crewRoster:   d.crew_roster || [],
+          motorHours:   d.motor_hours || {},
           tasks, log,
           records: [],
           alerts: tasks.filter(t => t.status === "overdue").length,
@@ -1192,7 +1205,7 @@ function IndicatorsCard({ vessel }) {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {[
           {Icon:IconFuel,val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:tr("dash.fuel"),color:fc,bar:true},
-          {Icon:IconEngine,val:`${vessel.engineHours}h`,lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
+          {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (
@@ -1420,7 +1433,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                     <td style={{...s.td,fontWeight:500,color:"#1e293b"}}>{task.name}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.assigned?.split(" ")[0]}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.interval}</td>
-                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{task.interval==="Por horas"?`${task.dueHours} h motor`:fmtDate(task.nextDue)}</td>
+                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{task.interval==="Por horas"?`${task.dueHours}h · ${task.motorName||"motor"}`:fmtDate(task.nextDue)}</td>
                     <td style={s.td}><span style={{...s.statusPill,background:p.bg,color:p.c}}>{p.l}</span></td>
                     <td style={{...s.td,color:"#94a3b8",fontSize:12,maxWidth:180}}>{task.notes||"—"}</td>
                   </tr>
@@ -1489,6 +1502,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   const [nextDue, setNextDue]         = useState("");
   const [dueHours, setDueHours]       = useState("");      // horas de motor a las que toca
   const [everyHours, setEveryHours]   = useState("");      // cada cuántas horas se repite
+  const [taskMotor, setTaskMotor]     = useState(getMotorLabels(vessel)[0] || "");  // motor al que aplica
   const [notes, setNotes]             = useState("");
   const [errors, setErrors]           = useState({});
   const [showAddSys, setShowAddSys]   = useState(false);
@@ -1546,13 +1560,13 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     const assigneePhone = _peopleDir.find(c => _norm(c.name) === _norm(assigned))?.phone || null;
     const boatName = vessel.name || "";
     if (interval==="Por horas") {
-      // Recordatorio por horas de motor
-      const currentHours = Number(vessel.engineHours)||0;
+      // Recordatorio por horas de motor (contra el motor elegido)
+      const currentHours = Number((vessel.motorHours||{})[taskMotor] ?? vessel.engineHours)||0;
       const target = Number(dueHours);
       const remaining = target - currentHours;
       let status="ok"; if(remaining<=0)status="overdue"; else if(remaining<=20)status="due";
       onSave({systemId,system:selectedSystem?.label||systemId,equipment:finalEquip,name,assigned,interval,
-        dueHours:target, everyHours:Number(everyHours)||null, nextDue:null, status,notes,photos:[],assigneePhone,boatName});
+        dueHours:target, everyHours:Number(everyHours)||null, motorName:taskMotor, nextDue:null, status,notes,photos:[],assigneePhone,boatName});
     } else {
       const today=new Date(),nd=new Date(nextDue),diff=Math.round((nd-today)/(1000*60*60*24));
       let status="ok"; if(diff<0)status="overdue"; else if(diff<=14)status="due";
@@ -1655,11 +1669,19 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
 
           {interval==="Por horas" ? (
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:14}}>
-              <div style={{fontSize:11,color:"#0369a1",marginBottom:10,fontWeight:600}}>Motor actual: {Number(vessel.engineHours)||0} horas. El recordatorio se activará según las horas de motor que registres en la bitácora.</div>
+              {getMotorLabels(vessel).length>1 && (
+                <div style={{marginBottom:10}}>
+                  <label style={s.label}>¿A qué motor aplica?</label>
+                  <select value={taskMotor} onChange={e=>setTaskMotor(e.target.value)} style={s.input}>
+                    {getMotorLabels(vessel).map(m=><option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              )}
+              <div style={{fontSize:11,color:"#0369a1",marginBottom:10,fontWeight:600}}>Horas actuales de {taskMotor||"motor"}: {Number((vessel.motorHours||{})[taskMotor] ?? vessel.engineHours)||0} h. Se toma de la entrada más reciente de la bitácora.</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
                   <label style={s.label}>Toca a las (horas motor) <span style={{color:"#dc2626"}}>*</span></label>
-                  <input type="number" value={dueHours} onChange={e=>setDueHours(e.target.value)} placeholder={`Ej: ${(Number(vessel.engineHours)||0)+100}`} style={{...s.input,borderColor:errors.dueHours?"#dc2626":"#e2e8f0"}}/>
+                  <input type="number" value={dueHours} onChange={e=>setDueHours(e.target.value)} placeholder={`Ej: ${(Number((vessel.motorHours||{})[taskMotor] ?? vessel.engineHours)||0)+100}`} style={{...s.input,borderColor:errors.dueHours?"#dc2626":"#e2e8f0"}}/>
                   {errors.dueHours&&<div style={s.errMsg}>{errors.dueHours}</div>}
                 </div>
                 <div>
