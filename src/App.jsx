@@ -16,6 +16,7 @@ import CostsPage from "./CostsPage";
 import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
 import FleetCrew from "./FleetCrew.jsx";
+import Schedule from "./Schedule.jsx";
 import { useLang } from "./i18n.jsx";
 import CariveLogo from "./CariveLogo";
 import FleetManagers from "./FleetManagers";
@@ -311,6 +312,7 @@ export default function App() {
   const [showFleetManagers, setShowFleetManagers] = useState(false);
   const [showExpenseRouter, setShowExpenseRouter] = useState(false);
   const [showFleetCrew, setShowFleetCrew] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem("nt_welcomed"));
   const [skippedSetup, setSkippedSetup] = useState(() => localStorage.getItem("nt_skipped_setup") === "1");
@@ -773,6 +775,7 @@ export default function App() {
         setShowProviders={setShowProviders} setShowProfile={setShowProfile}
         setShowFleetManagers={setShowFleetManagers}
         setShowFleetCrew={setShowFleetCrew}
+        setShowSchedule={setShowSchedule}
         canManageFleet={getPlan(vessel).features?.multiFleet}
         setShowNotifications={setShowNotifications}
         setShowNotifPanel={setShowNotifPanel}
@@ -837,6 +840,7 @@ export default function App() {
       {showPlans && <PlansModal vessel={vessel} user={user} onClose={()=>setShowPlans(false)} />}
       {showFleetManagers && <FleetManagers user={user} onClose={()=>setShowFleetManagers(false)} />}
       {showFleetCrew && <FleetCrew user={user} onClose={()=>setShowFleetCrew(false)} />}
+      {showSchedule && <Schedule user={user} vessels={vessels} onClose={()=>setShowSchedule(false)} />}
       {showExpenseRouter && <ExpenseRouter vessel={vessel} user={user} onClose={()=>setShowExpenseRouter(false)} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}
       {showAdmin && <AdminPanel user={user} onClose={()=>setShowAdmin(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
@@ -916,7 +920,7 @@ function NavGroups({ page, setPage, showFleet, isAdminUser }) {
 
 const iconBtn = { width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer" };
 
-function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,setShowFleetCrew,canManageFleet,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,setShowFleetCrew,setShowSchedule,canManageFleet,page,setPage,onLogout }) {
   const { t, lang, setLang } = useLang();
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1004,6 +1008,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>{t("nav.plans")}</button>
                 {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.team")}</button>}
                 {canManageFleet && <button onClick={()=>{setShowFleetCrew(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{lang==="es"?"Mi Equipo":"My Team"}</button>}
+                {canManageFleet && <button onClick={()=>{setShowSchedule(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCalendar size={17} color="#64748b"/>{lang==="es"?"Agenda":"Schedule"}</button>}
                 {isAdminUser && <button onClick={()=>{setPage("admin");setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>{t("nav.admin")}</button>}
                 {/* Selector de idioma */}
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"12px 14px"}}>
@@ -1080,6 +1085,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {Icon:IconCard,  label:t("nav.plans"), action:() => { setShowPlans(true); setShowUserMenu(false); }},
                 ...(canManageFleet?[{Icon:IconUser,  label:t("nav.team"),    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }}]:[]),
                 ...(canManageFleet?[{Icon:IconUser,  label:lang==="es"?"Mi Equipo":"My Team", action:() => { setShowFleetCrew(true); setShowUserMenu(false); }}]:[]),
+                ...(canManageFleet?[{Icon:IconCalendar, label:lang==="es"?"Agenda":"Schedule", action:() => { setShowSchedule(true); setShowUserMenu(false); }}]:[]),
               ].map(item => (
                 <button key={item.label} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>
                   <span style={{display:"flex",color:"#64748b"}}><item.Icon size={16} color="#64748b"/></span><span style={{fontSize:13,color:"#1e293b"}}>{item.label}</span>

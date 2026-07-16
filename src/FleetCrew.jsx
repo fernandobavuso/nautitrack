@@ -31,7 +31,7 @@ export default function FleetCrew({ user, onClose }) {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState("");
-  const [form, setForm] = useState({ name:"", role:"Capitán", phone:"", email:"", notes:"" });
+  const [form, setForm] = useState({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"" });
 
   useEffect(() => { load(); }, []);
 
@@ -54,9 +54,10 @@ export default function FleetCrew({ user, onClose }) {
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
       notes: form.notes.trim() || null,
+      rate: form.rate!=="" ? Number(form.rate) : null,
     });
     if (error) { flash("Error: " + error.message); return; }
-    setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"" });
+    setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"" });
     setAdding(false);
     flash(L("Agregado a tu equipo", "Added to your team"));
     load();
@@ -67,6 +68,12 @@ export default function FleetCrew({ user, onClose }) {
     await supabase.from("fleet_crew").delete().eq("id", c.id);
     flash(L("Quitado del equipo", "Removed from team"));
     load();
+  };
+
+  const updateRate = async (c, val) => {
+    const rate = val==="" ? null : Number(val);
+    setCrew(cs => cs.map(x => x.id===c.id ? {...x, rate} : x));
+    await supabase.from("fleet_crew").update({ rate }).eq("id", c.id);
   };
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
@@ -133,12 +140,16 @@ export default function FleetCrew({ user, onClose }) {
               <input value={form.email} onChange={e => setForm({...form, email:e.target.value})}
                 placeholder="correo@ejemplo.com" style={inp}/>
 
+              <label style={lbl}>{L("Tarifa por hora (USD)", "Hourly rate (USD)")}</label>
+              <input type="number" value={form.rate} onChange={e => setForm({...form, rate:e.target.value})}
+                placeholder={L("Ej: 25", "e.g. 25")} style={inp}/>
+
               <label style={lbl}>{L("Notas", "Notes")}</label>
               <input value={form.notes} onChange={e => setForm({...form, notes:e.target.value})}
                 placeholder={L("Ej: Licencia OUPV, disponible fines de semana", "e.g. OUPV license, available weekends")} style={inp}/>
 
               <div style={{display:"flex",gap:8,marginTop:14}}>
-                <button onClick={() => { setAdding(false); setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"" }); }}
+                <button onClick={() => { setAdding(false); setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"" }); }}
                   style={{flex:1,padding:"10px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#64748b",fontSize:13,fontWeight:600,cursor:"pointer"}}>
                   {L("Cancelar", "Cancel")}
                 </button>
@@ -180,6 +191,12 @@ export default function FleetCrew({ user, onClose }) {
                     <div style={{fontSize:12,color:"#64748b",marginTop:1}}>
                       <span style={{color:"#2563eb",fontWeight:600}}>{rl(c.role)}</span>
                       {c.phone && <> · {c.phone}</>}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:5}}>
+                      <span style={{fontSize:11,color:"#64748b"}}>{L("Tarifa/hora","Rate/hr")}:</span>
+                      <span style={{fontSize:11,color:"#64748b"}}>$</span>
+                      <input type="number" defaultValue={c.rate ?? ""} onBlur={e=>updateRate(c, e.target.value)}
+                        placeholder="0" style={{width:60,padding:"3px 6px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,color:"#0f172a"}}/>
                     </div>
                     {c.notes && (
                       <div style={{fontSize:11,color:"#94a3b8",marginTop:3,fontStyle:"italic"}}>{c.notes}</div>
