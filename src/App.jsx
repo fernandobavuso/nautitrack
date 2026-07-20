@@ -543,7 +543,9 @@ export default function App() {
         ...(updated.details || {}),
         _profile:      updated.profile      || {},
         _config:       updated.config       || {},
-        _subscription: updated.subscription || {},
+        // OJO: _subscription NO se escribe aquí. Solo activateSubscription() puede
+        // cambiar el plan. Antes se reescribia con el valor en memoria (a veces un
+        // default 'free') y borraba el plan activado desde el panel de admin.
         crew_roster:   updated.crewRoster   || [],
         motor_hours:   updated.motorHours   || {},
       },
@@ -551,6 +553,15 @@ export default function App() {
     // Remove frontend-only keys that don't exist in DB
     delete payload.id;
     delete payload.owner_id;
+    // La suscripcion SIEMPRE se toma de la base de datos, nunca del estado en
+    // memoria: el plan puede haberse activado desde el panel de admin y una copia
+    // vieja del barco lo borraria al guardar cualquier otra cosa.
+    try {
+      const { data: cur } = await supabase.from("vessels").select("details").eq("id", updated.id).single();
+      const dbSub = cur?.details?._subscription;
+      if (dbSub) payload.details = { ...payload.details, _subscription: dbSub };
+    } catch (e) { console.warn("No se pudo leer la suscripción actual:", e?.message); }
+
     // Estos campos solo se escriben si vienen definidos: si un objeto llega
     // incompleto (modales con copia congelada del barco), NO deben pisarse con 0.
     const numFuel = updated.fuel        ?? updated.fuel_hours;
