@@ -118,12 +118,18 @@ export default function Schedule({ user, vessels = [], onClose }) {
       days.push(dayShifts.length ? dayShifts.map(x => shiftText(x, false)).join(" + ") : L("Libre", "Off"));
     }
     let r = await notifyWeeklySchedule(p.phone, personName, days);
-    // Si la plantilla semanal aún no está aprobada, usar la de una sola línea
-    if (!r.ok) {
-      const list = upcoming.map(x => shiftText(x, true)).join("  |  ").replace(/\s{4,}/g, "   ").trim();
-      r = await notifySchedule(p.phone, personName, list);
+    if (r.ok) {
+      flash(L("Horario enviado (formato semanal)", "Schedule sent (weekly format)"));
+      return;
     }
-    flash(r.ok ? L("Horario enviado por WhatsApp", "Schedule sent via WhatsApp") : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
+    // Si la plantilla semanal falla, avisar por qué y usar la de una sola línea
+    console.warn("[Carive] horario_semanal falló:", r.error, "| params:", [personName, ...days]);
+    const weeklyErr = r.error || "?";
+    const list = upcoming.map(x => shiftText(x, true)).join("  |  ").replace(/\s{4,}/g, "   ").trim();
+    r = await notifySchedule(p.phone, personName, list);
+    flash(r.ok
+      ? L(`Enviado en formato simple. El semanal falló: ${weeklyErr}`, `Sent in simple format. Weekly failed: ${weeklyErr}`)
+      : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
   };
 
   const total  = (s) => (Number(s.hours) || 0) * (Number(s.rate) || 0);
