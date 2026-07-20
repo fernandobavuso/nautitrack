@@ -575,7 +575,7 @@ export default function App() {
           photo: v.photo_url || null,
           profile:      d._profile      || { firstName:"", lastName:"", phone:"", email:"", marinaAddress:"" },
           config:       d._config       || { distUnit:"nm", speedUnit:"kn", fuelUnit:"gal", tempUnit:"C" },
-          subscription: d._subscription || { plan:"Pro", price:79, currency:"USD", cycle:"Mensual" },
+          subscription: d._subscription || { plan:"free" },
           details:      d,
           crewRoster:   d.crew_roster || [],
           motorHours:   d.motor_hours || {},
