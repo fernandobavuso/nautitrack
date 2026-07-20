@@ -102,8 +102,8 @@ export default function Schedule({ user, vessels = [], onClose }) {
       if (x.vessel_name) parts.push(x.vessel_name);
       if (x.description) parts.push(x.description);
       if (x.hours)       parts.push(`${x.hours}h`);
-      return "• " + parts.join(" · ");
-    }).join("\n");
+      return parts.join(" ");
+    }).join("  |  ").replace(/\s{4,}/g, "   ").trim();
     const r = await notifySchedule(p.phone, personName, list);
     flash(r.ok ? L("Horario enviado por WhatsApp", "Schedule sent via WhatsApp") : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
   };
