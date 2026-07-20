@@ -4,7 +4,7 @@ import { useLang } from "./i18n.jsx";
 import { IconUser, IconTrash } from "./icons.jsx";
 
 // ─────────────────────────────────────────────────────────────
-// Mi Equipo — roster de tripulación del gestor de flota.
+// Personal — la gente que trabaja en los barcos del gestor de flota (sin acceso a la app).
 //
 // A diferencia de la tripulación por barco, esto es el POOL de gente
 // de confianza del gestor. No está atado a una embarcación: es "mi gente",
@@ -86,7 +86,7 @@ export default function FleetCrew({ user, onClose }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"20px 22px",borderBottom:"1px solid #e2e8f0"}}>
           <div>
             <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>
-              {L("Mi Equipo", "My Team")}
+              {L("Personal", "Staff")}
             </div>
             <div style={{fontSize:12,color:"#64748b",marginTop:2,lineHeight:1.5}}>
               {L(
@@ -107,7 +107,7 @@ export default function FleetCrew({ user, onClose }) {
           {/* Botón agregar */}
           {!adding && (
             <button onClick={() => setAdding(true)} style={{width:"100%",padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:18}}>
-              ＋ {L("Agregar a mi equipo", "Add to my team")}
+              ＋ {L("Agregar al personal", "Add staff member")}
             </button>
           )}
 

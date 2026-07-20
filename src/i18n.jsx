@@ -28,7 +28,7 @@ export const DICT = {
   "nav.profile":     { es: "Mi Perfil",    en: "My Profile" },
   "nav.vessel":      { es: "Mi Embarcación", en: "My Vessel" },
   "nav.plans":       { es: "Planes y Suscripción", en: "Plans & Subscription" },
-  "nav.team":        { es: "Equipo de gestión", en: "Management team" },
+  "nav.team":        { es: "Accesos a la app", en: "App access" },
   "nav.admin":       { es: "Panel de Administrador", en: "Admin Panel" },
   "nav.logout":      { es: "Cerrar Sesión", en: "Log out" },
   "nav.owner":       { es: "Propietario",  en: "Owner" },

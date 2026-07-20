@@ -91,7 +91,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
 
   const sendSchedule = async (personName) => {
     const p = team.find(t => t.name === personName);
-    if (!p || !p.phone) { flash(L("Esa persona no tiene teléfono en Mi Equipo", "That person has no phone in My Team")); return; }
+    if (!p || !p.phone) { flash(L("Esa persona no tiene teléfono en Personal", "That person has no phone in Staff")); return; }
     const upcoming = shifts
       .filter(x => x.person_name === personName && x.shift_date >= today)
       .sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1));

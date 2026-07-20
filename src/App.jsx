@@ -142,7 +142,7 @@ const PAYMENT_METHODS = ["Efectivo","Tarjeta","Transferencia","PayPal","Cheque",
 const INTERVALS       = ["Una vez","Diario","Semanal","Quincenal","Mensual","Trimestral","Semestral","Anual","Por horas","Por millas"];
 
 // Pool unificado de personas de un barco: capitán + tripulación (crew y crew2),
-// deduplicado por nombre. "Mi Equipo" (flota) se combina aparte donde haga falta.
+// deduplicado por nombre. El "Personal" (flota) se combina aparte donde haga falta.
 function getVesselPeople(vessel) {
   const out = [];
   if (vessel?.captain) out.push(`${vessel.captain} (Capitán)`);
@@ -389,7 +389,7 @@ export default function App() {
           task_id: String(data.id),
         }).then(() => {});
       }
-      // Avisar al asignado por WhatsApp si tiene teléfono en Mi Equipo
+      // Avisar al asignado por WhatsApp si tiene teléfono registrado en Personal
       if (task.assigneePhone) {
         const dateStr = task.nextDue
           ? new Date(task.nextDue + "T00:00:00").toLocaleDateString("es", { day:"numeric", month:"short", year:"numeric" })
@@ -1022,8 +1022,8 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 <button onClick={()=>{setShowProfile(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.profile")}</button>
                 <button onClick={()=>{setShowVesselDetails(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconBoat size={17} color="#64748b"/>{t("nav.vessel")}</button>
                 <button onClick={()=>{setShowPlans(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCard size={17} color="#64748b"/>{t("nav.plans")}</button>
-                {isAdminUser && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.team")}</button>}
-                {canManageFleet && <button onClick={()=>{setShowFleetCrew(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{lang==="es"?"Mi Equipo":"My Team"}</button>}
+                {canManageFleet && <button onClick={()=>{setShowFleetManagers(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{t("nav.team")}</button>}
+                {canManageFleet && <button onClick={()=>{setShowFleetCrew(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconUser size={17} color="#64748b"/>{lang==="es"?"Personal":"Staff"}</button>}
                 {canManageFleet && <button onClick={()=>{setShowSchedule(true);setMobileMenuOpen(false);}} style={mobileItemStyle}><IconCalendar size={17} color="#64748b"/>{lang==="es"?"Agenda":"Schedule"}</button>}
                 {isAdminUser && <button onClick={()=>{setPage("admin");setMobileMenuOpen(false);}} style={mobileItemStyle}><IconChart size={17} color="#64748b"/>{t("nav.admin")}</button>}
                 {/* Selector de idioma */}
@@ -1100,7 +1100,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {Icon:IconBoat,  label:t("nav.vessel"),  action:() => { setShowVesselDetails(true); setShowUserMenu(false); }},
                 {Icon:IconCard,  label:t("nav.plans"), action:() => { setShowPlans(true); setShowUserMenu(false); }},
                 ...(canManageFleet?[{Icon:IconUser,  label:t("nav.team"),    action:() => { setShowFleetManagers(true); setShowUserMenu(false); }}]:[]),
-                ...(canManageFleet?[{Icon:IconUser,  label:lang==="es"?"Mi Equipo":"My Team", action:() => { setShowFleetCrew(true); setShowUserMenu(false); }}]:[]),
+                ...(canManageFleet?[{Icon:IconUser,  label:lang==="es"?"Personal":"Staff", action:() => { setShowFleetCrew(true); setShowUserMenu(false); }}]:[]),
                 ...(canManageFleet?[{Icon:IconCalendar, label:lang==="es"?"Agenda":"Schedule", action:() => { setShowSchedule(true); setShowUserMenu(false); }}]:[]),
               ].map(item => (
                 <button key={item.label} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); item.action(); }} style={{...s.dropItem,gap:10}}>
@@ -1500,7 +1500,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
   const { t: tr } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
-  const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Mi Equipo (flota)
+  const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Personal (flota)
   const [fleetCrewDir,setFleetCrewDir]     = useState([]);   // directorio con teléfonos {name, phone}
   useEffect(() => {
     let alive = true;
@@ -1852,9 +1852,9 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [otherPerformed,setOtherPerformed] = useState("");   // si eligió "Otro"
   const [supervised,setSupervised]         = useState(initial?.supervised||"");       // técnico supervisado
   const [otherSupervised,setOtherSupervised] = useState("");
-  const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Mi Equipo
+  const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Personal
 
-  // Cargar el roster del gestor (Mi Equipo) para el desplegable de "Realizado por"
+  // Cargar el roster del gestor (Personal) para el desplegable de "Realizado por"
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -1907,7 +1907,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const provNames     = (vessel.providers||[]).map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
   const crewOptions   = getVesselPeople(vessel);
   // Servicio: crew + providers. Rest: crew only
-  // Quién realizó el trabajo: tripulación del barco + Mi Equipo (roster de flota)
+  // Quién realizó el trabajo: tripulación del barco + Personal (roster de flota)
   // + proveedores (si es un servicio técnico) + "Otro" para escribirlo libre.
   const allPerformed = type === "Servicio"
     ? [...new Set([...crewOptions, ...fleetCrewNames, ...provNames, "Otro"])].filter(Boolean)

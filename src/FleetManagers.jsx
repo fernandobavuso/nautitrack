@@ -82,16 +82,16 @@ export default function FleetManagers({ user, onClose }) {
     <div style={ov} onClick={onClose}>
       <div style={box} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-          <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>Equipo de gestión</div>
+          <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>Accesos a la app</div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:20}}>×</button>
         </div>
         <div style={{fontSize:13,color:"#64748b",marginBottom:18,lineHeight:1.5}}>
-          Invita a personas de tu equipo para que gestionen tus barcos contigo. Tendrán <strong>acceso total</strong>: ver y editar todos tus barcos, igual que tú.
+          Da acceso a la app a otras personas para que gestionen tus barcos contigo. Tendrán <strong>acceso total</strong>: ver y editar todos tus barcos, igual que tú. (Para el personal que solo trabaja en los barcos, usa <strong>Personal</strong>.)
         </div>
 
         {/* Agregar */}
         <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14,marginBottom:18}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>Agregar a alguien de tu equipo</div>
+          <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>Dar acceso a alguien</div>
           <div style={{display:"flex",gap:8}}>
             <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@ejemplo.com" style={{...inp,flex:1}}/>
             <button onClick={addManager} disabled={adding} style={{...btnPrimary,opacity:adding?.6:1,whiteSpace:"nowrap"}}>{adding?"Agregando...":"Dar acceso"}</button>
@@ -115,9 +115,9 @@ export default function FleetManagers({ user, onClose }) {
         {msg && <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14}}>{msg}</div>}
 
         {/* Lista */}
-        <div style={{fontSize:12,fontWeight:700,color:"#0a2540",marginBottom:8}}>Tu equipo ({managers.length})</div>
+        <div style={{fontSize:12,fontWeight:700,color:"#0a2540",marginBottom:8}}>Con acceso ({managers.length})</div>
         {loading ? <div style={{color:"#94a3b8",fontSize:13,padding:10}}>Cargando...</div> :
-         managers.length===0 ? <div style={{color:"#94a3b8",fontSize:13,padding:"10px 0"}}>Aún no has agregado a nadie. Solo tú gestionas tus barcos.</div> :
+         managers.length===0 ? <div style={{color:"#94a3b8",fontSize:13,padding:"10px 0"}}>Aún no le has dado acceso a nadie. Solo tú gestionas tus barcos.</div> :
          <div style={{display:"flex",flexDirection:"column",gap:8}}>
            {managers.map(m=>(
              <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
