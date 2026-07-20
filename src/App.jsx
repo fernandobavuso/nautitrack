@@ -28,7 +28,7 @@ import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
 import AdminPanel, { isAdmin } from "./AdminPanel";
 import { countUnread } from "./notifications";
-import { getPlan, isExpiringSoon, daysLeft, FounderBanner } from "./plans.jsx";
+import { getPlan, isExpiringSoon, daysLeft, FounderBanner, PLANS } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
 
 
@@ -3564,8 +3564,14 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
     onClose();
   };
 
-  const sub=vessel.subscription||{};
-  const planFeatures={Basic:["1 embarcación","Bitácora básica","Tareas ilimitadas","Soporte email"],Pro:["Hasta 3 embarcaciones","Bitácora con fotos","Records y reportes","Proveedores","Soporte prioritario"],Fleet:["Embarcaciones ilimitadas","Todo lo de Pro","API access","Reportes automáticos","Gerente de cuenta"]};
+  const sub = vessel.details?._subscription || {};
+  const currentPlan = getPlan(vessel);                 // plan REAL (el que controla las funciones)
+  const currentKey  = Object.keys(PLANS).find(k => PLANS[k].name === currentPlan.name) || "free";
+  const FEATURE_LABELS = {
+    tasks:"Tareas", log:"Bitácora", docs:"Documentos", weather:"Clima", marketplace:"Marketplace",
+    costs:"Finanzas", inventory:"Inventario", hourReminders:"Recordatorios por horas",
+    pdfReports:"Reportes PDF", multiFleet:"Gestión de flota",
+  };
   return (
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:560}} onClick={e=>e.stopPropagation()}>
@@ -3622,22 +3628,41 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
           {tab==="subscription"&&(
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <div style={{background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:12,padding:20,color:"#fff"}}>
-                <div style={{fontSize:11,opacity:.8,letterSpacing:"0.1em",marginBottom:4}}>PLAN ACTUAL</div>
-                <div style={{fontSize:24,fontWeight:800,marginBottom:4}}>{sub.plan||"Pro"}</div>
-                <div style={{fontSize:20,fontWeight:700}}>${sub.price||79}<span style={{fontSize:13,opacity:.8}}>/{sub.cycle==="Mensual"?"mes":"año"}</span></div>
-                <div style={{fontSize:12,opacity:.8,marginTop:8}}>Próximo cobro: {sub.nextBilling||"—"}</div>
+                <div style={{fontSize:11,opacity:.8,letterSpacing:"0.1em",marginBottom:4}}>PLAN ACTUAL · {vessel.name}</div>
+                <div style={{fontSize:24,fontWeight:800,marginBottom:4}}>{currentPlan.name}</div>
+                <div style={{fontSize:20,fontWeight:700}}>
+                  ${sub.billing_period==="yearly" ? currentPlan.priceYearly : currentPlan.priceMonthly}
+                  <span style={{fontSize:13,opacity:.8}}>/{sub.billing_period==="yearly"?"año":"mes"}</span>
+                </div>
+                <div style={{fontSize:12,opacity:.85,marginTop:8}}>
+                  {sub.expires_at ? `Vence: ${new Date(sub.expires_at).toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"})}` : currentPlan.tagline}
+                </div>
               </div>
+
+              <div style={{fontSize:11,color:"#64748b",background:"#f8fafc",borderRadius:8,padding:"9px 12px",lineHeight:1.5}}>
+                El plan se aplica <strong>por embarcación</strong>. Si gestionas varias, cada una tiene el suyo.
+              </div>
+
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-                {Object.entries(planFeatures).map(([plan,features])=>(
-                  <div key={plan} style={{border:`1.5px solid ${sub.plan===plan?"#0ea5e9":"#e2e8f0"}`,borderRadius:10,padding:"14px 12px",background:sub.plan===plan?"#f0f9ff":"#fff"}}>
-                    <div style={{fontWeight:700,fontSize:14,color:sub.plan===plan?"#0369a1":"#0f172a",marginBottom:4}}>{plan}</div>
-                    <div style={{fontSize:16,fontWeight:700,marginBottom:10}}>{plan==="Basic"?"$29":plan==="Pro"?"$79":"$149"}<span style={{fontSize:11,color:"#94a3b8"}}>/mes</span></div>
-                    {features.map(f=><div key={f} style={{fontSize:11,color:"#64748b",marginBottom:4}}>✓ {f}</div>)}
-                    {sub.plan!==plan&&<button style={{...s.btnPrimary,width:"100%",marginTop:10,fontSize:11,padding:"6px"}}>Cambiar</button>}
-                    {sub.plan===plan&&<div style={{fontSize:11,color:"#0369a1",fontWeight:600,marginTop:10,textAlign:"center"}}>✓ Plan actual</div>}
-                  </div>
-                ))}
+                {Object.entries(PLANS).map(([key,plan])=>{
+                  const isCurrent = key===currentKey;
+                  return (
+                    <div key={key} style={{border:`1.5px solid ${isCurrent?"#0ea5e9":"#e2e8f0"}`,borderRadius:10,padding:"14px 12px",background:isCurrent?"#f0f9ff":"#fff"}}>
+                      <div style={{fontWeight:700,fontSize:14,color:isCurrent?"#0369a1":"#0f172a",marginBottom:4}}>{plan.name}</div>
+                      <div style={{fontSize:16,fontWeight:700,marginBottom:2}}>${plan.priceMonthly}<span style={{fontSize:11,color:"#94a3b8"}}>/mes</span></div>
+                      {plan.priceYearly>0 && <div style={{fontSize:10,color:"#16a34a",fontWeight:600,marginBottom:8}}>${plan.priceYearly}/año</div>}
+                      <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>{plan.maxVessels===99?"Barcos ilimitados":`${plan.maxVessels} embarcación`}</div>
+                      {Object.entries(FEATURE_LABELS).filter(([f])=>plan.features[f]).map(([f,label])=>(
+                        <div key={f} style={{fontSize:11,color:"#64748b",marginBottom:3}}>✓ {label}</div>
+                      ))}
+                      {isCurrent
+                        ? <div style={{fontSize:11,color:"#0369a1",fontWeight:600,marginTop:10,textAlign:"center"}}>✓ Plan actual</div>
+                        : <a href="https://wa.me/17862577645" target="_blank" rel="noreferrer" style={{...s.btnPrimary,display:"block",width:"100%",marginTop:10,fontSize:11,padding:"6px",textAlign:"center",textDecoration:"none",boxSizing:"border-box"}}>Cambiar</a>}
+                    </div>
+                  );
+                })}
               </div>
+
               <div style={{padding:"12px 14px",background:"#fefce8",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e"}}>
                 💡 <strong>Métodos de pago:</strong> Aceptamos PayPal, tarjeta, transferencia bancaria y efectivo.
               </div>
