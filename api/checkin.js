@@ -178,7 +178,15 @@ export default async function handler(req, res) {
       .eq('id', vesselId)
       .single();
 
-    const notifyPhone = vessel?.details?.notify_phone;
+    // Teléfono de alertas: el del barco si lo definieron; si no, el del perfil del dueño
+    let notifyPhone = vessel?.details?.notify_phone;
+    if (!notifyPhone) {
+      const { data: v3 } = await supabase.from('vessels').select('owner_id').eq('id', vesselId).single();
+      if (v3?.owner_id) {
+        const { data: prof } = await supabase.from('profiles').select('phone').eq('id', v3.owner_id).maybeSingle();
+        notifyPhone = prof?.phone || null;
+      }
+    }
 
     // 3. Enviar WhatsApp si hay teléfono configurado
     const WA_TK = process.env.WHATSAPP_TOKEN    || process.env.WA_TOKEN;

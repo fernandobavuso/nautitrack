@@ -3821,7 +3821,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
             <VesselField key="city"    editMode={editMode} label="Ciudad 🌤"  value={gen.city}    onChange={v=>setGen(g=>({...g,city:v}))}    placeholder="Ej: Tucacas, Miami, Porlamar"/>
             <VesselField key="state"   editMode={editMode} label="Estado"     value={gen.state}   onChange={v=>setGen(g=>({...g,state:v}))}   placeholder="Ej: Falcón, Florida, Nueva Esparta"/>
             <VesselField key="country" editMode={editMode} label="País"       value={gen.country} onChange={v=>setGen(g=>({...g,country:v}))} placeholder="Ej: USA, España, México"/>
-            <VesselField key="notifyPhone" editMode={editMode} label="📲 WhatsApp Alertas" value={gen.notifyPhone} onChange={v=>setGen(g=>({...g,notifyPhone:v}))} placeholder="Ej: +584141234567 o +13051234567"/>
+            <VesselField key="notifyPhone" editMode={editMode} label="📲 WhatsApp Alertas (opcional)" value={gen.notifyPhone} onChange={v=>setGen(g=>({...g,notifyPhone:v}))} placeholder="Vacío = va a tu teléfono del perfil"/>
             <VesselField key="captain" editMode={editMode} label="Capitán" value={gen.captain} onChange={v=>setGen(g=>({...g,captain:v}))} placeholder="Nombre del capitán"/>
             <VesselField key="boatOwnerName" editMode={editMode} label="Dueño del barco" value={gen.boatOwnerName} onChange={v=>setGen(g=>({...g,boatOwnerName:v}))} placeholder="A quién se le envían los reportes"/>
             <VesselField key="boatOwnerEmail" editMode={editMode} label="Email del dueño" value={gen.boatOwnerEmail} onChange={v=>setGen(g=>({...g,boatOwnerEmail:v}))} placeholder="correo@ejemplo.com"/>
