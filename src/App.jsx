@@ -458,12 +458,21 @@ export default function App() {
       setVessels(vs => vs.map(v => {
         if (v.id !== vesselId) return v;
         let updated = { ...v, log: [mapped, ...(v.log||[])] };
+        // Nivel de combustible: de una carga (tipo Combustible) o del regreso de una
+        // salida (fuelIn = lo que quedó en el tanque al volver, que es el nivel actual).
         const fq = Number(entry.fuelQty);
+        const fIn = Number(entry.fuelIn);
+        let newFuel = null;
         if (entry.type === "Combustible" && entry.fuelQty !== null && entry.fuelQty !== "" && !isNaN(fq)) {
-          updated.fuel = fq;
+          newFuel = fq;
+        } else if (entry.type === "Salida" && entry.fuelIn !== null && entry.fuelIn !== "" && entry.fuelIn !== undefined && !isNaN(fIn)) {
+          newFuel = fIn;
+        }
+        if (newFuel !== null) {
+          updated.fuel = newFuel;
           updated.fuelUnit = entry.fuelUnit || v.fuelUnit;
           // Persistir: si no, al refrescar se pierde y el dashboard vuelve al valor viejo
-          supabase.from("vessels").update({ fuel: fq, fuel_unit: updated.fuelUnit }).eq("id", vesselId)
+          supabase.from("vessels").update({ fuel: newFuel, fuel_unit: updated.fuelUnit }).eq("id", vesselId)
             .then(({ error }) => { if (error) console.error("[Carive] no se pudo guardar el combustible:", error.message); });
         }
         // Actualizar horas del motor/generador desde cualquier registro que las traiga
@@ -2246,7 +2255,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                   <div><label style={s.label}>Hora de Llegada</label><input type="time" value={arrTime} onChange={e=>setArrTime(e.target.value)} style={s.input}/></div>
-                  <div><label style={s.label}>Combustible al regresar ({fuelUnit})</label><input type="number" value={fuelIn} onChange={e=>setFuelIn(e.target.value)} style={s.input}/></div>
+                  <div><label style={s.label}>Combustible al regresar ({fuelUnit})</label><input type="number" value={fuelIn} onChange={e=>setFuelIn(e.target.value)} style={s.input}/><div style={{fontSize:10,color:"#94a3b8",marginTop:3}}>Actualiza el nivel del tanque en el panel</div></div>
                 </div>
                 {getMotorLabels(vessel).length>0&&<div>
                   <label style={s.label}>Horas de Motores al regresar</label>
