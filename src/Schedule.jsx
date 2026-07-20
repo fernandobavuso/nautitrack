@@ -37,7 +37,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const [filterPerson, setFilterPerson] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo]     = useState("");
-  const [form, setForm] = useState({ date: today, personName:"", vesselName:"", description:"Lavada", hours:"", rate:"" });
+  const [form, setForm] = useState({ date: today, personName:"", vesselName:"", works:[], notes:"", hours:"", rate:"" });
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatWeeks, setRepeatWeeks] = useState(1);
 
@@ -66,7 +66,8 @@ export default function Schedule({ user, vessels = [], onClose }) {
       person_name: form.personName.trim(),
       vessel_name: form.vesselName || null,
       shift_date:  form.date,
-      description: form.description || null,
+      description: form.works.length ? form.works.join(" + ") : null,
+      notes:       form.notes.trim() || null,
       hours:       form.hours !== "" ? Number(form.hours) : null,
       rate:        form.rate  !== "" ? Number(form.rate)  : null,
       work_status:    "Agendado",
@@ -75,7 +76,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
     const { data, error } = await supabase.from("work_shifts").insert(row).select().single();
     if (error) { flash("Error: " + error.message); return; }
     setShifts(s => [...s, data].sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1)));
-    setForm({ date: today, personName:"", vesselName:"", description:"Lavada", hours:"", rate:"" });
+    setForm({ date: today, personName:"", vesselName:"", works:[], notes:"", hours:"", rate:"" });
     setAdding(false);
     flash(L("Turno agendado", "Shift scheduled"));
   };
@@ -145,7 +146,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
     for (let w = 1; w <= weeks; w++) {
       rows.push({
         manager_id: user.id, person_name: sh.person_name, vessel_name: sh.vessel_name,
-        shift_date: addDays(sh.shift_date, 7 * w), description: sh.description,
+        shift_date: addDays(sh.shift_date, 7 * w), description: sh.description, notes: sh.notes,
         hours: sh.hours, rate: sh.rate, work_status: "Agendado", payment_status: "Pendiente",
       });
     }
@@ -163,7 +164,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
       for (let w = 1; w <= weeks; w++) {
         rows.push({
           manager_id: user.id, person_name: sh.person_name, vessel_name: sh.vessel_name,
-          shift_date: addDays(sh.shift_date, 7 * w), description: sh.description,
+          shift_date: addDays(sh.shift_date, 7 * w), description: sh.description, notes: sh.notes,
           hours: sh.hours, rate: sh.rate, work_status: "Agendado", payment_status: "Pendiente",
         });
       }
@@ -178,14 +179,14 @@ export default function Schedule({ user, vessels = [], onClose }) {
   // Exportar a CSV (mismas columnas que la hoja de cálculo)
   const exportCSV = () => {
     if (filtered.length === 0) { flash(L("No hay turnos para exportar", "Nothing to export")); return; }
-    const head = ["Fecha","Día","Persona","Barco","Descripción","Horas","Tarifa","Total","Estado","Pago"];
+    const head = ["Fecha","Día","Persona","Barco","Trabajo","Notas","Horas","Tarifa","Total","Estado","Pago"];
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = filtered.map(s => [
-      s.shift_date, dayName(s.shift_date), s.person_name, s.vessel_name || "", s.description || "",
+      s.shift_date, dayName(s.shift_date), s.person_name, s.vessel_name || "", s.description || "", s.notes || "",
       Number(s.hours) || 0, Number(s.rate) || 0, total(s).toFixed(2),
       s.work_status || "", s.payment_status || "",
     ].map(esc).join(","));
-    const totalRow = ["","","","","", totalHours, "", grandTotal.toFixed(2), "", ""].map(esc).join(",");
+    const totalRow = ["","","","","","", totalHours, "", grandTotal.toFixed(2), "", ""].map(esc).join(",");
     const csv = "\uFEFF" + [head.map(esc).join(","), ...rows, totalRow].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const a = document.createElement("a");
@@ -268,9 +269,20 @@ export default function Schedule({ user, vessels = [], onClose }) {
                   </select>
                 </div>
                 <div style={{flex:1}}>
-                  <label style={lbl}>{L("Trabajo", "Work")}</label>
-                  <select value={form.description} onChange={e => setForm({...form, description:e.target.value})} style={inp}>
-                    {WORK_TYPES.map(w => <option key={w} value={w}>{w}</option>)}
+                  <label style={lbl}>{L("Trabajo (puedes elegir varios)", "Work (pick one or more)")}</label>
+                  {form.works.length > 0 && (
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                      {form.works.map(w => (
+                        <span key={w} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#1e40af",border:"1px solid #bfdbfe",borderRadius:20,padding:"4px 10px",fontSize:12,fontWeight:600}}>
+                          {w}
+                          <button type="button" onClick={()=>setForm(f=>({...f,works:f.works.filter(x=>x!==w)}))} style={{background:"none",border:"none",color:"#1e40af",cursor:"pointer",fontSize:15,lineHeight:1,padding:0}}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <select value="" onChange={e=>{const v=e.target.value; if(v&&!form.works.includes(v)) setForm(f=>({...f,works:[...f.works,v]})); e.target.value="";}} style={inp}>
+                    <option value="">{form.works.length ? L("＋ Agregar otro...","＋ Add another...") : L("Elegir...","Choose...")}</option>
+                    {WORK_TYPES.filter(w=>!form.works.includes(w)).map(w => <option key={w} value={w}>{w}</option>)}
                   </select>
                 </div>
               </div>
@@ -284,6 +296,13 @@ export default function Schedule({ user, vessels = [], onClose }) {
                   <label style={lbl}>{L("Tarifa/hora ($)", "Rate/hr ($)")}</label>
                   <input type="number" value={form.rate} onChange={e => setForm({...form, rate:e.target.value})} placeholder="Ej: 25" style={inp}/>
                 </div>
+              </div>
+
+              <div>
+                <label style={lbl}>{L("Notas (opcional)", "Notes (optional)")}</label>
+                <textarea value={form.notes} onChange={e => setForm({...form, notes:e.target.value})} rows={2}
+                  placeholder={L("Ej: llevar cera nueva, el dueño llega a las 3pm...", "e.g. bring new wax, owner arrives at 3pm...")}
+                  style={{...inp, resize:"vertical", fontFamily:"inherit"}}/>
               </div>
 
               {(form.hours && form.rate) ? (
@@ -396,6 +415,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
                         {s.vessel_name && <> · <span style={{color:"#2563eb",fontWeight:600}}>{s.vessel_name}</span></>}
                       </div>
                       {s.description && <div style={{fontSize:12,color:"#475569",marginTop:3}}>{s.description}</div>}
+                      {s.notes && <div style={{fontSize:11,color:"#94a3b8",marginTop:2,fontStyle:"italic"}}>{s.notes}</div>}
                     </div>
                     <div style={{textAlign:"right",flexShrink:0}}>
                       <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>${total(s).toLocaleString("en-US",{maximumFractionDigits:2})}</div>
