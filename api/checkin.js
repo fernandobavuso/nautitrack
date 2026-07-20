@@ -181,13 +181,17 @@ export default async function handler(req, res) {
     const notifyPhone = vessel?.details?.notify_phone;
 
     // 3. Enviar WhatsApp si hay teléfono configurado
-    if (notifyPhone && process.env.WA_TOKEN && process.env.WA_PHONE_ID) {
+    const WA_TK = process.env.WHATSAPP_TOKEN    || process.env.WA_TOKEN;
+    const WA_ID = process.env.WHATSAPP_PHONE_ID || process.env.WA_PHONE_ID;
+
+    if (notifyPhone && WA_TK && WA_ID) {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: true });
       const dateStr = now.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' });
 
       const actionEmoji = action === 'checkin' ? '✅' : '🔴';
       const actionText  = action === 'checkin' ? 'CHECK-IN'  : 'CHECK-OUT';
+      const detail = (action === 'checkout' && notes) ? notes : (locationNote || '');
 
       const message = `${actionEmoji} *NautiTrack — ${actionText}*\n\n` +
         `👤 ${crewName} (${crewRole || 'Marinero'})\n` +
@@ -195,28 +199,57 @@ export default async function handler(req, res) {
         `📍 ${vessel?.marina || ''}\n` +
         `🕐 ${timeStr} · ${dateStr}` +
         (taskName ? `\n📋 Tarea: ${taskName}` : '') +
-        (action === 'checkout' && notes ? `\n📝 "${notes}"` : (locationNote ? `\n📝 "${locationNote}"` : ''));
+        (detail ? `\n📝 "${detail}"` : '');
 
+      const to  = notifyPhone.replace(/[^0-9]/g, '');
+      const url = `https://graph.facebook.com/v21.0/${WA_ID}/messages`;
+      const hdr = { 'Authorization': `Bearer ${WA_TK}`, 'Content-Type': 'application/json' };
+
+      // WhatsApp solo permite texto libre dentro de la ventana de 24h, así que se
+      // intenta primero con plantilla aprobada (llega siempre) y si falla, texto libre.
+      // Parámetros sin saltos de línea (Meta los rechaza).
+      const clean = (v) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, 200) || '—';
+      const tplParams = [
+        clean(vessel?.name || 'Tu embarcación'),                 // {{1}} barco
+        clean(action === 'checkin' ? 'Check-in' : 'Check-out'),  // {{2}} movimiento
+        clean(crewName),                                         // {{3}} persona
+        clean(`${timeStr} · ${dateStr}`),                        // {{4}} hora
+        clean(taskName || detail || 'Sin detalle'),              // {{5}} detalle
+      ];
+
+      let sent = false;
       try {
-        await fetch(`https://graph.facebook.com/v21.0/${process.env.WA_PHONE_ID}/messages`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.WA_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
+        const r = await fetch(url, {
+          method: 'POST', headers: hdr,
           body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            to: notifyPhone.replace(/[^0-9]/g, ''),
-            type: 'text',
-            text: { body: message },
+            messaging_product: 'whatsapp', to, type: 'template',
+            template: {
+              name: 'checkin_aviso',
+              language: { code: 'es' },
+              components: [{ type: 'body', parameters: tplParams.map(t => ({ type: 'text', text: t })) }],
+            },
           }),
         });
+        const j = await r.json();
+        if (j.error) console.warn('[checkin] plantilla checkin_aviso falló:', j.error.message);
+        else sent = true;
+      } catch (e) { console.error('[checkin] error plantilla:', e.message); }
 
-        // Marcar como notificado
-        await supabase.from('crew_logs').update({ notified: true }).eq('id', log.id);
-      } catch(e) {
-        console.error('WhatsApp error:', e);
+      if (!sent) {
+        try {
+          const r2 = await fetch(url, {
+            method: 'POST', headers: hdr,
+            body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: message } }),
+          });
+          const j2 = await r2.json();
+          if (j2.error) console.warn('[checkin] texto libre falló:', j2.error.message);
+          else sent = true;
+        } catch (e) { console.error('[checkin] error texto:', e.message); }
       }
+
+      if (sent) await supabase.from('crew_logs').update({ notified: true }).eq('id', log.id);
+    } else if (notifyPhone) {
+      console.warn('[checkin] no hay WHATSAPP_TOKEN/WHATSAPP_PHONE_ID configurados en el entorno');
     }
 
     return res.status(200).json({ success: true, log, completedTask });
