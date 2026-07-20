@@ -38,6 +38,8 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const [from, setFrom] = useState("");
   const [to, setTo]     = useState("");
   const [form, setForm] = useState({ date: today, personName:"", vesselName:"", description:"Lavada", hours:"", rate:"" });
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
 
   useEffect(() => { load(); }, []);
 
@@ -130,6 +132,67 @@ export default function Schedule({ user, vessels = [], onClose }) {
     flash(r.ok
       ? L(`Enviado en formato simple. El semanal falló: ${weeklyErr}`, `Sent in simple format. Weekly failed: ${weeklyErr}`)
       : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
+  };
+
+  const addDays = (dateStr, n) => {
+    const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+
+  // Repetir UN turno hacia las próximas N semanas
+  const repeatShift = async (sh, weeks = 1) => {
+    const rows = [];
+    for (let w = 1; w <= weeks; w++) {
+      rows.push({
+        manager_id: user.id, person_name: sh.person_name, vessel_name: sh.vessel_name,
+        shift_date: addDays(sh.shift_date, 7 * w), description: sh.description,
+        hours: sh.hours, rate: sh.rate, work_status: "Agendado", payment_status: "Pendiente",
+      });
+    }
+    const { data, error } = await supabase.from("work_shifts").insert(rows).select();
+    if (error) { flash("Error: " + error.message); return; }
+    setShifts(x => [...x, ...(data || [])].sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1)));
+    flash(L(`Repetido ${weeks} semana(s)`, `Repeated ${weeks} week(s)`));
+  };
+
+  // Repetir TODOS los turnos filtrados hacia las próximas N semanas (armar la quincena de un tap)
+  const repeatAll = async (weeks) => {
+    if (filtered.length === 0) { flash(L("No hay turnos para repetir", "No shifts to repeat")); return; }
+    const rows = [];
+    filtered.forEach(sh => {
+      for (let w = 1; w <= weeks; w++) {
+        rows.push({
+          manager_id: user.id, person_name: sh.person_name, vessel_name: sh.vessel_name,
+          shift_date: addDays(sh.shift_date, 7 * w), description: sh.description,
+          hours: sh.hours, rate: sh.rate, work_status: "Agendado", payment_status: "Pendiente",
+        });
+      }
+    });
+    const { data, error } = await supabase.from("work_shifts").insert(rows).select();
+    if (error) { flash("Error: " + error.message); return; }
+    setShifts(x => [...x, ...(data || [])].sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1)));
+    setRepeatOpen(false);
+    flash(L(`${rows.length} turnos creados`, `${rows.length} shifts created`));
+  };
+
+  // Exportar a CSV (mismas columnas que la hoja de cálculo)
+  const exportCSV = () => {
+    if (filtered.length === 0) { flash(L("No hay turnos para exportar", "Nothing to export")); return; }
+    const head = ["Fecha","Día","Persona","Barco","Descripción","Horas","Tarifa","Total","Estado","Pago"];
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = filtered.map(s => [
+      s.shift_date, dayName(s.shift_date), s.person_name, s.vessel_name || "", s.description || "",
+      Number(s.hours) || 0, Number(s.rate) || 0, total(s).toFixed(2),
+      s.work_status || "", s.payment_status || "",
+    ].map(esc).join(","));
+    const totalRow = ["","","","","", totalHours, "", grandTotal.toFixed(2), "", ""].map(esc).join(",");
+    const csv = "\uFEFF" + [head.map(esc).join(","), ...rows, totalRow].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `agenda_${filterPerson ? filterPerson.replace(/\s+/g, "_") + "_" : ""}${today}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    flash(L("CSV descargado", "CSV downloaded"));
   };
 
   const total  = (s) => (Number(s.hours) || 0) * (Number(s.rate) || 0);
@@ -253,6 +316,39 @@ export default function Schedule({ user, vessels = [], onClose }) {
             </button>
           )}
 
+          {/* Acciones sobre lo filtrado */}
+          {filtered.length > 0 && (
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
+              <button onClick={() => setRepeatOpen(o => !o)} style={actBtn}>🔁 {L("Repetir","Repeat")}</button>
+              <button onClick={exportCSV} style={actBtn}>⬇️ {L("Exportar CSV","Export CSV")}</button>
+            </div>
+          )}
+
+          {/* Panel de repetición */}
+          {repeatOpen && (
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14,marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:4}}>{L("Repetir estos turnos","Repeat these shifts")}</div>
+              <div style={{fontSize:12,color:"#0c4a6e",lineHeight:1.5,marginBottom:10}}>
+                {L(`Se copiarán los ${filtered.length} turnos mostrados a las próximas semanas, mismo día de la semana.`,
+                   `The ${filtered.length} shifts shown will be copied to the coming weeks, same weekday.`)}
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+                <div style={{flex:1}}>
+                  <label style={lbl}>{L("¿Cuántas semanas?","How many weeks?")}</label>
+                  <select value={repeatWeeks} onChange={e => setRepeatWeeks(Number(e.target.value))} style={inp}>
+                    <option value={1}>{L("1 semana","1 week")}</option>
+                    <option value={2}>{L("2 semanas (quincena)","2 weeks")}</option>
+                    <option value={3}>{L("3 semanas","3 weeks")}</option>
+                    <option value={4}>{L("4 semanas (mes)","4 weeks")}</option>
+                  </select>
+                </div>
+                <button onClick={() => repeatAll(repeatWeeks)} style={{padding:"10px 18px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                  {L("Crear","Create")}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Resumen de totales */}
           {filtered.length > 0 && (
             <div style={{background:"#0a2540",borderRadius:12,padding:"14px 16px",marginBottom:14,color:"#fff"}}>
@@ -316,7 +412,8 @@ export default function Schedule({ user, vessels = [], onClose }) {
                       style={{fontSize:11,fontWeight:700,padding:"4px 8px",borderRadius:20,border:`1.5px solid ${PS_COLOR[s.payment_status]||"#dc2626"}`,cursor:"pointer",color:PS_COLOR[s.payment_status]||"#dc2626",background:"#fff"}}>
                       {PAY_STATUS.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
-                    <button onClick={() => removeShift(s.id)} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:"#ef4444",fontSize:14}}>{L("Eliminar","Delete")}</button>
+                    <button onClick={() => repeatShift(s, 1)} title={L("Repetir la próxima semana","Repeat next week")} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:12,fontWeight:600}}>🔁 {L("Repetir","Repeat")}</button>
+                    <button onClick={() => removeShift(s.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#ef4444",fontSize:14}}>{L("Eliminar","Delete")}</button>
                   </div>
                 </div>
               ))}
@@ -330,5 +427,6 @@ export default function Schedule({ user, vessels = [], onClose }) {
 
 const ov  = {position:"fixed",inset:0,background:"rgba(10,37,64,.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000,padding:20};
 const box = {background:"#fff",borderRadius:18,maxWidth:640,width:"100%",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 20px 60px rgba(10,37,64,.25)"};
+const actBtn = {flex:1,padding:"9px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#475569",fontSize:13,fontWeight:700,cursor:"pointer"};
 const lbl = {display:"block",fontSize:12,color:"#475569",fontWeight:600,marginBottom:5,marginTop:10};
 const inp = {width:"100%",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",boxSizing:"border-box",outline:"none"};
