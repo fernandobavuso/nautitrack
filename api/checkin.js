@@ -201,7 +201,7 @@ export default async function handler(req, res) {
       const actionText  = action === 'checkin' ? 'CHECK-IN'  : 'CHECK-OUT';
       const detail = (action === 'checkout' && notes) ? notes : (locationNote || '');
 
-      const message = `${actionEmoji} *NautiTrack — ${actionText}*\n\n` +
+      const message = `${actionEmoji} *Carive — ${actionText}*\n\n` +
         `👤 ${crewName} (${crewRole || 'Marinero'})\n` +
         `🚢 ${vessel?.name || 'Tu embarcación'}\n` +
         `📍 ${vessel?.marina || ''}\n` +

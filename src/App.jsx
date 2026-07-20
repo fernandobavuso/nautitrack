@@ -2770,7 +2770,7 @@ function ReportModal({ vessel, onClose }) {
   <div style="background:#0a1628;color:rgba(255,255,255,0.5);padding:20px 56px;display:flex;justify-content:space-between;align-items:center;margin-top:40px;">
     <div style="display:flex;align-items:center;gap:8px;">
       <div style="font-size:14px;font-weight:700;color:#38bdf8;">Carive</div>
-      <div style="font-size:11px;">— nautitrack.vercel.app</div>
+      <div style="font-size:11px;">— app.carive.co</div>
     </div>
     <div style="font-size:11px;">Documento confidencial · ${vessel.name} · ${today}</div>
   </div>
@@ -3344,7 +3344,7 @@ function NotificationsModal({ vessel, user, onClose }) {
       border: "#fecaca",
       generate: () => overdueTasks.length === 0
         ? `✅ *Carive* — ${vessel.name}\n\nSin tareas vencidas. ¡Todo al día!`
-        : `🚨 *Carive* — ${vessel.name}\n\n⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:\n\n${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
+        : `🚨 *Carive* — ${vessel.name}\n\n⚠️ ${overdueTasks.length} tarea${overdueTasks.length>1?"s":""} vencida${overdueTasks.length>1?"s":""}:\n\n${overdueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: app.carive.co`
     },
     {
       key: "due_soon",
@@ -3355,7 +3355,7 @@ function NotificationsModal({ vessel, user, onClose }) {
       border: "#fde68a",
       generate: () => dueTasks.length === 0
         ? `✅ *Carive* — ${vessel.name}\n\nSin tareas por vencer esta semana.`
-        : `⏰ *Carive* — ${vessel.name}\n\n📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:\n\n${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: nautitrack.vercel.app`
+        : `⏰ *Carive* — ${vessel.name}\n\n📅 ${dueTasks.length} tarea${dueTasks.length>1?"s":""} por vencer:\n\n${dueTasks.slice(0,5).map(t=>`• ${t.system} — ${t.name} (vence: ${fmtDate(t.nextDue)})`).join("\n")}\n\n📱 Ver detalles: app.carive.co`
     },
     {
       key: "status",
@@ -3364,7 +3364,7 @@ function NotificationsModal({ vessel, user, onClose }) {
       color: "#2563eb",
       bg: "#eff6ff",
       border: "#bfdbfe",
-      generate: () => `📊 *Carive* — Reporte ${vessel.name}\n\n🚢 *${vessel.name}* · ${vessel.type||""}\n📍 ${vessel.marina||""}\n\n🔧 Motor: ${vessel.engineHours||0}h\n⚡ Generador: ${vessel.genHours||0}h\n⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}\n\n✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}\n⚠️ Vencidas: ${overdueTasks.length}\n📋 Bitácora: ${(vessel.log||[]).length} entradas\n\n📱 nautitrack.vercel.app`
+      generate: () => `📊 *Carive* — Reporte ${vessel.name}\n\n🚢 *${vessel.name}* · ${vessel.type||""}\n📍 ${vessel.marina||""}\n\n🔧 Motor: ${vessel.engineHours||0}h\n⚡ Generador: ${vessel.genHours||0}h\n⛽ Combustible: ${vessel.fuel||0} ${vessel.fuelUnit||"gal"}\n\n✅ Tareas al día: ${(vessel.tasks||[]).filter(t=>t.status==="ok").length}\n⚠️ Vencidas: ${overdueTasks.length}\n📋 Bitácora: ${(vessel.log||[]).length} entradas\n\n📱 app.carive.co`
     },
     {
       key: "custom",
@@ -4267,7 +4267,7 @@ function CaptainManagerModal({ vessel, user, onClose }) {
         .single();
 
       if (!profile) {
-        setMsg("⚠️ Ese email no tiene cuenta en Carive. Pídele que se registre primero en nautitrack.vercel.app");
+        setMsg("⚠️ Ese email no tiene cuenta en Carive. Pídele que se registre primero en app.carive.co");
         setSaving(false); return;
       }
 
@@ -4394,7 +4394,7 @@ function CaptainManagerModal({ vessel, user, onClose }) {
 
           {/* Instrucciones */}
           <div style={{marginTop:16,padding:"10px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,fontSize:11,color:"#64748b",lineHeight:1.6}}>
-            💡 El capitán debe crear su cuenta en <strong>nautitrack.vercel.app</strong> primero. Una vez agregado aquí, al iniciar sesión verá automáticamente la vista de capitán de este barco.
+            💡 El capitán debe crear su cuenta en <strong>app.carive.co</strong> primero. Una vez agregado aquí, al iniciar sesión verá automáticamente la vista de capitán de este barco.
           </div>
         </div>
       </div>

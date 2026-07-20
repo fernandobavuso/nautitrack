@@ -51,7 +51,7 @@ export default function QRPanel({ vessel, onClose }) {
         @media print { body { -webkit-print-color-adjust:exact; } }
       </style></head><body>
       <div class="box">
-        <div class="logo">NAUTITRACK.VZ</div>
+        <div class="logo">CARIVE</div>
         <h2>🚢 ${vessel.name}</h2>
         <div class="sub">${vessel.marina||""}</div>
         <img src="${`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(checkinUrl)}&margin=10&color=1e3a5f`}" width="240" height="240"/>

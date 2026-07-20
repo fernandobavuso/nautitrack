@@ -102,7 +102,7 @@ export default function InviteCaptain({ vessel, onClose }) {
             </div>
             {msg&&<div style={{padding:"8px 12px",borderRadius:8,fontSize:12,fontWeight:600,marginBottom:10,background:msg.type==="success"?"#f0fdf4":"#fff5f5",color:msg.type==="success"?"#15803d":"#dc2626"}}>{msg.text}</div>}
             <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>
-              💡 La persona debe crear su cuenta en <strong>nautitrack.vercel.app</strong> primero con ese email.
+              💡 La persona debe crear su cuenta en <strong>app.carive.co</strong> primero con ese email.
             </div>
             <button onClick={invite} disabled={saving} style={{...s.btn,opacity:saving?0.6:1}}>
               {saving?"⏳ Guardando...":"＋ Dar acceso"}
