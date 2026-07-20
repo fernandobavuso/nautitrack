@@ -136,6 +136,8 @@ const VISIT_TYPES_EN = {
 };
 
 export const logTypeL   = (t, lang) => (lang === "en" ? (LOG_TYPES_EN[t]   || t) : t);
+const SERVICE_TYPES_EN = { "Preventivo":"Preventive", "Reactivo":"Reactive", "Reparación":"Repair" };
+export const serviceTypeL = (t, lang) => (lang === "en" ? (SERVICE_TYPES_EN[t] || t) : t);
 export const visitTypeL = (t, lang) => (lang === "en" ? (VISIT_TYPES_EN[t] || t) : t);
 const SERVICE_TYPES   = ["Preventivo","Reactivo","Reparación"];
 const PAYMENT_METHODS = ["Efectivo","Tarjeta","Transferencia","PayPal","Cheque","Otro"];
@@ -1814,7 +1816,7 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
       )}
 
       <div style={s.toolbar}>
-        <h2 style={s.toolbarTitle}>Bitácora — {vessel.name}</h2>
+        <h2 style={s.toolbarTitle}>{lang==="es"?"Bitácora":"Logbook"} — {vessel.name}</h2>
         <div style={{display:"flex",gap:6,flex:1,alignItems:"center",flexWrap:"wrap"}}>
           {["Todos",...LOG_TYPES].map(f=>(
             <button key={f} onClick={()=>setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0",fontSize:11}}>{f==="Todos" ? tr("tasks.all") : logTypeL(f, lang)}</button>
@@ -1975,13 +1977,13 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:580}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>📓 {initial?"Editar":"Nueva"} Entrada</div>
+          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>📓 {lang==="es"?(initial?"Editar Entrada":"Nueva Entrada"):(initial?"Edit Entry":"New Entry")}</div>
           <button onClick={onClose} style={s.modalClose}>✕</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:14}}>
 
           <div>
-            <label style={s.label}>Tipo <span style={{color:"#dc2626"}}>*</span></label>
+            <label style={s.label}>{lang==="es"?"Tipo":"Type"} <span style={{color:"#dc2626"}}>*</span></label>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
               {LOG_TYPES.map(t=><button key={t} onClick={()=>{setType(t); if(t!=="Visita") setVisitTypes([]);}} style={{...s.typeChip,background:type===t?LOG_COLOR[t]+"22":"#f8fafc",borderColor:type===t?LOG_COLOR[t]:"#e2e8f0",color:type===t?LOG_COLOR[t]:"#64748b",fontWeight:type===t?700:400}}>{logTypeL(t, lang)}</button>)}
             </div>
@@ -2010,7 +2012,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
           </div>
 
           <div>
-            <label style={s.label}>Fecha <span style={{color:"#dc2626"}}>*</span></label>
+            <label style={s.label}>{lang==="es"?"Fecha":"Date"} <span style={{color:"#dc2626"}}>*</span></label>
             <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={s.input}/>
             {errors.date&&<div style={s.errMsg}>{errors.date}</div>}
           </div>
@@ -2251,8 +2253,8 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
 
         </div>
         <div style={s.modalFooter}>
-          <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
-          <button style={s.btnPrimary} onClick={handleSave}>{initial?"Guardar Cambios":"Guardar Entrada"}</button>
+          <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cancelar":"Cancel"}</button>
+          <button style={s.btnPrimary} onClick={handleSave}>{lang==="es"?(initial?"Guardar Cambios":"Guardar Entrada"):(initial?"Save Changes":"Save Entry")}</button>
         </div>
       </div>
     </div>
@@ -2314,6 +2316,7 @@ function PhotoFld({ photos, setPhotos, err, label="Fotos", userId, vesselId }) {
   );
 }
 function RecordsPage({ vessel }) {
+  const { lang } = useLang();
   const [mainFilter,setMainFilter] = useState("Servicio");
   const [subFilter,setSubFilter]   = useState("Todos");
   const [showReport,setShowReport] = useState(false);
@@ -2348,7 +2351,7 @@ function RecordsPage({ vessel }) {
         <div style={{display:"flex",gap:6,marginBottom:12}}>
           {["Todos","Preventivo","Reactivo","Reparación"].map(f=><button key={f} onClick={()=>setSubFilter(f)} style={{...s.filterBtn,background:subFilter===f?"#1e3a5f":"transparent",color:subFilter===f?"#fff":"#64748b",borderColor:subFilter===f?"#4a9eff":"#e2e8f0",fontSize:11}}>{f}</button>)}
         </div>
-        <RecordTable rows={filteredSvc.map(e=>({Fecha:e.date,Tipo:e.serviceType||"—",Equipo:e.equipment||"—",Descripción:e.desc,"Realizado por":e.performedBy,Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>
+        <RecordTable rows={filteredSvc.map(e=>({Fecha:e.date,Tipo:serviceTypeL(e.serviceType,lang)||"—",Equipo:e.equipment||"—",Descripción:e.desc,"Realizado por":e.performedBy,Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>
       </>)}
       {mainFilter==="Inspecciones"&&<RecordTable rows={inspLog.map(e=>({Fecha:e.date,Equipo:e.equipment||"—",Descripción:e.desc,"Realizado por":e.performedBy,Fotos:(e.photos||[]).length>0?`📷 ${e.photos.length}`:"—"}))}/>}
       {mainFilter==="Combustible"&&<RecordTable rows={fuelLog.map(e=>({Fecha:e.date,Cantidad:`${e.fuelQty} ${e.fuelUnit}`,Notas:e.desc||"—","Registrado por":e.performedBy}))}/>}
@@ -2365,17 +2368,47 @@ function RecordsPage({ vessel }) {
   );
 }
 
+// Celda de texto largo: recorta y permite expandir, para que no se lea en vertical
+function LongCell({ text, limit = 90 }) {
+  const [open, setOpen] = useState(false);
+  const str = String(text ?? "");
+  if (str.length <= limit) return <>{str}</>;
+  return (
+    <>
+      {open ? str : str.slice(0, limit).trimEnd() + "…"}{" "}
+      <button onClick={() => setOpen(o => !o)}
+        style={{background:"none",border:"none",padding:0,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+        {open ? "ver menos" : "ver todo"}
+      </button>
+    </>
+  );
+}
+
+const TH_EN = {"Fecha":"Date","Tipo":"Type","Equipo":"Equipment","Descripción":"Description","Realizado por":"Performed by","Fotos":"Photos","Cantidad":"Quantity","Notas":"Notes","Registrado por":"Logged by","Marca":"Brand","Modelo":"Model","N° Parte":"Part No.","Pago":"Payment","Horas":"Hours","Costo":"Cost","Detalle":"Detail","Notas / Proveedor":"Notes / Supplier","Destino":"Destination","Personas":"People","Salida":"Departure","Regreso":"Return","Clima":"Weather","Dueño":"Owner","Sistema / Equipo":"System / Equipment","Equipo / Sistema":"Equipment / System","Unidad":"Unit"};
+
 function RecordTable({ rows }) {
-  if (rows.length===0) return <div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>Sin registros</div>;
+  const { lang } = useLang();
+  const TH = (h) => (lang==="en" ? (TH_EN[h] || h) : h);
+  if (rows.length===0) return <div style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>{lang==="es"?"Sin registros":"No records"}</div>;
   const cols = Object.keys(rows[0]);
+  const isLong = (k) => k==="Descripción" || k==="Notas" || k==="Detalle" || k==="Notas / Proveedor";
   return (
     <div style={{overflowX:"auto"}}>
       <table style={s.table}>
-        <thead><tr style={{background:"#1e3a5f"}}>{cols.map(h=><th key={h} style={s.th}>{h}</th>)}</tr></thead>
+        <thead><tr style={{background:"#1e3a5f"}}>{cols.map(h=><th key={h} style={{...s.th,whiteSpace:"nowrap"}}>{TH(h)}</th>)}</tr></thead>
         <tbody>
           {rows.map((row,i)=>(
             <tr key={i} style={s.trow}>
-              {cols.map((k,j)=><td key={j} style={{...s.td,whiteSpace:k==="Fecha"?"nowrap":"normal",color:k==="Costo"||k==="USD"?"#16a34a":"#475569",fontWeight:k==="Costo"||k==="USD"?600:400,maxWidth:k==="Descripción"?280:"none"}}>{row[k]}</td>)}
+              {cols.map((k,j)=>(
+                <td key={j} style={{...s.td,
+                  whiteSpace:isLong(k)?"normal":"nowrap",
+                  color:k==="Costo"||k==="USD"?"#16a34a":"#475569",
+                  fontWeight:k==="Costo"||k==="USD"?600:400,
+                  minWidth:isLong(k)?220:"auto",
+                  maxWidth:isLong(k)?320:"none"}}>
+                  {isLong(k) ? <LongCell text={row[k]}/> : row[k]}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
