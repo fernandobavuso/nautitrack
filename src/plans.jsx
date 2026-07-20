@@ -7,7 +7,7 @@ import { useLang } from "./i18n.jsx";
 // Mientras esté en true, TODOS los usuarios tienen acceso completo
 // (nivel Flota) gratis. El día que quieras empezar a cobrar,
 // cambia esto a false y se activa el flujo de pago normal.
-export const FOUNDER_ACCESS = true;
+export const FOUNDER_ACCESS = false;
 // Plan que reciben todos durante el Acceso de Fundador:
 const FOUNDER_PLAN = "fleet";
 // ─────────────────────────────────────────────────────────────
