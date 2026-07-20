@@ -16,6 +16,7 @@ export const WA_TEMPLATES = {
   OFERTA_TRABAJO: "oferta_trabajo_tripulante", // {{1}} tripulante, {{2}} rol, {{3}} zona
   TAREA_ASIGNADA: "tarea_asignada",            // {{1}} nombre, {{2}} barco, {{3}} tarea, {{4}} fecha (UTILITY)
   HORARIO:        "horario_trabajo",           // {{1}} nombre, {{2}} lista de turnos (UTILITY)
+  HORARIO_SEMANAL:"horario_semanal",           // {{1}} nombre, {{2}}-{{8}} Lun..Dom (UTILITY)
 };
 
 /**
@@ -71,3 +72,7 @@ export const notifyTaskAssigned = (phone, name, boat, task, date) =>
 
 export const notifySchedule = (phone, name, listText) =>
   sendWhatsApp(phone, WA_TEMPLATES.HORARIO, [name, listText]);
+
+// Horario semanal: una línea por día (Lun..Dom). days = array de 7 strings.
+export const notifyWeeklySchedule = (phone, name, days) =>
+  sendWhatsApp(phone, WA_TEMPLATES.HORARIO_SEMANAL, [name, ...days]);

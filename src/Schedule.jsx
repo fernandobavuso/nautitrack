@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
-import { notifySchedule } from "./whatsapp.js";
+import { notifySchedule, notifyWeeklySchedule } from "./whatsapp.js";
 
 // ─────────────────────────────────────────────────────────────
 // Agenda — horario de trabajo del equipo de flota.
@@ -96,15 +96,33 @@ export default function Schedule({ user, vessels = [], onClose }) {
       .filter(x => x.person_name === personName && x.shift_date >= today)
       .sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1));
     if (upcoming.length === 0) { flash(L("No hay turnos próximos para esa persona", "No upcoming shifts for that person")); return; }
-    const list = upcoming.map(x => {
-      const d = new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es", { weekday:"short", day:"numeric", month:"short" });
-      const parts = [d];
+    // Descripción corta de un turno (sin saltos de línea: WhatsApp los rechaza)
+    const shiftText = (x, withDate) => {
+      const parts = [];
+      if (withDate) parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es", { weekday:"short", day:"numeric", month:"short" }));
+      else          parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es", { day:"numeric", month:"short" }));
       if (x.vessel_name) parts.push(x.vessel_name);
       if (x.description) parts.push(x.description);
       if (x.hours)       parts.push(`${x.hours}h`);
-      return parts.join(" ");
-    }).join("  |  ").replace(/\s{4,}/g, "   ").trim();
-    const r = await notifySchedule(p.phone, personName, list);
+      return parts.join(" ").replace(/\s{4,}/g, "   ").trim();
+    };
+
+    // Preferido: horario semanal (una línea por día, Lun..Dom) — los 7 días próximos
+    const start = new Date(today + "T00:00:00");
+    const monday = new Date(start); monday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const dayShifts = upcoming.filter(x => x.shift_date === key);
+      days.push(dayShifts.length ? dayShifts.map(x => shiftText(x, false)).join(" + ") : L("Libre", "Off"));
+    }
+    let r = await notifyWeeklySchedule(p.phone, personName, days);
+    // Si la plantilla semanal aún no está aprobada, usar la de una sola línea
+    if (!r.ok) {
+      const list = upcoming.map(x => shiftText(x, true)).join("  |  ").replace(/\s{4,}/g, "   ").trim();
+      r = await notifySchedule(p.phone, personName, list);
+    }
     flash(r.ok ? L("Horario enviado por WhatsApp", "Schedule sent via WhatsApp") : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
   };
 
