@@ -373,7 +373,7 @@ export default function App() {
       brand: e.brand, model2: e.model2, partNum: e.part_num,
       costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
       item: e.item, dest: e.dest, persons: e.persons,
-      ownerAboard: e.owner_aboard, crewSel: e.crew_sel || [],
+      ownerAboard: e.owner_aboard, ownerName: e.owner_name || "", crewSel: e.crew_sel || [],
       deptTime: e.dept_time, arrTime: e.arr_time,
       fuelOut: e.fuel_out, fuelIn: e.fuel_in,
       engineHrsOut: e.eng_out, engineHrsIn: e.eng_in,
@@ -435,7 +435,7 @@ export default function App() {
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       cost_usd: entry.costUSD, cost_bs: entry.costBs, payment: entry.payment,
       item: entry.item, dest: entry.dest, persons: entry.persons,
-      owner_aboard: entry.ownerAboard, crew_sel: entry.crewSel || [],
+      owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
       dept_time: entry.deptTime, arr_time: entry.arrTime,
       fuel_out: entry.fuelOut, fuel_in: entry.fuelIn,
       eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
@@ -1922,6 +1922,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [fuelUnit,setFuelUnit]       = useState(initial?.fuelUnit||vessel.fuelUnit||"gal");
   const [fuelQty,setFuelQty]         = useState(initial?.fuelQty||"");
   const [ownerAboard,setOwnerAboard] = useState(initial?.ownerAboard||false);
+  const [ownerName,setOwnerName]     = useState(initial?.ownerName||"");
   const [crewSel,setCrewSel]         = useState(initial?.crewSel||[]);
   const [crewInput,setCrewInput]     = useState("");
   const [persons,setPersons]         = useState(initial?.persons||"");
@@ -1969,6 +1970,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     if (["Inspección","Servicio","Combustible"].includes(type)&&!desc.trim()) e.desc="Descripción requerida";
     // photos optional now — real uploads
     if (type==="Compra"&&!item.trim()) e.item="Requerido";
+    if (type==="Salida"&&(persons===""||persons===null||Number(persons)<1)) e.persons="Indica cuántas personas van a bordo";
     setErrors(e); return Object.keys(e).length===0;
   };
 
@@ -1980,7 +1982,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     let entry = {...base};
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
-    if (type==="Salida")      entry={...entry,ownerAboard,crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
+    if (type==="Salida")      entry={...entry,ownerAboard,ownerName:ownerAboard?ownerName.trim():"",crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
     if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment};
     // Visita: guardar el subtipo (qué clase de visita fue)
     if (type==="Visita") {
@@ -2180,9 +2182,19 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                   <div><label style={s.label}>Hora de Salida</label><input type="time" value={deptTime} onChange={e=>setDeptTime(e.target.value)} style={s.input}/></div>
-                  <div><label style={s.label}>N° Personas</label><input type="number" value={persons} onChange={e=>setPersons(e.target.value)} style={s.input}/></div>
+                  <div>
+                    <label style={s.label}>N° Personas a bordo (POB) <span style={{color:"#dc2626"}}>*</span></label>
+                    <input type="number" min="1" value={persons} onChange={e=>setPersons(e.target.value)} style={{...s.input,borderColor:errors.persons?"#dc2626":"#e2e8f0"}}/>
+                    {errors.persons&&<div style={s.errMsg}>{errors.persons}</div>}
+                  </div>
                 </div>
                 <div><label style={s.label}>Dueño a bordo</label><div style={{display:"flex",gap:8,marginTop:4}}>{[true,false].map(v=><button key={String(v)} onClick={()=>setOwnerAboard(v)} style={{...s.typeChip,background:ownerAboard===v?"#2563eb22":"#f8fafc",borderColor:ownerAboard===v?"#2563eb":"#e2e8f0",color:ownerAboard===v?"#2563eb":"#64748b",fontWeight:ownerAboard===v?700:400}}>{v?"Sí":"No"}</button>)}</div></div>
+                {ownerAboard && (
+                  <div>
+                    <label style={s.label}>¿Quién? (nombre del dueño / invitado principal)</label>
+                    <input value={ownerName} onChange={e=>setOwnerName(e.target.value)} placeholder="Ej: Fernando Bavuso" style={s.input}/>
+                  </div>
+                )}
                 <div>
                   <label style={s.label}>Tripulación a bordo</label>
                   {aboardPeople.length>0 ? (
@@ -2609,7 +2621,7 @@ function ReportModal({ vessel, onClose }) {
             <td>${e.deptTime||"—"}</td>
             <td>${e.arrTime||"<span style='color:#d97706'>Pendiente</span>"}</td>
             <td style="color:#64748b;">${e.salidaClima||"—"}</td>
-            <td style="text-align:center;">${e.ownerAboard?"<span class='badge badge-green'>Sí</span>":"<span class='badge' style='background:#f1f5f9;color:#64748b;'>No</span>"}</td>
+            <td style="text-align:center;">${e.ownerAboard?`<span class='badge badge-green'>${e.ownerName||"Sí"}</span>`:"<span class='badge' style='background:#f1f5f9;color:#64748b;'>No</span>"}</td>
           </tr>`).join("")}
         </tbody>
       </table>`;
