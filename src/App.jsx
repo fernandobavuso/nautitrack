@@ -319,6 +319,26 @@ export default function App() {
   const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
   // Recordar el barco seleccionado entre refrescos
   useEffect(() => { if (vesselId != null) localStorage.setItem("nt_vessel_id", String(vesselId)); }, [vesselId]);
+
+  // ── Navegación con el botón "atrás" del navegador ─────────────────────────
+  // Cada cambio de pestaña deja un paso en el historial, para que "atrás" mueva
+  // dentro de la app en vez de salir al landing. Al agotar los pasos, sale normal.
+  const fromPopRef = useRef(false);
+  useEffect(() => {
+    window.history.replaceState({ ntPage: page }, "");
+    const onPop = (e) => {
+      const p = e.state?.ntPage;
+      if (p) { fromPopRef.current = true; setPage(p); }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (fromPopRef.current) { fromPopRef.current = false; return; }   // vino del botón atrás: no re-apilar
+    if (window.history.state?.ntPage === page) return;                 // ya es el paso actual
+    window.history.pushState({ ntPage: page }, "");
+  }, [page]);
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
   const [showCaptainManager, setShowCaptainManager] = useState(false);
