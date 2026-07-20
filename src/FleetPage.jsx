@@ -7,7 +7,8 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
   const [costs, setCosts] = useState({}); // {vesselId: {usd, ves}}
   const [loading, setLoading] = useState(true);
 
-  const allowed = hasFeature(vessel, "multiFleet");
+  // La vista abarca TODA la flota: basta con que alguna embarcación tenga el plan Flota
+  const allowed = (vessels || []).some(v => hasFeature(v, "multiFleet")) || hasFeature(vessel, "multiFleet");
 
   useEffect(() => { if (allowed) loadCosts(); }, []);
 
@@ -30,7 +31,7 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
   };
 
   if (!allowed) {
-    return <div style={{padding:"40px 20px"}}><PremiumLock feature="Vista de Flota" onUpgrade={()=>setShowProfile&&setShowProfile(true)}/></div>;
+    return <div style={{padding:"40px 20px"}}><PremiumLock feature="Vista de Flota" plan="fleet" onUpgrade={()=>setShowProfile&&setShowProfile(true)}/></div>;
   }
 
   // Totales consolidados del mes

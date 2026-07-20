@@ -823,7 +823,7 @@ export default function App() {
         setShowFleetManagers={setShowFleetManagers}
         setShowFleetCrew={setShowFleetCrew}
         setShowSchedule={setShowSchedule}
-        canManageFleet={getPlan(vessel).features?.multiFleet}
+        canManageFleet={vessels.some(v=>getPlan(v).features?.multiFleet)}
         setShowNotifications={setShowNotifications}
         setShowNotifPanel={setShowNotifPanel}
         unreadCount={unreadCount}
