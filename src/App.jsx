@@ -3557,7 +3557,6 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
                 <div style={{fontSize:10,color:"#94a3b8",marginTop:4,lineHeight:1.4}}>Las tiendas lo usan para coordinar la entrega de repuestos contigo. Solo se comparte cuando eliges una tienda.</div>
               </div>
               <div><label style={s.label}>Email</label><input type="email" value={form.email||""} onChange={e=>set("email",e.target.value)} style={s.input}/></div>
-              <div><label style={s.label}>Ubicación de la Marina</label><input value={form.marinaAddress||""} onChange={e=>set("marinaAddress",e.target.value)} style={s.input}/></div>
             </div>
           )}
           {tab==="config"&&(
