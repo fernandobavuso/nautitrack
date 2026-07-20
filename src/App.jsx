@@ -458,11 +458,13 @@ export default function App() {
       setVessels(vs => vs.map(v => {
         if (v.id !== vesselId) return v;
         let updated = { ...v, log: [mapped, ...(v.log||[])] };
-        if (entry.type === "Combustible" && entry.fuelQty != null) {
-          updated.fuel = entry.fuelQty;
+        const fq = Number(entry.fuelQty);
+        if (entry.type === "Combustible" && entry.fuelQty !== null && entry.fuelQty !== "" && !isNaN(fq)) {
+          updated.fuel = fq;
           updated.fuelUnit = entry.fuelUnit || v.fuelUnit;
           // Persistir: si no, al refrescar se pierde y el dashboard vuelve al valor viejo
-          supabase.from("vessels").update({ fuel: updated.fuel, fuel_unit: updated.fuelUnit }).eq("id", vesselId).then(()=>{});
+          supabase.from("vessels").update({ fuel: fq, fuel_unit: updated.fuelUnit }).eq("id", vesselId)
+            .then(({ error }) => { if (error) console.error("[Carive] no se pudo guardar el combustible:", error.message); });
         }
         // Actualizar horas del motor/generador desde cualquier registro que las traiga
         // (Salida o Inspección de motores). Las horas se guardan por motor: tomamos la más alta.
@@ -493,7 +495,7 @@ export default function App() {
             return t;
           });
           updated.details = { ...(updated.details||{}), motor_hours: updated.motorHours || {} };
-          supabase.from("vessels").update({ engine_hours: updated.engineHours, gen_hours: updated.genHours, details: updated.details }).eq("id", vesselId).then(()=>{});
+          supabase.from("vessels").update({ engine_hours: updated.engineHours, gen_hours: updated.genHours, details: updated.details }).eq("id", vesselId).then(({ error }) => { if (error) console.error("[Carive] no se pudieron guardar las horas:", error.message); });
         }
         return updated;
       }));
@@ -529,10 +531,7 @@ export default function App() {
       type:         updated.type         || "",
       marina:       updated.marina       || "",
       captain:      updated.captain      || "",
-      fuel:         updated.fuel         ?? 0,
       fuel_unit:    updated.fuelUnit     || updated.fuel_unit || "gal",
-      engine_hours: updated.engineHours  ?? updated.engine_hours ?? 0,
-      gen_hours:    updated.genHours     ?? updated.gen_hours    ?? 0,
       status:       updated.status       || "ok",
       photo_url:    updated.photo        || null,
       crew:         updated.crew         || [],
@@ -552,6 +551,14 @@ export default function App() {
     // Remove frontend-only keys that don't exist in DB
     delete payload.id;
     delete payload.owner_id;
+    // Estos campos solo se escriben si vienen definidos: si un objeto llega
+    // incompleto (modales con copia congelada del barco), NO deben pisarse con 0.
+    const numFuel = updated.fuel        ?? updated.fuel_hours;
+    const numEng  = updated.engineHours ?? updated.engine_hours;
+    const numGen  = updated.genHours    ?? updated.gen_hours;
+    if (numFuel !== undefined && numFuel !== null && numFuel !== "") payload.fuel         = Number(numFuel);
+    if (numEng  !== undefined && numEng  !== null && numEng  !== "") payload.engine_hours = Number(numEng);
+    if (numGen  !== undefined && numGen  !== null && numGen  !== "") payload.gen_hours    = Number(numGen);
     const { error } = await supabase.from("vessels").update(payload).eq("id", updated.id);
     if (error) console.error("updateVessel error:", error.message);
   }, []);
