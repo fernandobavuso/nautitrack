@@ -461,6 +461,8 @@ export default function App() {
         if (entry.type === "Combustible" && entry.fuelQty != null) {
           updated.fuel = entry.fuelQty;
           updated.fuelUnit = entry.fuelUnit || v.fuelUnit;
+          // Persistir: si no, al refrescar se pierde y el dashboard vuelve al valor viejo
+          supabase.from("vessels").update({ fuel: updated.fuel, fuel_unit: updated.fuelUnit }).eq("id", vesselId).then(()=>{});
         }
         // Actualizar horas del motor/generador desde cualquier registro que las traiga
         // (Salida o Inspección de motores). Las horas se guardan por motor: tomamos la más alta.
@@ -1236,7 +1238,8 @@ function AlertsCard({ vessel, setPage }) {
 
 function IndicatorsCard({ vessel }) {
   const { t: tr } = useLang();
-  const fc = vessel.fuel>50?"#16a34a":vessel.fuel>25?"#d97706":"#dc2626";
+  const fuelVal = Number(vessel.fuel)||0;
+  const fc = fuelVal>50?"#16a34a":fuelVal>25?"#d97706":"#dc2626";
   // Calcular próximo servicio real de las tareas pendientes
   const pendingTasks = (vessel.tasks||[]).filter(t=>t.status!=="done"&&t.nextDue).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
   const nextService = pendingTasks[0];
@@ -1248,7 +1251,7 @@ function IndicatorsCard({ vessel }) {
       <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {[
-          {Icon:IconFuel,val:`${vessel.fuel} ${vessel.fuelUnit}`,lbl:tr("dash.fuel"),color:fc,bar:true},
+          {Icon:IconFuel,val:`${fuelVal} ${vessel.fuelUnit||"gal"}`,lbl:tr("dash.fuel"),color:fc,bar:true},
           {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
@@ -1257,7 +1260,7 @@ function IndicatorsCard({ vessel }) {
             <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>
             <div style={{fontSize:17,fontWeight:700,color:ind.color}}>{ind.val}</div>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{ind.lbl}</div>
-            {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${Math.min(vessel.fuel,100)}%`,background:ind.color}} /></div>}
+            {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${Math.min(fuelVal,100)}%`,background:ind.color}} /></div>}
           </div>
         ))}
       </div>
