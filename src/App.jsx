@@ -756,10 +756,12 @@ export default function App() {
     setPage("home");
   };
 
-  // Intentar agregar barco respetando el límite del plan
+  // Intentar agregar barco respetando el límite del plan (a nivel de cuenta)
   const tryAddVessel = () => {
-    const plan = getPlan(vessels.find(v=>v.id===vesselId) || vessels[0]);
-    if (vessels.length >= plan.maxVessels) {
+    // El máximo lo da el mejor plan entre TODOS los barcos: si alguno es Flota,
+    // la cuenta puede tener hasta 99. No se decide mirando un solo barco.
+    const maxAllowed = Math.max(1, ...vessels.map(v => getPlan(v).maxVessels || 1));
+    if (vessels.length >= maxAllowed) {
       setShowPlans(true);
       return;
     }
