@@ -513,10 +513,10 @@ export default function App() {
 
   const updateTask = useCallback(async (vesselId, taskId, patch) => {
     const dbPatch = {};
-    if ("status"   in patch) dbPatch.status   = patch.status;
-    if ("nextDue"  in patch) dbPatch.next_due = patch.nextDue;
-    if ("notes"    in patch) dbPatch.notes    = patch.notes;
-    if ("assigned" in patch) dbPatch.assigned = patch.assigned;
+    const MAP = { status:"status", nextDue:"next_due", notes:"notes", assigned:"assigned",
+      name:"name", systemId:"system_id", system:"system_name", equipment:"equipment",
+      interval:"interval", dueHours:"due_hours", everyHours:"every_hours", motorName:"motor" };
+    for (const k in MAP) if (k in patch) dbPatch[MAP[k]] = patch[k];
     await supabase.from("tasks").update(dbPatch).eq("id", taskId);
     setVessels(vs => vs.map(v => v.id === vesselId
       ? { ...v, tasks: (v.tasks || []).map(t => t.id === taskId ? { ...t, ...patch } : t) }
@@ -1475,7 +1475,9 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   });
   const PILL = { overdue:{bg:"#ef4444",c:"#fff",l:tr("tasks.overdue")}, due:{bg:"#f59e0b",c:"#fff",l:tr("tasks.due")}, ok:{bg:"#22c55e",c:"#fff",l:tr("tasks.onTrack")}, done:{bg:"#64748b",c:"#fff",l:tr("tasks.done")} };
   const allSystems = getAllSystems(vessel);
+  const [editingTask, setEditingTask] = useState(null);
   const handleAddTask = (task) => { addTask(task); setShowAdd(false); };
+  const handleEditTask = (task) => { updateTask(editingTask.id, task); setEditingTask(null); };
   return (
     <div style={{padding:"24px 28px"}}>
       <div style={s.toolbar}>
@@ -1524,7 +1526,9 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                             </div>
                           ))}
                         </div>
-                        <div style={{padding:"0 24px 16px",display:"flex",gap:8}}>
+                        <div style={{padding:"0 24px 16px",display:"flex",gap:8,flexWrap:"wrap"}}>
+                          <button onClick={()=>{setEditingTask(task);setExpanded(null);}}
+                            style={{padding:"7px 16px",border:"1.5px solid #2563eb",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"#eff6ff",color:"#2563eb"}}>✏️ Editar</button>
                           <button onClick={()=>{
                             updateTask(task.id,{status:"done"});setExpanded(null);
                           }} style={{padding:"7px 16px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff"}}>Completar</button>
@@ -1546,11 +1550,12 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
         </table>
       </div>
       {showAdd && <AddTaskModal vessel={vessel} updateVessel={updateVessel} onSave={handleAddTask} onClose={() => setShowAdd(false)} />}
+      {editingTask && <AddTaskModal vessel={vessel} updateVessel={updateVessel} initial={editingTask} onSave={handleEditTask} onClose={() => setEditingTask(null)} />}
     </div>
   );
 }
 
-function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
+function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initial }) {
   const { t: tr } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
@@ -1569,17 +1574,17 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     return () => { alive = false; };
   }, [vessel?.owner_id]);
   const allSystems = getAllSystems(vessel);
-  const [systemId, setSystemId]       = useState("");
-  const [equipment, setEquipment]     = useState("");
+  const [systemId, setSystemId]       = useState(initial?.systemId || "");
+  const [equipment, setEquipment]     = useState(initial?.equipment || "");
   const [otherEquip, setOtherEquip]   = useState("");
-  const [name, setName]               = useState("");
-  const [assigned, setAssigned]       = useState(vessel.captain ? `${vessel.captain} (Capitán)` : "");
-  const [interval, setInterval]       = useState("");
-  const [nextDue, setNextDue]         = useState("");
-  const [dueHours, setDueHours]       = useState("");      // horas de motor a las que toca
-  const [everyHours, setEveryHours]   = useState("");      // cada cuántas horas se repite
-  const [taskMotor, setTaskMotor]     = useState(getMotorLabels(vessel)[0] || "");  // motor al que aplica
-  const [notes, setNotes]             = useState("");
+  const [name, setName]               = useState(initial?.name || "");
+  const [assigned, setAssigned]       = useState(initial?.assigned || (vessel.captain ? `${vessel.captain} (Capitán)` : ""));
+  const [interval, setInterval]       = useState(initial?.interval || "");
+  const [nextDue, setNextDue]         = useState(initial?.nextDue || "");
+  const [dueHours, setDueHours]       = useState(initial?.dueHours ?? "");      // horas de motor a las que toca
+  const [everyHours, setEveryHours]   = useState(initial?.everyHours ?? "");    // cada cuántas horas se repite
+  const [taskMotor, setTaskMotor]     = useState(initial?.motorName || getMotorLabels(vessel)[0] || "");  // motor al que aplica
+  const [notes, setNotes]             = useState(initial?.notes || "");
   const [errors, setErrors]           = useState({});
   const [showAddSys, setShowAddSys]   = useState(false);
   const [newSysLabel, setNewSysLabel] = useState("");
@@ -1655,7 +1660,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
     <div style={s.modalOverlay} onClick={onClose}>
       <div style={{...s.modalBox,maxWidth:580}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
-          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>{tr("tasks.new")}</div>
+          <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>{initial ? "Editar Tarea" : tr("tasks.new")}</div>
           <button onClick={onClose} style={s.modalClose}>✕</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:14}}>
@@ -1782,7 +1787,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose }) {
         </div>
         <div style={s.modalFooter}>
           <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
-          <button style={s.btnPrimary} onClick={handleSave}>Guardar Tarea</button>
+          <button style={s.btnPrimary} onClick={handleSave}>{initial ? "Guardar Cambios" : "Guardar Tarea"}</button>
         </div>
       </div>
     </div>
