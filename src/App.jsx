@@ -3781,7 +3781,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
                       ))}
                       {isCurrent
                         ? <div style={{fontSize:11,color:"#0369a1",fontWeight:600,marginTop:10,textAlign:"center"}}>✓ Plan actual</div>
-                        : <a href="https://wa.me/17862577645" target="_blank" rel="noreferrer" style={{...s.btnPrimary,display:"block",width:"100%",marginTop:10,fontSize:11,padding:"6px",textAlign:"center",textDecoration:"none",boxSizing:"border-box"}}>Cambiar</a>}
+                        : <a href={`mailto:info@carive.co?subject=${encodeURIComponent(`Cambio de plan a ${plan.name}`)}&body=${encodeURIComponent(`Hola, quiero cambiar mi plan a ${plan.name} ($${plan.priceMonthly}/mes).\n\nCuenta: ${user?.email||""}\n`)}`} style={{...s.btnPrimary,display:"block",width:"100%",marginTop:10,fontSize:11,padding:"6px",textAlign:"center",textDecoration:"none",boxSizing:"border-box"}}>Cambiar</a>}
                     </div>
                   );
                 })}

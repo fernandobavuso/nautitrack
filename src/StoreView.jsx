@@ -296,10 +296,11 @@ export default function StoreView({ user, onLogout }) {
                   {/* 5. AYUDA */}
                   <button onMouseDown={(e)=>{
                       e.preventDefault();
-                      const msg = L(
-                        `Hola, soy ${profile?.store_name||"una tienda"} en Carive. Necesito ayuda con el portal de tiendas.`,
-                        `Hi, I'm ${profile?.store_name||"a store"} on Carive. I need help with the store portal.`);
-                      window.open(`https://wa.me/17862577645?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+                      const subject = L("Ayuda — Portal de Tiendas","Help — Store Portal");
+                      const body = L(
+                        `Tienda: ${profile?.store_name||"—"}\nCuenta: ${user?.email||"—"}\n\nCuéntanos qué necesitas:\n`,
+                        `Store: ${profile?.store_name||"—"}\nAccount: ${user?.email||"—"}\n\nTell us what you need:\n`);
+                      window.location.href = `mailto:info@carive.co?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                       setShowStoreMenu(false);
                     }}
                     style={{...storeMenuItem, borderTop:"1px solid #f1f5f9", marginTop:4}}>
