@@ -11,7 +11,8 @@ const CAT_COLORS = {
 };
 
 export default function CostsPage({ vessel, vessels, user, setShowProfile, onRegisterExpense }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -95,17 +96,17 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       {showHelp && (
         <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:"14px 16px",marginBottom:16,position:"relative"}}>
           <button onClick={()=>setShowHelp(false)} style={{position:"absolute",top:10,right:12,background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16}}>×</button>
-          <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:8}}>¿Cómo se llenan los costos?</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:8}}>{L("¿Cómo se llenan los costos?","How are costs recorded?")}</div>
           <div style={{fontSize:12,color:"#475569",lineHeight:1.6}}>
             Hay dos formas de que un gasto llegue aquí, y las dos terminan en esta misma lista:
             <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                 <span style={{fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap",marginTop:1}}>desde bitácora</span>
-                <span>Cuando el capitán (o quien esté a bordo) registra una <strong>compra</strong> en la Bitácora, ese gasto aparece aquí solo. No hay que anotarlo dos veces.</span>
+                <span>{L("Cuando el capitán (o quien esté a bordo) registra una ","When the captain (or whoever is aboard) records a ")}<strong>compra</strong> en la Bitácora, ese gasto aparece aquí solo. No hay que anotarlo dos veces.</span>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                 <span style={{fontSize:9,background:"#f1f5f9",color:"#64748b",padding:"2px 7px",borderRadius:10,fontWeight:700,whiteSpace:"nowrap",marginTop:1}}>directo</span>
-                <span>Gastos que no son compras del barco (seguro, marina, sueldos...) los registras tú aquí con "Registrar gasto".</span>
+                <span>{L('Gastos que no son compras del barco (seguro, marina, sueldos...) los registras tú aquí con "Registrar gasto".','Expenses that are not boat purchases (insurance, marina, payroll...) you record here with "Record expense".')}</span>
               </div>
             </div>
           </div>
@@ -126,7 +127,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       {/* Total */}
       <div style={{marginBottom:20}}>
         <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18}}>
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>TOTAL</div>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,marginBottom:6}}>{L("TOTAL","TOTAL")}</div>
           <div style={{fontSize:26,fontWeight:800,color:"#0f172a"}}>$ {totalUSD.toLocaleString("en-US",{maximumFractionDigits:2})}</div>
         </div>
       </div>
@@ -134,7 +135,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       {/* Desglose por categoría */}
       {catEntries.length>0&&(
         <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18,marginBottom:20}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>Desglose por categoría (USD)</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:14}}>{L("Desglose por categoría (USD)","Breakdown by category (USD)")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {catEntries.map(([cat,val])=>(
               <div key={cat}>
@@ -152,12 +153,12 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       )}
 
       {/* Lista de gastos */}
-      <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Movimientos</div>
-      {loading&&<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando...</div>}
+      <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{L("Movimientos","Transactions")}</div>
+      {loading&&<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>{L("Cargando...","Loading...")}</div>}
       {!loading&&filtered.length===0&&(
         <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
           <div style={{fontWeight:600}}>{t("fin.empty")}</div>
-          <div style={{fontSize:12,marginTop:4}}>Registra el primer gasto de tu barco</div>
+          <div style={{fontSize:12,marginTop:4}}>{L("Registra el primer gasto de tu barco","Record your boat's first expense")}</div>
         </div>
       )}
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -180,32 +181,32 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       {creating&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setCreating(false)}>
           <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:16}}>Registrar gasto</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:16}}>{L("Registrar gasto","Record expense")}</div>
             <div style={{marginBottom:10}}>
-              <label style={lbl}>Categoría</label>
+              <label style={lbl}>{L("Categoría","Category")}</label>
               <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={inp}>
                 {CATEGORIES.map(c=><option key={c}>{c}</option>)}
               </select>
             </div>
             <div style={{marginBottom:10}}>
-              <label style={lbl}>Descripción</label>
-              <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Ej: Cambio de aceite motor estribor" style={inp}/>
+              <label style={lbl}>{L("Descripción","Description")}</label>
+              <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={L("Ej: Cambio de aceite motor estribor","e.g. Starboard engine oil change")} style={inp}/>
             </div>
             <div style={{marginBottom:10}}>
-              <label style={lbl}>Monto (USD)</label>
+              <label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label>
               <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0" style={inp}/>
             </div>
             <div style={{marginBottom:10}}>
-              <label style={lbl}>Fecha</label>
+              <label style={lbl}>{L("Fecha","Date")}</label>
               <input type="date" value={form.expense_date} onChange={e=>setForm({...form,expense_date:e.target.value})} style={inp}/>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
               <input type="checkbox" id="recurring" checked={form.recurring} onChange={e=>setForm({...form,recurring:e.target.checked})} style={{width:15,height:15}}/>
-              <label htmlFor="recurring" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>Es un gasto fijo mensual (sueldo, marina, seguro)</label>
+              <label htmlFor="recurring" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>{L("Es un gasto fijo mensual (sueldo, marina, seguro)","It's a fixed monthly expense (payroll, marina, insurance)")}</label>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setCreating(false)} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Guardar gasto</button>
+              <button onClick={()=>setCreating(false)} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>{L("Cancelar","Cancel")}</button>
+              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Guardar gasto","Save expense")}</button>
             </div>
           </div>
         </div>
