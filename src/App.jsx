@@ -895,9 +895,9 @@ export default function App() {
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
-        {page==="costs"   && <CostsPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
+        {page==="costs"   && <CostsPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
         {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
-        {page==="inventory" && <InventoryPage vessel={vessel} user={user} setShowProfile={()=>setShowPlans(true)} />}
+        {page==="inventory" && <InventoryPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} deleteVessel={deleteVessel} canDelete={vessels.length>0} onClose={() => setShowVesselDetails(false)} />}
       {showNotifications && <NotificationsModal vessel={vessel} user={user} onClose={() => setShowNotifications(false)} />}

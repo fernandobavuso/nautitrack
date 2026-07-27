@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
-import { hasFeature, PremiumLock } from "./plans.jsx";
+import { hasFeature, PremiumLock, accountHasFleet } from "./plans.jsx";
 import { findCityCoords, distanceKm, kmToMi } from "./geo.js";
 import { notifyStoreNewOrder, notifyStoreUrgent } from "./whatsapp.js";
 import { useLang } from "./i18n.jsx";
@@ -11,7 +11,7 @@ const CATEGORIES = ["Filtros","Aceites y Lubricantes","Correas","Eléctrico","Se
 const UNITS = ["unidad","litros","galones","metros","kit"];
 const LOCATIONS = ["A bordo","Dock box","Storage","Maletero / pañol","Casa","Otro"];
 
-export default function InventoryPage({ vessel, user, setShowProfile, role="owner", captainLimit }) {
+export default function InventoryPage({ vessel, vessels, user, setShowProfile, role="owner", captainLimit }) {
   const { t, lang } = useLang();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function InventoryPage({ vessel, user, setShowProfile, role="owne
   const blank = { name:"", category:"Filtros", brand:"", part_num:"", quantity:"", min_quantity:"", unit:"unidad", location_type:"A bordo", location:"", bought_at:"", notes:"" };
   const [form, setForm] = useState(blank);
 
-  const allowed = hasFeature(vessel, "inventory");
+  const allowed = hasFeature(vessel, "inventory") || accountHasFleet(vessels);
 
   useEffect(() => { if (allowed) { loadItems(); loadRequests(); } }, []);
 

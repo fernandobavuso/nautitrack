@@ -79,6 +79,12 @@ export function hasFeature(vessel, featureKey) {
   return !!getPlan(vessel).features[featureKey];
 }
 
+// ¿La CUENTA tiene plan Flota? (basta con que un barco lo tenga).
+// El plan Flota cubre a toda la flota, no barco por barco.
+export function accountHasFleet(vessels) {
+  return (vessels || []).some(v => getPlan(v).features?.multiFleet);
+}
+
 // Banner discreto de Acceso de Fundador para el dashboard
 export function FounderBanner() {
   if (!FOUNDER_ACCESS) return null;

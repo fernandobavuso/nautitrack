@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
-import { hasFeature, PremiumLock } from "./plans.jsx";
+import { hasFeature, PremiumLock, accountHasFleet } from "./plans.jsx";
 
 const CATEGORIES = ["Combustible","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
 const CAT_COLORS = {
@@ -10,7 +10,7 @@ const CAT_COLORS = {
   Seguro:"#0891b2", Impuestos:"#be185d", Otro:"#64748b",
 };
 
-export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpense }) {
+export default function CostsPage({ vessel, vessels, user, setShowProfile, onRegisterExpense }) {
   const { t } = useLang();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,7 @@ export default function CostsPage({ vessel, user, setShowProfile, onRegisterExpe
     expense_date:new Date().toISOString().slice(0,10), recurring:false,
   });
 
-  const allowed = hasFeature(vessel, "costs");
+  const allowed = hasFeature(vessel, "costs") || accountHasFleet(vessels);
 
   useEffect(() => { if (allowed) loadExpenses(); }, []);
 
