@@ -530,6 +530,35 @@ export default function App() {
       : v));
   }, []);
 
+  const updateLogEntry = useCallback(async (vesselId, entryId, entry) => {
+    await supabase.from("log_entries").update({
+      date: entry.date, type: entry.type,
+      service_type: entry.serviceType, system_id: entry.systemId,
+      equipment: entry.equipment, description: entry.desc,
+      performed_by: entry.performedBy, fuel_qty: entry.fuelQty,
+      fuel_unit: entry.fuelUnit, equip_hours: entry.equipHours,
+      photos: entry.photos || [],
+      brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
+      cost_usd: entry.costUSD, payment: entry.payment,
+      item: entry.item, dest: entry.dest, persons: entry.persons,
+      owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
+      dept_time: entry.deptTime, arr_time: entry.arrTime,
+      fuel_out: entry.fuelOut, fuel_in: entry.fuelIn,
+      eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
+      gen_out: entry.genHrsOut, gen_in: entry.genHrsIn, clima: entry.salidaClima,
+    }).eq("id", entryId);
+    setVessels(vs => vs.map(v => v.id === vesselId
+      ? { ...v, log: (v.log || []).map(e => e.id === entryId ? { ...entry, id: entryId } : e) }
+      : v));
+  }, []);
+
+  const deleteLogEntry = useCallback(async (vesselId, entryId) => {
+    await supabase.from("log_entries").delete().eq("id", entryId);
+    setVessels(vs => vs.map(v => v.id === vesselId
+      ? { ...v, log: (v.log || []).filter(e => e.id !== entryId) }
+      : v));
+  }, []);
+
   // All hooks must be before any early returns
   const updateVessel = useCallback(async (updated) => {
     // Update local state immediately
@@ -562,23 +591,24 @@ export default function App() {
     // Remove frontend-only keys that don't exist in DB
     delete payload.id;
     delete payload.owner_id;
-    // La suscripcion SIEMPRE se toma de la base de datos, nunca del estado en
-    // memoria: el plan puede haberse activado desde el panel de admin y una copia
-    // vieja del barco lo borraria al guardar cualquier otra cosa.
+    // AUDITORÍA DE GUARDADO — Campos "volátiles" que actualizan flujos de fondo
+    // (bitácora: combustible y horas de motor/generador; activación de plan:
+    // suscripción; horas por motor). NINGÚN guardado de barco (ajustes, equipos,
+    // proveedores, renombrar...) edita estos campos, así que SIEMPRE se toman de la
+    // base de datos. De este modo una copia vieja del barco no puede pisarlos —ni con
+    // 0 ni con un valor anterior—. Esto cierra toda la familia de bugs "se guarda
+    // bien y luego se pisa".
     try {
-      const { data: cur } = await supabase.from("vessels").select("details").eq("id", updated.id).single();
-      const dbSub = cur?.details?._subscription;
-      if (dbSub) payload.details = { ...payload.details, _subscription: dbSub };
-    } catch (e) { console.warn("No se pudo leer la suscripción actual:", e?.message); }
-
-    // Estos campos solo se escriben si vienen definidos: si un objeto llega
-    // incompleto (modales con copia congelada del barco), NO deben pisarse con 0.
-    const numFuel = updated.fuel        ?? updated.fuel_hours;
-    const numEng  = updated.engineHours ?? updated.engine_hours;
-    const numGen  = updated.genHours    ?? updated.gen_hours;
-    if (numFuel !== undefined && numFuel !== null && numFuel !== "") payload.fuel         = Number(numFuel);
-    if (numEng  !== undefined && numEng  !== null && numEng  !== "") payload.engine_hours = Number(numEng);
-    if (numGen  !== undefined && numGen  !== null && numGen  !== "") payload.gen_hours    = Number(numGen);
+      const { data: cur } = await supabase.from("vessels")
+        .select("fuel, engine_hours, gen_hours, details").eq("id", updated.id).single();
+      if (cur) {
+        payload.fuel         = cur.fuel;
+        payload.engine_hours = cur.engine_hours;
+        payload.gen_hours    = cur.gen_hours;
+        payload.details._subscription = cur.details?._subscription || payload.details._subscription;
+        payload.details.motor_hours   = cur.details?.motor_hours   ?? payload.details.motor_hours ?? {};
+      }
+    } catch (e) { console.warn("No se pudo leer el estado actual del barco:", e?.message); }
     const { error } = await supabase.from("vessels").update(payload).eq("id", updated.id);
     if (error) console.error("updateVessel error:", error.message);
   }, []);
@@ -900,7 +930,7 @@ export default function App() {
         {page==="providers" && <ProvidersModal vessel={vessel} updateVessel={updateVessel} asPage />}
         {page==="admin" && isAdmin(user) && <AdminPanel user={user} asPage />}
         {page==="calendar" && <CalendarPage vessel={vessel} isMobile={isMobile} />}
-        {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} />}
+        {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} updateLogEntry={(id,e)=>updateLogEntry(vessel.id,id,e)} deleteLogEntry={(id)=>deleteLogEntry(vessel.id,id)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
         {page==="costs"   && <CostsPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
@@ -1801,7 +1831,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
     </div>
   );
 }
-function LogPage({ vessel, updateVessel, addLogEntry }) {
+function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogEntry }) {
   const { t: tr, lang } = useLang();
   const [showModal, setShowModal]       = useState(false);
   const [editEntry, setEditEntry]       = useState(null);
@@ -1813,18 +1843,16 @@ function LogPage({ vessel, updateVessel, addLogEntry }) {
 
   const saveEntry = useCallback((entry) => {
     if (editEntry) {
-      updateVessel({...vessel, log: (vessel.log||[]).map(e => e.id === entry.id ? entry : e)});
+      updateLogEntry(entry.id, entry);
     } else {
       addLogEntry(entry);
     }
     setShowModal(false); setEditEntry(null);
-  }, [vessel, editEntry, updateVessel, addLogEntry]);
+  }, [vessel, editEntry, updateLogEntry, addLogEntry]);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    // Delete from Supabase
-    await supabase.from("log_entries").delete().eq("id", deleteTarget.id);
-    updateVessel({...vessel, log: (vessel.log||[]).filter(e => e.id !== deleteTarget.id)});
+    await deleteLogEntry(deleteTarget.id);
     setDeleteTarget(null); setDeleteReason("");
   };
 
