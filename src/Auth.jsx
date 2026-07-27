@@ -101,7 +101,7 @@ export default function Auth({ onLogin, invite }) {
             <div style={{background:"#eff6ff",border:"1px solid #bae6fd",borderRadius:12,padding:"14px 16px",marginTop:16,textAlign:"left"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:4}}>{c.title}</div>
               <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>{c.body}</div>
-              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>Crea tu cuenta abajo para aceptar la invitación.</div>
+              <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:8}}>{lang==="es"?"Crea tu cuenta abajo para aceptar la invitación.":"Create your account below to accept the invitation."}</div>
             </div>
           ); })()}
           <div style={s.tagline}>{t("auth.smartMgmt")}</div>
@@ -170,12 +170,12 @@ export default function Auth({ onLogin, invite }) {
                       </div>
                       {hasCrew==="si"&&(
                         <div>
-                          <div style={{fontSize:11,color:"#64748b",marginBottom:6}}>Vincula a tu tripulante por su email o teléfono. Si aún no tiene cuenta, podrás invitarlo después.</div>
-                          <input value={linkContact} onChange={e=>setLinkContact(e.target.value)} placeholder="Email o teléfono del tripulante" style={s.input}/>
+                          <div style={{fontSize:11,color:"#64748b",marginBottom:6}}>{lang==="es"?"Vincula a tu tripulante por su email o teléfono. Si aún no tiene cuenta, podrás invitarlo después.":"Link your crew member by email or phone. If they don't have an account yet, you can invite them later."}</div>
+                          <input value={linkContact} onChange={e=>setLinkContact(e.target.value)} placeholder={lang==="es"?"Email o teléfono del tripulante":"Crew member email or phone"} style={s.input}/>
                         </div>
                       )}
                       {hasCrew==="no"&&(
-                        <div style={{fontSize:11,color:"#2563eb",background:"#eff6ff",padding:"10px 12px",borderRadius:8}}>Dentro de la app puedes conseguir tripulación: publica una búsqueda y te llegarán capitanes que califican en tu zona.</div>
+                        <div style={{fontSize:11,color:"#2563eb",background:"#eff6ff",padding:"10px 12px",borderRadius:8}}>{lang==="es"?"Dentro de la app puedes conseguir tripulación: publica una búsqueda y te llegarán capitanes que califican en tu zona.":"Inside the app you can find crew: post a search and qualified captains in your area will reach out."}</div>
                       )}
                     </div>
                   )}
@@ -183,19 +183,19 @@ export default function Auth({ onLogin, invite }) {
                   {/* GERENTE → datos de los dueños + frecuencia de reporte */}
                   {boatRole==="gerente"&&(
                     <div>
-                      <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>Como gerente, gestionas barcos de otros. Agrega los dueños a quienes les reportarás.</div>
+                      <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>{lang==="es"?"Como gerente, gestionas barcos de otros. Agrega los dueños a quienes les reportarás.":"As a manager, you manage other people's boats. Add the owners you'll report to."}</div>
                       {ownerContacts.map((oc,i)=>(
                         <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
-                          <input value={oc.name} onChange={e=>{const n=[...ownerContacts];n[i].name=e.target.value;setOwnerContacts(n);}} placeholder="Nombre del dueño" style={{...s.input,flex:1}}/>
-                          <input value={oc.phone} onChange={e=>{const n=[...ownerContacts];n[i].phone=e.target.value;setOwnerContacts(n);}} placeholder="Teléfono" style={{...s.input,flex:1}}/>
+                          <input value={oc.name} onChange={e=>{const n=[...ownerContacts];n[i].name=e.target.value;setOwnerContacts(n);}} placeholder={lang==="es"?"Nombre del dueño":"Owner name"} style={{...s.input,flex:1}}/>
+                          <input value={oc.phone} onChange={e=>{const n=[...ownerContacts];n[i].phone=e.target.value;setOwnerContacts(n);}} placeholder={lang==="es"?"Teléfono":"Phone"} style={{...s.input,flex:1}}/>
                         </div>
                       ))}
                       <button type="button" onClick={()=>setOwnerContacts([...ownerContacts,{name:"",phone:""}])} style={{fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:"4px 0",marginBottom:10}}>＋ Agregar otro dueño</button>
-                      <label style={s.label}>¿Cada cuánto envías reporte al dueño?</label>
+                      <label style={s.label}>{lang==="es"?"¿Cada cuánto envías reporte al dueño?":"How often do you report to the owner?"}</label>
                       <select value={reportFreq} onChange={e=>setReportFreq(e.target.value)} style={s.input}>
-                        <option value="semanal">Cada semana</option>
-                        <option value="quincenal">Cada 15 días</option>
-                        <option value="mensual">Una vez al mes</option>
+                        <option value="semanal">{lang==="es"?"Cada semana":"Weekly"}</option>
+                        <option value="quincenal">{lang==="es"?"Cada 15 días":"Every 2 weeks"}</option>
+                        <option value="mensual">{lang==="es"?"Una vez al mes":"Monthly"}</option>
                       </select>
                     </div>
                   )}
@@ -204,7 +204,7 @@ export default function Auth({ onLogin, invite }) {
             </div>
           )}
           <div>
-            <label style={s.label}>Email</label>
+            <label style={s.label}>{lang==="es"?"Email":"Email"}</label>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={t("auth.emailPh")} style={s.input}
               onKeyDown={e=>e.key==="Enter"&&(mode==="login"?handleLogin():handleRegister())}/>
           </div>
