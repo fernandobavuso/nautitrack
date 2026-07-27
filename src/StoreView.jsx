@@ -168,7 +168,7 @@ export default function StoreView({ user, onLogout }) {
   const quotesSent = myResponses.length;
   const responseRate = requests.length>0 ? Math.round((myResponses.length/(requests.length+myResponses.length))*100) : 0;
 
-  if (loading) return <div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando...</div>;
+  if (loading) return <div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>{lang==="es"?"Cargando...":"Loading..."}</div>;
 
   // Bienvenida la primera vez (tienda nueva)
   if (showWelcome && !profileComplete) return (
@@ -382,7 +382,7 @@ export default function StoreView({ user, onLogout }) {
         {/* ── MIS COTIZACIONES ── */}
         {tab==="respuestas"&&(
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>Mis cotizaciones</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{lang==="es"?"Mis cotizaciones":"My quotes"}</div>
             {myResponses.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>{t("store.noQuotes")}</div>}
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               {myResponses.map(r=>{
@@ -397,8 +397,8 @@ export default function StoreView({ user, onLogout }) {
                         <div style={{display:"flex",gap:14,fontSize:12,color:"#94a3b8",flexWrap:"wrap"}}>
                           <span>{r.request?.category}</span>
                           {r.response_type==="have"&&<span style={{color:"#475569",fontWeight:600}}>Cotizaste ${r.price}</span>}
-                          {r.response_type==="have_questions"&&<span>Disponible, con preguntas</span>}
-                          {r.response_type==="dont_have"&&<span>No disponible</span>}
+                          {r.response_type==="have_questions"&&<span>{lang==="es"?"Disponible, con preguntas":"Available, with questions"}</span>}
+                          {r.response_type==="dont_have"&&<span>{lang==="es"?"No disponible":"Not available"}</span>}
                         </div>
                         {r.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:8,fontStyle:"italic"}}>"{r.message}"</div>}
                       </div>
@@ -452,7 +452,7 @@ export default function StoreView({ user, onLogout }) {
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18,display:"flex",flexDirection:"column",gap:12}}>
               <div>
                 <label style={lbl}>{L("Nombre de la tienda","Store name")} *</label>
-                <input value={profile.store_name||""} onChange={e=>setProfile({...profile,store_name:e.target.value})} placeholder="Ej: Repuestos Náuticos del Oriente" style={inp}/>
+                <input value={profile.store_name||""} onChange={e=>setProfile({...profile,store_name:e.target.value})} placeholder={lang==="es"?"Ej: Repuestos Náuticos del Oriente":"e.g. Miami Marine Supply"} style={inp}/>
               </div>
               <div>
                 <label style={lbl}>{L("Ubicación de la tienda","Store location")} *</label>
@@ -464,7 +464,7 @@ export default function StoreView({ user, onLogout }) {
               <div style={{display:"flex",gap:8}}>
                 <div style={{flex:1}}>
                   <label style={lbl}>{L("Teléfono / WhatsApp","Phone / WhatsApp")}</label>
-                  <input value={profile.store_phone||""} onChange={e=>setProfile({...profile,store_phone:e.target.value})} placeholder="+1 305..." style={inp}/>
+                  <input value={profile.store_phone||""} onChange={e=>setProfile({...profile,store_phone:e.target.value})} placeholder={lang==="es"?"+1 305...":"+1 305..."} style={inp}/>
                 </div>
                 <div style={{flex:1}}>
                   <label style={lbl}>{L("Radio de cobertura","Coverage radius")}</label>
@@ -479,7 +479,7 @@ export default function StoreView({ user, onLogout }) {
               </div>
               <div>
                 <label style={lbl}>{L("Dirección (opcional)","Address (optional)")}</label>
-                <input value={profile.store_address||""} onChange={e=>setProfile({...profile,store_address:e.target.value})} placeholder="Calle, número..." style={inp}/>
+                <input value={profile.store_address||""} onChange={e=>setProfile({...profile,store_address:e.target.value})} placeholder={lang==="es"?"Calle, número...":"Street, number..."} style={inp}/>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <input type="checkbox" id="nationwide" checked={profile.store_ships_nationwide||false} onChange={e=>setProfile({...profile,store_ships_nationwide:e.target.checked})} style={{width:15,height:15}}/>
@@ -631,7 +631,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={onClose}>
       <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>Responder solicitud</div>
+        <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>{lang==="es"?"Responder solicitud":"Respond to request"}</div>
         <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{request.item_name}</div>
 
         {/* Aviso de subasta a ciegas */}
@@ -669,7 +669,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
         <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder={type==="have_questions"?L("¿Qué necesitas saber? Ej: ¿marca exacta? ¿año del motor?","What do you need to know? e.g. exact brand? engine year?"):L("Mensaje al cliente (opcional)","Message to the customer (optional)")} style={{...inp,resize:"vertical",marginBottom:14}}/>
 
         <div style={{display:"flex",gap:8}}>
-          <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
+          <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>{lang==="es"?"Cancelar":"Cancel"}</button>
           <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Enviar cotización","Send quote")}</button>
         </div>
       </div>
