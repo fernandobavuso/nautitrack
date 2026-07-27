@@ -322,13 +322,31 @@ export default function App() {
   // Recordar el barco seleccionado entre refrescos
   useEffect(() => { if (vesselId != null) localStorage.setItem("nt_vessel_id", String(vesselId)); }, [vesselId]);
 
-  // ── Navegación con el botón "atrás" del navegador ─────────────────────────
-  // Cada cambio de pestaña deja un paso en el historial, para que "atrás" mueva
-  // dentro de la app en vez de salir al landing. Al agotar los pasos, sale normal.
-  const fromPopRef = useRef(false);
+  const [planMsg, setPlanMsg] = useState("");
+  const [showQRPanel, setShowQRPanel]             = useState(false);
+  const [showCaptainManager, setShowCaptainManager] = useState(false);
+  const [showCrewMarket, setShowCrewMarket] = useState(false);
+
+  // ── Navegación con el botón "atrás" (pestañas + modales) ──────────────────
+  // Cada cambio de pestaña deja un paso en el historial. Al abrir un modal de
+  // nivel-app, "atrás" lo cierra en vez de cambiar de página (útil en móvil).
+  const fromPopRef   = useRef(false);
+  const anyModalRef  = useRef(false);
+  const consumingRef = useRef(false);
+  const closeModalsRef = useRef(() => {});
+  const appModals = [showProfile, showPlans, showFleetManagers, showExpenseRouter, showFleetCrew, showSchedule, showAdmin, showVesselDetails, showProviders, showCaptainManager, showCrewMarket, showQRPanel];
+  const anyModalOpen = appModals.some(Boolean);
+  closeModalsRef.current = () => {
+    setShowProfile(false); setShowPlans(false); setShowFleetManagers(false); setShowExpenseRouter(false);
+    setShowFleetCrew(false); setShowSchedule(false); setShowAdmin(false); setShowVesselDetails(false);
+    setShowProviders(false); setShowCaptainManager(false); setShowCrewMarket(false); setShowQRPanel(false);
+  };
+
   useEffect(() => {
     window.history.replaceState({ ntPage: page }, "");
     const onPop = (e) => {
+      if (consumingRef.current) { consumingRef.current = false; return; }  // paso extra que estamos limpiando
+      if (anyModalRef.current) { closeModalsRef.current(); return; }        // hay un modal abierto: cerrarlo
       const p = e.state?.ntPage;
       if (p) { fromPopRef.current = true; setPage(p); }
     };
@@ -336,15 +354,25 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Apilar paso al cambiar de pestaña
   useEffect(() => {
-    if (fromPopRef.current) { fromPopRef.current = false; return; }   // vino del botón atrás: no re-apilar
-    if (window.history.state?.ntPage === page) return;                 // ya es el paso actual
+    if (fromPopRef.current) { fromPopRef.current = false; return; }
+    if (window.history.state?.ntPage === page) return;
     window.history.pushState({ ntPage: page }, "");
   }, [page]);
-  const [planMsg, setPlanMsg] = useState("");
-  const [showQRPanel, setShowQRPanel]             = useState(false);
-  const [showCaptainManager, setShowCaptainManager] = useState(false);
-  const [showCrewMarket, setShowCrewMarket] = useState(false);
+
+  // Apilar/limpiar paso al abrir/cerrar un modal de nivel-app
+  useEffect(() => {
+    const wasOpen = anyModalRef.current;
+    anyModalRef.current = anyModalOpen;
+    if (anyModalOpen && !wasOpen) {
+      window.history.pushState({ ntModal: true }, "");
+    } else if (!anyModalOpen && wasOpen && window.history.state?.ntModal) {
+      consumingRef.current = true;   // se cerró con ✕: consumir el paso extra
+      window.history.back();
+    }
+  }, [anyModalOpen]);
+
   const [captainProfile, setCaptainProfile]       = useState(null);
   const [captainVessel, setCaptainVessel]         = useState(null);
   const [crewProfile, setCrewProfile]             = useState(null);
