@@ -6,8 +6,11 @@ import CariveLogo from "./CariveLogo";
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
+import { useLang } from "./i18n.jsx";
 
 export default function CaptainView({ vessel, user, onLogout }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const { isMobile } = useResponsive();
   const [tab,       setTab]       = useState("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -55,7 +58,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
           <CariveLogo size={30} />
           <div>
             <div style={{fontSize:14, fontWeight:800, color:"#0f172a", lineHeight:1}}>Carive</div>
-            <div style={{fontSize:10, color:"#64748b"}}>Vista Capitán</div>
+            <div style={{fontSize:10, color:"#64748b"}}>{L("Vista Capitán","Captain View")}</div>
           </div>
         </div>
 
@@ -87,7 +90,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:200}} onClick={()=>setMobileMenuOpen(false)}>
           <div style={{position:"absolute",left:0,top:0,bottom:0,width:260,background:"#fff",boxShadow:"2px 0 20px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
             <div style={{padding:"18px 20px",borderBottom:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Menú</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{L("Menú","Menu")}</div>
               <button onClick={()=>setMobileMenuOpen(false)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
             </div>
             <div style={{padding:"12px"}}>
@@ -115,7 +118,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
           </div>
         </div>
         <div style={{textAlign:"right"}}>
-          <div style={{fontSize:11, color:"rgba(255,255,255,0.6)"}}>Capitán</div>
+          <div style={{fontSize:11, color:"rgba(255,255,255,0.6)"}}>{L("Capitán","Captain")}</div>
           <div style={{fontSize:13, fontWeight:700, color:"#fff"}}>{vessel.captain || user?.email}</div>
         </div>
       </div>
@@ -200,11 +203,11 @@ export default function CaptainView({ vessel, user, onLogout }) {
         {tab==="tasks"&&(
           <div>
             <div style={{fontSize:16, fontWeight:700, color:"#0f172a", marginBottom:4}}>☑ Tareas de Mantenimiento</div>
-            <div style={{fontSize:12, color:"#64748b", marginBottom:16}}>Solo lectura · Contacta al propietario para agregar tareas</div>
+            <div style={{fontSize:12, color:"#64748b", marginBottom:16}}>{L("Solo lectura · Contacta al propietario para agregar tareas","Read-only · Contact the owner to add tasks")}</div>
             {myTasks.length===0&&(
               <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
                 <div style={{fontSize:40, marginBottom:12}}>✅</div>
-                <div style={{fontWeight:600}}>Sin tareas pendientes</div>
+                <div style={{fontWeight:600}}>{L("Sin tareas pendientes","No pending tasks")}</div>
               </div>
             )}
             <div style={{display:"flex", flexDirection:"column", gap:8}}>
@@ -237,14 +240,14 @@ export default function CaptainView({ vessel, user, onLogout }) {
         {tab==="crew"&&(
           <div>
             <div style={{fontSize:16, fontWeight:700, color:"#0f172a", marginBottom:4}}>👥 Registro de Tripulación</div>
-            <div style={{fontSize:12, color:"#64748b", marginBottom:16}}>Historial de check-ins y check-outs</div>
+            <div style={{fontSize:12, color:"#64748b", marginBottom:16}}>{L("Historial de check-ins y check-outs","Check-in and check-out history")}</div>
 
             {logsLoad&&<div style={{textAlign:"center", padding:"40px", color:"#64748b"}}>⏳ Cargando...</div>}
             {!logsLoad&&crewLogs.length===0&&(
               <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
                 <div style={{fontSize:40, marginBottom:12}}>👥</div>
-                <div style={{fontWeight:600}}>Sin registros aún</div>
-                <div style={{fontSize:12, marginTop:6}}>Comparte el QR para que la tripulación haga check-in</div>
+                <div style={{fontWeight:600}}>{L("Sin registros aún","No records yet")}</div>
+                <div style={{fontSize:12, marginTop:6}}>{L("Comparte el QR para que la tripulación haga check-in","Share the QR so the crew can check in")}</div>
               </div>
             )}
             <div style={{display:"flex", flexDirection:"column", gap:6}}>
@@ -273,10 +276,10 @@ export default function CaptainView({ vessel, user, onLogout }) {
         {tab==="docs"&&(
           <div>
             <div style={{fontSize:16, fontWeight:700, color:"#0f172a", marginBottom:4}}>📄 Manuales y Asistente IA</div>
-            <div style={{fontSize:12, color:"#64748b", marginBottom:20}}>Consulta manuales técnicos y pregunta al asistente</div>
+            <div style={{fontSize:12, color:"#64748b", marginBottom:20}}>{L("Consulta manuales técnicos y pregunta al asistente","Browse technical manuals and ask the assistant")}</div>
             <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)", borderRadius:14, padding:"20px 24px", color:"#fff", textAlign:"center"}}>
               <div style={{fontSize:32, marginBottom:8}}>🤖</div>
-              <div style={{fontSize:15, fontWeight:700, marginBottom:6}}>Asistente IA de Manuales</div>
+              <div style={{fontSize:15, fontWeight:700, marginBottom:6}}>{L("Asistente IA de Manuales","Manuals AI Assistant")}</div>
               <div style={{fontSize:12, opacity:0.85, lineHeight:1.6}}>
                 Accede a los manuales técnicos desde el menú principal.<br/>
                 Pregunta al IA sobre procedimientos, repuestos o mantenimiento.
@@ -336,7 +339,7 @@ function CaptainLogTab({ vessel, user }) {
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16}}>
         <div>
           <div style={{fontSize:16, fontWeight:700, color:"#0f172a"}}>📓 Bitácora</div>
-          <div style={{fontSize:12, color:"#64748b"}}>Registra eventos y actividades</div>
+          <div style={{fontSize:12, color:"#64748b"}}>{L("Registra eventos y actividades","Record events and activities")}</div>
         </div>
         <button onClick={()=>setShowForm(!showForm)} style={{padding:"8px 14px", background:"linear-gradient(120deg,#2563eb,#0ea5e9)", border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer"}}>
           {showForm?"✕ Cancelar":"＋ Nueva entrada"}
@@ -347,24 +350,24 @@ function CaptainLogTab({ vessel, user }) {
         <div style={{background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:12, padding:18, marginBottom:16}}>
           <div style={{display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10, marginBottom:10}}>
             <div>
-              <label style={s2.label}>Fecha</label>
+              <label style={s2.label}>{L("Fecha","Date")}</label>
               <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={s2.input}/>
             </div>
             <div>
-              <label style={s2.label}>Tipo</label>
+              <label style={s2.label}>{L("Tipo","Type")}</label>
               <select value={form.type} onChange={e=>set("type",e.target.value)} style={s2.input}>
                 {TYPES.map(t=><option key={t} value={t}>{t}</option>)}
               </select>
             </div>
           </div>
           <div style={{marginBottom:10}}>
-            <label style={s2.label}>Descripción *</label>
+            <label style={s2.label}>{L("Descripción *","Description *")}</label>
             <textarea value={form.desc} onChange={e=>set("desc",e.target.value)}
               placeholder="Describe lo que ocurrió..."
               rows={3} style={{...s2.input, resize:"vertical"}}/>
           </div>
           <div style={{marginBottom:12}}>
-            <label style={s2.label}>Realizado por</label>
+            <label style={s2.label}>{L("Realizado por","Performed by")}</label>
             <input value={form.performedBy} onChange={e=>set("performedBy",e.target.value)}
               placeholder={vessel.captain||"Nombre"} style={s2.input}/>
           </div>
@@ -392,7 +395,7 @@ function CaptainLogTab({ vessel, user }) {
         {!loading&&entries.length===0&&(
           <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
             <div style={{fontSize:40, marginBottom:12}}>📓</div>
-            <div style={{fontWeight:600}}>Sin entradas en la bitácora</div>
+            <div style={{fontWeight:600}}>{L("Sin entradas en la bitácora","No logbook entries")}</div>
           </div>
         )}
       </div>
