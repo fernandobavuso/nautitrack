@@ -518,6 +518,16 @@ export default function App() {
       interval:"interval", dueHours:"due_hours", everyHours:"every_hours", motorName:"motor" };
     for (const k in MAP) if (k in patch) dbPatch[MAP[k]] = patch[k];
     await supabase.from("tasks").update(dbPatch).eq("id", taskId);
+    // Si la tarea tiene un turno enlazado en la Agenda, sincronizarlo
+    if ("assigned" in patch || "nextDue" in patch || "name" in patch) {
+      const shiftPatch = {};
+      if ("assigned" in patch) shiftPatch.person_name = (patch.assigned || "").replace(/\s*\(.*\)$/, "").trim();
+      if ("nextDue"  in patch && patch.nextDue) shiftPatch.shift_date = patch.nextDue;
+      if ("name"     in patch) shiftPatch.description = patch.name;
+      if (Object.keys(shiftPatch).length) {
+        supabase.from("work_shifts").update(shiftPatch).eq("task_id", String(taskId)).then(() => {});
+      }
+    }
     setVessels(vs => vs.map(v => v.id === vesselId
       ? { ...v, tasks: (v.tasks || []).map(t => t.id === taskId ? { ...t, ...patch } : t) }
       : v));
@@ -1306,7 +1316,11 @@ function AlertsCard({ vessel, setPage }) {
 function IndicatorsCard({ vessel }) {
   const { t: tr } = useLang();
   const fuelVal = Number(vessel.fuel)||0;
-  const fc = fuelVal>50?"#16a34a":fuelVal>25?"#d97706":"#dc2626";
+  const tankCap = (vessel.details?.fuelTanks||[]).reduce((a,t)=>a+(Number(t.capacity)||0),0);
+  const fuelPct = tankCap>0 ? Math.min(100,(fuelVal/tankCap)*100) : null;
+  const fc = fuelPct!=null
+    ? (fuelPct>50?"#16a34a":fuelPct>25?"#d97706":"#dc2626")
+    : "#0ea5e9";
   // Calcular próximo servicio real de las tareas pendientes
   const pendingTasks = (vessel.tasks||[]).filter(t=>t.status!=="done"&&t.nextDue).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
   const nextService = pendingTasks[0];
@@ -1318,7 +1332,7 @@ function IndicatorsCard({ vessel }) {
       <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {[
-          {Icon:IconFuel,val:`${fuelVal} ${vessel.fuelUnit||"gal"}`,lbl:tr("dash.fuel"),color:fc,bar:true},
+          {Icon:IconFuel,val:tankCap>0?`${fuelVal}/${tankCap} ${vessel.fuelUnit||"gal"}`:`${fuelVal} ${vessel.fuelUnit||"gal"}`,lbl:fuelPct!=null?`${tr("dash.fuel")} · ${Math.round(fuelPct)}%`:tr("dash.fuel"),color:fc,bar:fuelPct!=null},
           {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
@@ -1327,7 +1341,7 @@ function IndicatorsCard({ vessel }) {
             <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>
             <div style={{fontSize:17,fontWeight:700,color:ind.color}}>{ind.val}</div>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{ind.lbl}</div>
-            {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${Math.min(fuelVal,100)}%`,background:ind.color}} /></div>}
+            {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${fuelPct!=null?fuelPct:0}%`,background:ind.color}} /></div>}
           </div>
         ))}
       </div>
