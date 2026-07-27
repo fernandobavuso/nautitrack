@@ -7,6 +7,7 @@ import LocationPicker from "./LocationPicker.jsx";
 import { distanceKm, kmToMi } from "./geo.js";
 import StoreOnboarding from "./StoreOnboarding.jsx";
 import { useLang } from "./i18n.jsx";
+import { useResponsive } from "./useResponsive";
 
 const CATEGORY_GROUPS = [
   { es:"Motor y propulsión", en:"Engine & propulsion", items:[
@@ -47,6 +48,7 @@ const catL = (c, lang) => lang === "en" ? (CAT_EN[c] || c) : c;
 
 export default function StoreView({ user, onLogout }) {
   const { t, lang, setLang } = useLang();
+  const { isMobile } = useResponsive();
   const L=(es,en)=>lang==="en"?en:es;
   const [tab, setTab] = useState("solicitudes");
   const [profile, setProfile] = useState(null);
@@ -156,6 +158,12 @@ export default function StoreView({ user, onLogout }) {
 
   const respondedIds = myResponses.map(r=>r.request_id);
   // Iniciales de la tienda para el avatar (ej: "West Marine" -> "WM")
+  const TABS = [
+    {k:"solicitudes",l:t("store.requests")},
+    {k:"respuestas", l:t("store.quotes")},
+    {k:"ventas",     l:L("Ventas","Sales")},
+    {k:"perfil",     l:t("store.myStore")},
+  ];
   const storeInitials = (profile?.store_name || user?.email || "T")
     .trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase() || "T";
   const profileComplete = profile?.store_name && profile?.store_city && (profile?.store_categories||[]).length>0;
@@ -181,7 +189,7 @@ export default function StoreView({ user, onLogout }) {
   return (
     <div style={{minHeight:"100vh",background:"#f1f5f9"}}>
       {/* Barra superior */}
-      <div style={{background:"#0a2540",borderBottom:"1px solid #0f3a5f",padding:"11px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:"#0a2540",borderBottom:"1px solid #0f3a5f",padding:isMobile?"9px 12px":"11px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <CariveLogo size={28} />
           <div>
@@ -198,11 +206,13 @@ export default function StoreView({ user, onLogout }) {
           )}
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
-          <div style={{display:"flex",gap:2,background:"rgba(255,255,255,.07)",borderRadius:9,padding:3}}>
-            {[{k:"solicitudes",l:t("store.requests")},{k:"respuestas",l:t("store.quotes")},{k:"ventas",l:L("Ventas","Sales")},{k:"perfil",l:t("store.myStore")}].map(tb=>(
-              <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"6px 13px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",letterSpacing:"0.05em",fontWeight:600,background:tab===tb.k?"#fff":"transparent",color:tab===tb.k?"#0a2540":"#94a3b8"}}>{tb.l.toUpperCase()}</button>
-            ))}
-          </div>
+          {!isMobile && (
+            <div style={{display:"flex",gap:2,background:"rgba(255,255,255,.07)",borderRadius:9,padding:3}}>
+              {TABS.map(tb=>(
+                <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"6px 13px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",letterSpacing:"0.05em",fontWeight:600,background:tab===tb.k?"#fff":"transparent",color:tab===tb.k?"#0a2540":"#94a3b8"}}>{tb.l.toUpperCase()}</button>
+              ))}
+            </div>
+          )}
           <div style={{position:"relative",marginLeft:6}}>
             <button onClick={(e)=>{e.stopPropagation();setShowStoreMenu(v=>!v);}} style={{display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:4}}>
               <div style={{width:30,height:30,borderRadius:8,background:"rgba(96,165,250,.18)",border:"1px solid rgba(96,165,250,.45)",color:"#93c5fd",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:700}}>
@@ -305,8 +315,16 @@ export default function StoreView({ user, onLogout }) {
         </div>
       </div>
 
+      {isMobile && (
+        <div style={{position:"sticky",top:50,zIndex:99,background:"#0a2540",display:"flex",gap:4,padding:"0 10px 9px",overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          {TABS.map(tb=>(
+            <button key={tb.k} onClick={()=>setTab(tb.k)} style={{flexShrink:0,padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",letterSpacing:"0.05em",fontWeight:700,background:tab===tb.k?"#fff":"rgba(255,255,255,.07)",color:tab===tb.k?"#0a2540":"#94a3b8",whiteSpace:"nowrap"}}>{tb.l.toUpperCase()}</button>
+          ))}
+        </div>
+      )}
+
       {msg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"11px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:5000,boxShadow:"0 8px 24px rgba(0,0,0,.2)"}}>{msg}</div>}
-      <div style={{maxWidth:820,margin:"0 auto",padding:"24px 20px"}}>
+      <div style={{maxWidth:820,margin:"0 auto",padding:isMobile?"14px 12px 40px":"24px 20px"}}>
         {/* Aviso: tienda en pausa */}
         {profile.store_paused && (
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
@@ -322,14 +340,14 @@ export default function StoreView({ user, onLogout }) {
 
         {/* Métricas: panel de control del negocio */}
         {profileComplete && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",marginBottom:isMobile?12:16}}>
             {[
               {v:newRequests,        l:t("store.newOrders"),    c:"#2563eb"},
               {v:quotesSent,         l:t("store.quotesSent"),   c:"#0f172a"},
               {v:thisMonthWon,       l:t("store.monthSales"),   c:"#16a34a"},
               {v:responseRate,       l:t("store.responseRate"), c:"#0f172a", pct:true},
             ].map((m,i)=>(
-              <div key={i} style={{padding:"13px 15px",borderRight:i<3?"1px solid #e2e8f0":"none"}}>
+              <div key={i} style={{padding:isMobile?"11px 13px":"13px 15px",borderRight:(isMobile?(i%2===0):(i<3))?"1px solid #e2e8f0":"none",borderTop:(isMobile&&i>1)?"1px solid #e2e8f0":"none"}}>
                 <div style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#94a3b8",letterSpacing:"0.08em",marginBottom:5,textTransform:"uppercase",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.l}</div>
                 <div style={{fontSize:25,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:m.c,lineHeight:1,fontWeight:600}}>
                   {typeof m.v==="number"&&m.v<10&&!m.pct?`0${m.v}`:m.v}{m.pct&&<span style={{fontSize:14,color:"#94a3b8"}}>%</span>}
@@ -504,12 +522,12 @@ export default function StoreView({ user, onLogout }) {
                   onChange={(loc)=>setProfile({...profile,store_lat:loc.lat,store_lng:loc.lng,store_city:loc.label})}
                 />
               </div>
-              <div style={{display:"flex",gap:8}}>
-                <div style={{flex:1}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div style={{flex:"1 1 200px",minWidth:0}}>
                   <label style={lbl}>{L("Teléfono / WhatsApp","Phone / WhatsApp")}</label>
                   <input value={profile.store_phone||""} onChange={e=>setProfile({...profile,store_phone:e.target.value})} placeholder={lang==="es"?"+1 305...":"+1 305..."} style={inp}/>
                 </div>
-                <div style={{flex:1}}>
+                <div style={{flex:"1 1 200px",minWidth:0}}>
                   <label style={lbl}>{L("Radio de cobertura","Coverage radius")}</label>
                   <select value={profile.store_radius_km||50} onChange={e=>setProfile({...profile,store_radius_km:Number(e.target.value)})} style={inp}>
                     <option value={15}>{L("Hasta ~10 millas","Up to ~10 miles")}</option>
@@ -622,7 +640,7 @@ export default function StoreView({ user, onLogout }) {
               const totalComm = wins.reduce((s,r)=>s+(Number(r.commission_amount)||0),0);
               const totalNet = totalSold - totalComm;
               return (
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:12,marginBottom:16}}>
                   {[
                     {v:`$${totalSold.toFixed(0)}`, l:t("store.totalSold")},
                     {v:`$${totalComm.toFixed(0)}`, l:t("store.commPaid"), c:"#dc2626"},
@@ -730,7 +748,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
   };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:12,overflowY:"auto"}} onClick={onClose}>
       <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>{lang==="es"?"Responder solicitud":"Respond to request"}</div>
         <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{request.item_name}</div>
@@ -752,7 +770,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
 
         {type==="have"&&(
           <div style={{marginBottom:12}}>
-            <div style={{display:"flex",gap:8}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <select value={currency} onChange={e=>setCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
                 <option value="USD">$ USD</option>
               </select>
@@ -769,7 +787,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
 
         <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder={type==="have_questions"?L("¿Qué necesitas saber? Ej: ¿marca exacta? ¿año del motor?","What do you need to know? e.g. exact brand? engine year?"):L("Mensaje al cliente (opcional)","Message to the customer (optional)")} style={{...inp,resize:"vertical",marginBottom:14}}/>
 
-        <div style={{display:"flex",gap:8}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           <button onClick={onClose} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>{lang==="es"?"Cancelar":"Cancel"}</button>
           <button onClick={submit} disabled={type==="have"&&!price} style={{flex:2,padding:"11px",background:(type==="have"&&!price)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Enviar cotización","Send quote")}</button>
         </div>
