@@ -1342,7 +1342,7 @@ function AlertsCard({ vessel, setPage }) {
 }
 
 function IndicatorsCard({ vessel }) {
-  const { t: tr } = useLang();
+  const { t: tr, lang } = useLang();
   const fuelVal = Number(vessel.fuel)||0;
   const tankCap = (vessel.details?.fuelTanks||[]).reduce((a,t)=>a+(Number(t.capacity)||0),0);
   const fuelPct = tankCap>0 ? Math.min(100,(fuelVal/tankCap)*100) : null;
@@ -1353,8 +1353,8 @@ function IndicatorsCard({ vessel }) {
   const pendingTasks = (vessel.tasks||[]).filter(t=>t.status!=="done"&&t.nextDue).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
   const nextService = pendingTasks[0];
   const nextServiceVal = nextService
-    ? new Date(nextService.nextDue).toLocaleDateString("es-VE",{day:"numeric",month:"short"})
-    : "Ninguno";
+    ? new Date(nextService.nextDue).toLocaleDateString(lang==="en"?"en-US":"es",{day:"numeric",month:"short"})
+    : tr("dash.none");
   return (
     <div style={{...s.card,flex:1}}>
       <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
@@ -1362,8 +1362,8 @@ function IndicatorsCard({ vessel }) {
         {[
           {Icon:IconFuel,val:tankCap>0?`${fuelVal}/${tankCap} ${vessel.fuelUnit||"gal"}`:`${fuelVal} ${vessel.fuelUnit||"gal"}`,lbl:fuelPct!=null?`${tr("dash.fuel")} · ${Math.round(fuelPct)}%`:tr("dash.fuel"),color:fc,bar:fuelPct!=null},
           {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
-          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:"Horas Generador",color:"#7c3aed",bar:false},
-          {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?"Próx. Servicio":"Sin servicios",color:nextService?"#dc2626":"#94a3b8",bar:false},
+          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false},
+          {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?tr("dash.nextService"):tr("dash.noServices"),color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (
           <div key={ind.lbl} style={s.indBox}>
             <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>

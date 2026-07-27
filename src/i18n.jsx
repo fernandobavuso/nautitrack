@@ -400,6 +400,10 @@ export const DICT = {
   "dash.see":        { es: "Ver",          en: "See" },
   "dash.indicators": { es: "Indicadores",  en: "Indicators" },
   "dash.fuel":       { es: "Combustible",  en: "Fuel" },
+  "dash.genHours":   { es: "Horas Generador", en: "Generator Hours" },
+  "dash.nextService":{ es: "Próx. Servicio",  en: "Next Service" },
+  "dash.noServices": { es: "Sin servicios",   en: "No services" },
+  "dash.none":       { es: "Ninguno",         en: "None" },
   "dash.engineHours":{ es: "Horas Motor",  en: "Engine Hours" },
 
   // ─── Founder banner ───
