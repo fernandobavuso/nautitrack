@@ -967,7 +967,7 @@ export default function App() {
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} updateTask={(taskId,patch)=>updateTask(vessel.id,taskId,patch)} deleteTask={(taskId)=>deleteTask(vessel.id,taskId)} />}
         {page==="providers" && <ProvidersModal vessel={vessel} updateVessel={updateVessel} asPage />}
         {page==="admin" && isAdmin(user) && <AdminPanel user={user} asPage />}
-        {page==="calendar" && <CalendarPage vessel={vessel} isMobile={isMobile} />}
+        {page==="calendar" && <CalendarPage vessel={vessel} vessels={vessels} isMobile={isMobile} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} updateLogEntry={(id,e)=>updateLogEntry(vessel.id,id,e)} deleteLogEntry={(id)=>deleteLogEntry(vessel.id,id)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}

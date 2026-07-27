@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { accountHasFleet } from "./plans.jsx";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
@@ -10,45 +11,73 @@ const STATUS_COLOR = {
 };
 const SHIFT_COLOR = { "Agendado":"#d97706", "En proceso":"#2563eb", "Completado":"#16a34a" };
 
-export default function CalendarPage({ vessel, isMobile }) {
+export default function CalendarPage({ vessel, vessels, isMobile }) {
   const { lang } = useLang();
   const L = (es, en) => (lang === "en" ? en : es);
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-  const [filter, setFilter] = useState("todo"); // todo | tareas | viajes
+  const [filter, setFilter] = useState("todo"); // todo | tareas | turnos | viajes
+  const [scope, setScope]   = useState("vessel"); // vessel | fleet
+  const fleetMode  = scope === "fleet";
+  const canFleet   = accountHasFleet(vessels) && (vessels || []).length > 1;
+  // Color estable por barco (para distinguirlos en modo flota)
+  const VESSEL_COLORS = ["#2563eb","#16a34a","#d97706","#7c3aed","#db2777","#0891b2","#ca8a04","#dc2626"];
+  const vesselColor = (name) => {
+    const idx = (vessels || []).findIndex(v => v.name === name);
+    return VESSEL_COLORS[(idx < 0 ? 0 : idx) % VESSEL_COLORS.length];
+  };
   const [trips, setTrips] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [selected, setSelected] = useState(null); // evento seleccionado
 
   useEffect(() => {
-    if (!vessel?.id || vessel.id === "__empty__") { setTrips([]); return; }
-    supabase.from("day_trips").select("*").eq("vessel_id", vessel.id).then(({ data }) => setTrips(data || []));
-    if (vessel.owner_id) {
-      supabase.from("work_shifts").select("*").eq("manager_id", vessel.owner_id).eq("vessel_name", vessel.name).then(({ data }) => setShifts(data || []));
+    if (!vessel?.id || vessel.id === "__empty__") { setTrips([]); setShifts([]); return; }
+    if (fleetMode) {
+      // Toda la flota: viajes y turnos de todas las embarcaciones de la cuenta
+      const ids = (vessels || []).map(v => v.id);
+      supabase.from("day_trips").select("*").in("vessel_id", ids).then(({ data }) => setTrips(data || []));
+      const owners = [...new Set((vessels || []).map(v => v.owner_id).filter(Boolean))];
+      if (owners.length) {
+        supabase.from("work_shifts").select("*").in("manager_id", owners).then(({ data }) => setShifts(data || []));
+      }
+    } else {
+      supabase.from("day_trips").select("*").eq("vessel_id", vessel.id).then(({ data }) => setTrips(data || []));
+      if (vessel.owner_id) {
+        supabase.from("work_shifts").select("*").eq("manager_id", vessel.owner_id).eq("vessel_name", vessel.name).then(({ data }) => setShifts(data || []));
+      }
     }
-  }, [vessel?.id]);
+  }, [vessel?.id, fleetMode, (vessels || []).length]);
 
   // Construir lista de eventos combinada
   const events = [];
   const shiftTaskIds = new Set(shifts.map(s => String(s.task_id)).filter(x => x && x !== "null"));
   if (filter === "todo" || filter === "tareas") {
-    (vessel.tasks || []).forEach(t => {
+    const taskSources = fleetMode
+      ? (vessels || []).map(v => ({ vName: v.name, tasks: v.tasks || [] }))
+      : [{ vName: vessel.name, tasks: vessel.tasks || [] }];
+    taskSources.forEach(({ vName, tasks }) => tasks.forEach(t => {
       if (!t.nextDue) return;
       if (shiftTaskIds.has(String(t.id))) return; // ya se muestra como turno
       events.push({
         kind: "task", date: t.nextDue.slice(0, 10),
-        title: t.name || "Tarea", sub: [t.system, t.equipment].filter(Boolean).join(" · "),
-        color: STATUS_COLOR[t.status] || "#2563eb", raw: t,
+        title: t.name || "Tarea",
+        sub: [fleetMode ? vName : null, t.system, t.equipment].filter(Boolean).join(" · "),
+        vesselName: vName,
+        color: fleetMode ? vesselColor(vName) : (STATUS_COLOR[t.status] || "#2563eb"),
+        dot: STATUS_COLOR[t.status] || "#2563eb", raw: t,
       });
-    });
+    }));
   }
   if (filter === "todo" || filter === "turnos") {
     shifts.forEach(sh => {
       if (!sh.shift_date) return;
       events.push({
         kind: "shift", date: sh.shift_date.slice(0, 10),
-        title: sh.person_name, sub: [sh.description, sh.hours ? `${sh.hours}h` : null].filter(Boolean).join(" · "),
-        color: SHIFT_COLOR[sh.work_status] || "#d97706", raw: sh,
+        title: sh.person_name,
+        sub: [fleetMode ? sh.vessel_name : null, sh.description, sh.hours ? `${sh.hours}h` : null].filter(Boolean).join(" · "),
+        vesselName: sh.vessel_name,
+        color: fleetMode ? vesselColor(sh.vessel_name) : (SHIFT_COLOR[sh.work_status] || "#d97706"),
+        dot: SHIFT_COLOR[sh.work_status] || "#d97706", raw: sh,
       });
     });
   }
@@ -59,8 +88,9 @@ export default function CalendarPage({ vessel, isMobile }) {
       events.push({
         kind: "trip", date: tp.trip_date.slice(0, 10),
         title: `Day trip${cancelled ? " (cancelado)" : ""}`,
-        sub: [tp.trip_type, tp.crew_role].filter(Boolean).join(" · "),
-        color: cancelled ? "#94a3b8" : "#0ea5e9", raw: tp,
+        sub: [fleetMode ? ((vessels||[]).find(v=>v.id===tp.vessel_id)?.name) : null, tp.trip_type, tp.crew_role].filter(Boolean).join(" · "),
+        color: cancelled ? "#94a3b8" : (fleetMode ? vesselColor((vessels||[]).find(v=>v.id===tp.vessel_id)?.name) : "#0ea5e9"),
+        dot: cancelled ? "#94a3b8" : "#0ea5e9", raw: tp,
       });
     });
   }
@@ -90,7 +120,7 @@ export default function CalendarPage({ vessel, isMobile }) {
       {/* Encabezado */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:12}}>
         <div>
-          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>{L("Calendario","Calendar")}</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>{L("Calendario","Calendar")}{fleetMode?L(" — Toda la flota"," — Whole fleet"):""}</div>
           <div style={{fontSize:13,color:"#64748b"}}>{vessel.name}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -101,9 +131,29 @@ export default function CalendarPage({ vessel, isMobile }) {
         </div>
       </div>
 
+      {/* Alcance: este barco o toda la flota */}
+      {canFleet && (
+        <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"inline-flex",background:"#f1f5f9",borderRadius:9,padding:3}}>
+            {[{k:"vessel",l:L("Este barco","This boat")},{k:"fleet",l:L("Toda la flota","Whole fleet")}].map(o=>(
+              <button key={o.k} onClick={()=>setScope(o.k)} style={{padding:"6px 14px",border:"none",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:700,background:scope===o.k?"#fff":"transparent",color:scope===o.k?"#2563eb":"#64748b"}}>{o.l}</button>
+            ))}
+          </div>
+          {fleetMode && (
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+              {(vessels||[]).map(v=>(
+                <span key={v.id} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,color:"#64748b"}}>
+                  <span style={{width:9,height:9,borderRadius:"50%",background:vesselColor(v.name)}}/>{v.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filtro */}
       <div style={{display:"flex",gap:8,marginBottom:14}}>
-        {[{k:"todo",l:"Todo"},{k:"tareas",l:"Tareas"},{k:"turnos",l:"Turnos"},{k:"viajes",l:"Day trips"}].map(f=>(
+        {[{k:"todo",l:L("Todo","All")},{k:"tareas",l:L("Tareas","Tasks")},{k:"turnos",l:L("Turnos","Shifts")},{k:"viajes",l:"Day trips"}].map(f=>(
           <button key={f.k} onClick={()=>setFilter(f.k)} style={{padding:"7px 16px",borderRadius:20,border:"none",cursor:"pointer",fontSize:13,fontWeight:filter===f.k?700:500,background:filter===f.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#f1f5f9",color:filter===f.k?"#fff":"#64748b"}}>{f.l}</button>
         ))}
       </div>
