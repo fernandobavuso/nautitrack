@@ -213,7 +213,7 @@ export default function StoreView({ user, onLogout }) {
             {showStoreMenu && (
               <>
                 <div style={{position:"fixed",inset:0,zIndex:200}} onClick={()=>setShowStoreMenu(false)}/>
-                <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,boxShadow:"0 12px 32px rgba(10,37,64,.14)",minWidth:270,padding:6,zIndex:210}}>
+                <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,boxShadow:"0 12px 32px rgba(10,37,64,.14)",minWidth:270,maxWidth:"calc(100vw - 24px)",padding:6,zIndex:210,maxHeight:"calc(100vh - 90px)",overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain"}}>
 
                   {/* Cabecera: identidad de la tienda */}
                   <div style={{padding:"10px 12px 10px",borderBottom:"1px solid #f1f5f9",marginBottom:6}}>
