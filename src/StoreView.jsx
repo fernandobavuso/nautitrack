@@ -178,26 +178,34 @@ export default function StoreView({ user, onLogout }) {
   return (
     <div style={{minHeight:"100vh",background:"#f1f5f9"}}>
       {/* Barra superior */}
-      <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:"#0a2540",borderBottom:"1px solid #0f3a5f",padding:"11px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <CariveLogo size={30} />
+          <CariveLogo size={28} />
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Carive</div>
-            <div style={{fontSize:10,color:"#64748b"}}>{t("store.portal")}</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#f1f5f9",fontFamily:"'Sora',system-ui,sans-serif"}}>{profile?.store_name || "Carive"}</div>
+            <div style={{fontSize:10,color:"#94a3b8",fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",letterSpacing:"0.04em"}}>
+              {[profile?.store_city, profile?.store_ships_nationwide ? L("ENVÍO NACIONAL","NATIONWIDE") : (profile?.store_radius_km ? `${Math.round(kmToMi(profile.store_radius_km))}MI` : null), (profile?.store_categories||[]).length ? `${(profile.store_categories||[]).length} CAT` : null].filter(Boolean).join(" · ").toUpperCase() || t("store.portal")}
+            </div>
           </div>
+          {profileComplete && (
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:profile.store_paused?"#fcd34d":"#86efac",background:profile.store_paused?"rgba(251,191,36,.15)":"rgba(34,197,94,.15)",border:`1px solid ${profile.store_paused?"rgba(251,191,36,.4)":"rgba(34,197,94,.4)"}`,padding:"4px 9px",borderRadius:6,marginLeft:4,letterSpacing:"0.06em"}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background:profile.store_paused?"#fcd34d":"#4ade80"}}/>
+              {profile.store_paused?L("EN PAUSA","PAUSED"):"ONLINE"}
+            </span>
+          )}
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
-          <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:10,padding:4}}>
-            {[{k:"perfil",l:t("store.myStore")},{k:"respuestas",l:t("store.quotes")},{k:"solicitudes",l:t("store.requests")},{k:"ventas",l:L("Ventas","Sales")}].map(tb=>(
-              <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===tb.k?700:500,background:tab===tb.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"transparent",color:tab===tb.k?"#fff":"#64748b"}}>{tb.l}</button>
+          <div style={{display:"flex",gap:2,background:"rgba(255,255,255,.07)",borderRadius:9,padding:3}}>
+            {[{k:"solicitudes",l:t("store.requests")},{k:"respuestas",l:t("store.quotes")},{k:"ventas",l:L("Ventas","Sales")},{k:"perfil",l:t("store.myStore")}].map(tb=>(
+              <button key={tb.k} onClick={()=>setTab(tb.k)} style={{padding:"6px 13px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",letterSpacing:"0.05em",fontWeight:600,background:tab===tb.k?"#fff":"transparent",color:tab===tb.k?"#0a2540":"#94a3b8"}}>{tb.l.toUpperCase()}</button>
             ))}
           </div>
           <div style={{position:"relative",marginLeft:6}}>
             <button onClick={(e)=>{e.stopPropagation();setShowStoreMenu(v=>!v);}} style={{display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:4}}>
-              <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#2563eb,#0ea5e9)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,letterSpacing:"0.02em"}}>
+              <div style={{width:30,height:30,borderRadius:8,background:"rgba(96,165,250,.18)",border:"1px solid rgba(96,165,250,.45)",color:"#93c5fd",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:700}}>
                 {storeInitials}
               </div>
-              <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
+              <span style={{color:"#64748b",fontSize:9}}>▼</span>
             </button>
             {showStoreMenu && (
               <>
@@ -278,16 +286,6 @@ export default function StoreView({ user, onLogout }) {
 
       {msg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"11px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:5000,boxShadow:"0 8px 24px rgba(0,0,0,.2)"}}>{msg}</div>}
       <div style={{maxWidth:820,margin:"0 auto",padding:"24px 20px"}}>
-        {/* Header storefront (solo con perfil completo) */}
-        {profileComplete && (
-          <div style={{background:"linear-gradient(120deg,#0a2540,#0f3a5f)",borderRadius:18,padding:"22px 24px",color:"#fff",marginBottom:16,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:"radial-gradient(circle,rgba(56,189,248,.22),transparent 70%)"}}/>
-            <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:22,fontWeight:800,marginBottom:4}}>{profile.store_name}</div>
-            <div style={{fontSize:13,opacity:.85}}>{profile.store_city}{profile.store_ships_nationwide?` · ${L("Envío nacional","Nationwide shipping")}`:profile.store_radius_km?` · ${L("Cobertura","Coverage")} ${Math.round(kmToMi(profile.store_radius_km))} mi`:""}</div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:profile.store_paused?"rgba(251,191,36,.2)":"rgba(56,189,248,.2)",color:profile.store_paused?"#fcd34d":"#7dd3fc",fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,marginTop:10}}>{profile.store_paused?L("En pausa","Paused"):`✓ ${t("store.active")}`}</div>
-          </div>
-        )}
-
         {/* Aviso: tienda en pausa */}
         {profile.store_paused && (
           <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
@@ -301,19 +299,20 @@ export default function StoreView({ user, onLogout }) {
           </div>
         )}
 
-        {/* Métricas: pulso del negocio */}
+        {/* Métricas: panel de control del negocio */}
         {profileComplete && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden",marginBottom:16}}>
             {[
-              {v:newRequests, l:t("store.newOrders"), sub:t("store.forYou"), hl:true},
-              {v:thisMonthWon, l:t("store.monthSales"), sub:""},
-              {v:quotesSent, l:t("store.quotesSent"), sub:""},
-              {v:responseRate+"%", l:t("store.responseRate"), sub:""},
+              {v:newRequests,        l:t("store.newOrders"),    c:"#2563eb"},
+              {v:quotesSent,         l:t("store.quotesSent"),   c:"#0f172a"},
+              {v:thisMonthWon,       l:t("store.monthSales"),   c:"#16a34a"},
+              {v:responseRate,       l:t("store.responseRate"), c:"#0f172a", pct:true},
             ].map((m,i)=>(
-              <div key={i} style={{background:m.hl?"linear-gradient(120deg,#eff6ff,#e0f2fe)":"#fff",border:`1px solid ${m.hl?"#bae6fd":"#e2e8f0"}`,borderRadius:14,padding:16}}>
-                <div style={{fontFamily:"'Sora',system-ui,sans-serif",fontSize:26,fontWeight:800,color:m.hl?"#2563eb":"#0a2540"}}>{m.v}</div>
-                <div style={{fontSize:11,color:"#64748b",marginTop:2,fontWeight:500}}>{m.l}</div>
-                {m.sub&&<div style={{fontSize:11,color:"#16a34a",fontWeight:700,marginTop:6}}>{m.sub}</div>}
+              <div key={i} style={{padding:"13px 15px",borderRight:i<3?"1px solid #e2e8f0":"none"}}>
+                <div style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#94a3b8",letterSpacing:"0.08em",marginBottom:5,textTransform:"uppercase",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.l}</div>
+                <div style={{fontSize:25,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:m.c,lineHeight:1,fontWeight:600}}>
+                  {typeof m.v==="number"&&m.v<10&&!m.pct?`0${m.v}`:m.v}{m.pct&&<span style={{fontSize:14,color:"#94a3b8"}}>%</span>}
+                </div>
               </div>
             ))}
           </div>
@@ -331,47 +330,71 @@ export default function StoreView({ user, onLogout }) {
         {/* ── SOLICITUDES ── */}
         {tab==="solicitudes"&&(
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{t("store.requestsForYou")}{profile.store_city?` · ${profile.store_city}`:""}</div>
+            <div style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.08em",marginBottom:10,textTransform:"uppercase"}}>{t("store.requestsForYou")}{profile.store_city?` · ${profile.store_city}`:""}</div>
             {requests.length===0&&(
               <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                 <div style={{fontWeight:600}}>{t("store.noRequests")}</div>
                 <div style={{fontSize:12,marginTop:4}}>{t("store.noRequestsSub")}</div>
               </div>
             )}
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {requests.map(r=>{
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden"}}>
+              {requests.map((r,idx)=>{
                 const responded = respondedIds.includes(r.id);
                 const ageHours = r.created_at ? Math.round((Date.now()-new Date(r.created_at))/3600000) : null;
-                const ageLabel = ageHours==null?"":ageHours<1?"hace minutos":ageHours<24?`hace ${ageHours}h`:`hace ${Math.round(ageHours/24)}d`;
+                const ageLabel = ageHours==null?"":ageHours<1?"<1H":ageHours<24?`${ageHours}H`:`${Math.round(ageHours/24)}D`;
                 const isNew = ageHours!=null && ageHours < 6;
+                const reqId = `REQ-${String(r.id).replace(/\D/g,"").slice(-4).padStart(4,"0")}`;
+                const meta = [r.category, r.city].filter(Boolean).join(" / ").toUpperCase();
                 return (
-                  <div key={r.id} style={{background:"#fff",border:`1px solid ${r.urgent?"#fecaca":"#e2e8f0"}`,borderRadius:16,padding:18,transition:".2s"}}
-                    onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 8px 24px rgba(10,37,64,.08)";e.currentTarget.style.borderColor="#bae6fd";}}
-                    onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=r.urgent?"#fecaca":"#e2e8f0";}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:10}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#2563eb",fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20}}>{r.category||"Repuesto"}</span>
-                      <div style={{display:"flex",gap:6}}>
-                        {r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>{t("store.urgent")}</span>}
-                        {isNew&&!r.urgent&&<span style={{background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"3px 9px",borderRadius:20}}>{t("store.new")}</span>}
+                  <div key={r.id} style={{
+                    padding:"13px 15px",
+                    borderTop: idx===0?"none":"1px solid #f1f5f9",
+                    borderLeft: r.urgent?"2px solid #dc2626":"2px solid transparent",
+                    background: r.urgent?"#fefcfc":"#fff", transition:".15s",
+                  }}
+                    onMouseEnter={e=>{e.currentTarget.style.background="#f8fafc";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background=r.urgent?"#fefcfc":"#fff";}}>
+
+                    {/* Fila de estado: etiqueta + id + antigüedad */}
+                    <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:9,flexWrap:"wrap"}}>
+                      {r.urgent
+                        ? <span style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#dc2626",background:"#fef2f2",padding:"3px 7px",borderRadius:5,letterSpacing:"0.06em",fontWeight:700}}>{t("store.urgent").toUpperCase()}</span>
+                        : isNew
+                          ? <span style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#2563eb",background:"#eff6ff",padding:"3px 7px",borderRadius:5,letterSpacing:"0.06em",fontWeight:700}}>{t("store.new").toUpperCase()}</span>
+                          : <span style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",border:"1px solid #e2e8f0",padding:"3px 7px",borderRadius:5,letterSpacing:"0.06em",fontWeight:600}}>{L("ABIERTA","OPEN")}</span>}
+                      <span style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#94a3b8"}}>{reqId}{ageLabel?` · ${ageLabel}`:""}</span>
+                      {responded && <span style={{marginLeft:"auto",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#16a34a",fontWeight:600}}>✓ {t("store.alreadyQuoted").toUpperCase()}</span>}
+                    </div>
+
+                    {/* Nombre + meta */}
+                    <div style={{display:"flex",gap:12}}>
+                      {r.photo_url&&<img src={r.photo_url} style={{width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0,border:"1px solid #e2e8f0"}} alt=""/>}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:15,fontWeight:600,color:"#0a2540",marginBottom:3}}>{r.item_name}</div>
+                        <div style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.03em"}}>{meta}</div>
+                        {r.description&&<div style={{fontSize:12,color:"#475569",marginTop:7,lineHeight:1.5}}>{r.description}</div>}
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:14,marginBottom:14}}>
-                      {r.photo_url&&<img src={r.photo_url} style={{width:56,height:56,borderRadius:10,objectFit:"cover",flexShrink:0}} alt=""/>}
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:16,fontWeight:700,color:"#0a2540",marginBottom:6}}>{r.item_name}</div>
-                        <div style={{display:"flex",gap:14,fontSize:12,color:"#94a3b8",flexWrap:"wrap"}}>
-                          {r.city&&<span>{r.city}</span>}
-                          {r._distKm!=null&&<span style={{color:"#2563eb",fontWeight:600}}>a {Math.round(kmToMi(r._distKm))} mi</span>}
-                          {ageLabel&&<span>{ageLabel}</span>}
-                          {r.part_num&&<span>Ref: {r.part_num}</span>}
+
+                    {/* Datos duros */}
+                    <div style={{display:"flex",gap:22,padding:"9px 0",borderTop:"1px solid #f1f5f9",marginTop:11,marginBottom:responded?0:11,flexWrap:"wrap"}}>
+                      {[
+                        r.part_num ? {l:"REF", v:r.part_num} : null,
+                        r._distKm!=null ? {l:"DIST", v:`${Math.round(kmToMi(r._distKm))} mi`} : null,
+                        r.est_cost ? {l:"EST", v:`$${r.est_cost}`} : null,
+                      ].filter(Boolean).map(d=>(
+                        <div key={d.l}>
+                          <div style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#94a3b8",letterSpacing:"0.06em"}}>{d.l}</div>
+                          <div style={{fontSize:13,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#0f172a",marginTop:1}}>{d.v}</div>
                         </div>
-                        {r.description&&<div style={{fontSize:12,color:"#475569",marginTop:8}}>{r.description}</div>}
-                      </div>
+                      ))}
                     </div>
-                    {responded
-                      ? <div style={{fontSize:12,color:"#16a34a",fontWeight:600,textAlign:"center",background:"#f0fdf4",borderRadius:9,padding:"9px"}}>✓ {t("store.alreadyQuoted")}</div>
-                      : <button onClick={()=>setRespondTo(r)} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{t("store.sendQuote")}</button>
-                    }
+
+                    {!responded && (
+                      <button onClick={()=>setRespondTo(r)} style={{width:"100%",padding:"9px",background:"#0a2540",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                        {t("store.sendQuote")}
+                      </button>
+                    )}
                   </div>
                 );
               })}
