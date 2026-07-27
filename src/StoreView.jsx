@@ -261,7 +261,18 @@ export default function StoreView({ user, onLogout }) {
                     <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",margin:"8px 0 4px"}}>{L("CUENTA","ACCOUNT")}</div>
                   </div>
                   <button onMouseDown={()=>{setShowStoreMenu(false);setTab("perfil");}} style={storeMenuItem}>{L("Datos de la tienda","Store details")}</button>
-                  <button onMouseDown={async(e)=>{e.preventDefault(); const {error}=await supabase.auth.resetPasswordForEmail(user.email); alert(error?L("No se pudo enviar el correo","Could not send the email"):L("Te enviamos un correo para cambiar tu contraseña","We sent you an email to change your password")); setShowStoreMenu(false);}} style={storeMenuItem}>{L("Cambiar contraseña","Change password")}</button>
+                  <button onMouseDown={async(e)=>{
+                    e.preventDefault();
+                    setShowStoreMenu(false);
+                    const mail = user?.email || profile?.email;
+                    if (!mail) { setMsg(L("Tu cuenta no tiene email registrado","Your account has no email on file")); return; }
+                    const { error } = await supabase.auth.resetPasswordForEmail(mail, { redirectTo: `${window.location.origin}/` });
+                    if (!error) { setMsg(L(`Te enviamos un correo a ${mail}`,`We sent an email to ${mail}`)); return; }
+                    const m = (error.message||"").toLowerCase();
+                    setMsg(m.includes("seconds") || m.includes("rate")
+                      ? L("Espera un momento antes de pedir otro correo","Wait a moment before requesting another email")
+                      : L("No se pudo enviar: ","Could not send: ") + error.message);
+                  }} style={storeMenuItem}>{L("Cambiar contraseña","Change password")}</button>
 
                   {/* 4. IDIOMA */}
                   <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderTop:"1px solid #f1f5f9",marginTop:4}}>

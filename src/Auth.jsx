@@ -232,7 +232,8 @@ export default function Auth({ onLogin, invite }) {
           {mode==="login"&&(
             <button style={s.forgotBtn} onClick={async()=>{
               if(!email){setError("Escribe tu email primero");return;}
-              await supabase.auth.resetPasswordForEmail(email);
+              const { error: rErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
+              if (rErr) { setError(lang==="es"?"No se pudo enviar: ":"Could not send: " + rErr.message); return; }
               setSuccess("Te enviamos un link para restablecer tu contraseña.");
             }}>{t("auth.forgot")}</button>
           )}
