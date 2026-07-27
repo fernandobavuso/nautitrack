@@ -273,10 +273,17 @@ export default function StoreView({ user, onLogout }) {
                   </div>
 
                   {/* 5. AYUDA */}
-                  <a href={`mailto:info@carive.co?subject=${encodeURIComponent(L("Ayuda — Portal de Tiendas","Help — Store Portal"))}`}
-                     style={{...storeMenuItem, display:"block", textDecoration:"none", borderTop:"1px solid #f1f5f9", marginTop:4}}>
+                  <button onMouseDown={(e)=>{
+                      e.preventDefault();
+                      const msg = L(
+                        `Hola, soy ${profile?.store_name||"una tienda"} en Carive. Necesito ayuda con el portal de tiendas.`,
+                        `Hi, I'm ${profile?.store_name||"a store"} on Carive. I need help with the store portal.`);
+                      window.open(`https://wa.me/17862577645?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+                      setShowStoreMenu(false);
+                    }}
+                    style={{...storeMenuItem, borderTop:"1px solid #f1f5f9", marginTop:4}}>
                     {L("Ayuda y soporte","Help & support")}
-                  </a>
+                  </button>
 
                   {/* 6. CERRAR SESIÓN */}
                   <button onMouseDown={onLogout} style={{...storeMenuItem,color:"#dc2626",borderTop:"1px solid #f1f5f9",marginTop:4}}>{L("Cerrar sesión","Log out")}</button>
