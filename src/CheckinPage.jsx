@@ -9,8 +9,10 @@
 //   4. Al salir: comentarios OBLIGATORIOS + puedes marcar la tarea completada
 
 import { useState, useEffect } from "react";
+import { useLang } from "./i18n.jsx";
 
 const ROLES = ["Capitán", "Primer Oficial", "Jefe de Máquinas", "Mecánico", "Marinero", "Cocinero", "Camarero", "Otro"];
+const ROLE_EN = {"Capitán":"Captain","Primer Oficial":"First Officer","Jefe de Máquinas":"Chief Engineer","Mecánico":"Mechanic","Marinero":"Deckhand","Cocinero":"Cook","Camarero":"Steward","Otro":"Other"};
 
 // Emparejar tareas con la persona (el asignado puede venir como "Nombre (Rol)")
 const normName = (s) => (s||"").replace(/\s*\(.*\)\s*$/,"").trim().toLowerCase();
@@ -20,6 +22,8 @@ const isMyTask = (t, who) => {
 };
 
 export default function CheckinPage() {
+  const { lang, setLang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const params   = new URLSearchParams(window.location.search);
   const vesselId = params.get("v");
 
@@ -116,7 +120,7 @@ export default function CheckinPage() {
   };
 
   // ── Estados de carga / error ──
-  if (loading) return <Screen><div style={{color:"#94a3b8"}}>Cargando...</div></Screen>;
+  if (loading) return <Screen><div style={{color:"#94a3b8"}}>{L("Cargando...","Loading...")}</div></Screen>;
   if (error)   return <Screen><div style={{color:"#dc2626",fontWeight:600}}>{error}</div></Screen>;
 
   // ── Pantalla de confirmación ──
@@ -132,7 +136,7 @@ export default function CheckinPage() {
           </div>
 
           <div style={{fontSize:22,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:8}}>
-            {isIn ? "Check-in registrado" : "Check-out registrado"}
+            {isIn ? (lang==="es"?"Check-in registrado":"Check-in recorded") : (lang==="es"?"Check-out registrado":"Check-out recorded")}
           </div>
 
           <div style={{fontSize:14,color:"#64748b",lineHeight:1.6}}>
@@ -143,16 +147,16 @@ export default function CheckinPage() {
 
           {done.completedTask && (
             <div style={{marginTop:18,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"12px 16px"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#15803d"}}>Tarea completada</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#15803d"}}>{L("Tarea completada","Task completed")}</div>
               <div style={{fontSize:13,color:"#166534",marginTop:2}}>{done.completedTask}</div>
             </div>
           )}
 
           {done.linkedTask && (
             <div style={{marginTop:18,background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:"12px 16px"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#1e40af"}}>Vienes a hacer</div>
+              <div style={{fontSize:12,fontWeight:700,color:"#1e40af"}}>{L("Vienes a hacer","You're here to do")}</div>
               <div style={{fontSize:13,color:"#1e3a8a",marginTop:2}}>{done.linkedTask}</div>
-              <div style={{fontSize:11,color:"#64748b",marginTop:6}}>Al terminar, vuelve a escanear y haz check-out para marcarla completada.</div>
+              <div style={{fontSize:11,color:"#64748b",marginTop:6}}>{L("Al terminar, vuelve a escanear y haz check-out para marcarla completada.","When you're done, scan again and check out to mark it completed.")}</div>
             </div>
           )}
 
@@ -169,9 +173,17 @@ export default function CheckinPage() {
     <Screen align="flex-start">
       <div style={{maxWidth:440,width:"100%",padding:"28px 0 40px"}}>
 
+        {/* Toggle de idioma (el trabajador elige) */}
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+          <div style={{display:"inline-flex",background:"#f1f5f9",borderRadius:7,padding:2}}>
+            <button onClick={()=>setLang("es")} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="es"?"#fff":"transparent",color:lang==="es"?"#2563eb":"#64748b"}}>ES</button>
+            <button onClick={()=>setLang("en")} style={{padding:"4px 10px",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700,background:lang==="en"?"#fff":"transparent",color:lang==="en"?"#2563eb":"#64748b"}}>EN</button>
+          </div>
+        </div>
+
         {/* Cabecera del barco */}
         <div style={{textAlign:"center",marginBottom:26}}>
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em",marginBottom:6}}>REGISTRO A BORDO</div>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.1em",marginBottom:6}}>{L("REGISTRO A BORDO","ONBOARD CHECK-IN")}</div>
           <div style={{fontSize:26,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>{vessel.name}</div>
           {vessel.marina && <div style={{fontSize:13,color:"#64748b",marginTop:3}}>{vessel.marina}</div>}
         </div>
@@ -204,11 +216,11 @@ export default function CheckinPage() {
             </>
           ) : (
             <>
-              <label style={lbl}>Tu nombre</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: John Pérez" style={inp}/>
-              <label style={lbl}>Tu rol</label>
+              <label style={lbl}>{L("Tu nombre","Your name")}</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder={L("Ej: John Pérez","e.g. John Perez")} style={inp}/>
+              <label style={lbl}>{L("Tu rol","Your role")}</label>
               <select value={role} onChange={e => setRole(e.target.value)} style={inp}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{L(r, ROLE_EN[r]||r)}</option>)}
               </select>
               {roster.length > 0 && (
                 <button onClick={() => { setManual(false); setName(""); }} style={linkBtn}>
@@ -223,8 +235,8 @@ export default function CheckinPage() {
         <Card title="¿Entras o sales?">
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             {[
-              { k:"checkin",  l:"Entrar",  sub:"Check-in",  c:"#16a34a", bg:"#f0fdf4", bd:"#bbf7d0" },
-              { k:"checkout", l:"Salir",   sub:"Check-out", c:"#2563eb", bg:"#eff6ff", bd:"#bfdbfe" },
+              { k:"checkin",  l:(lang==="es"?"Entrar":"Check in"),  sub:"Check-in",  c:"#16a34a", bg:"#f0fdf4", bd:"#bbf7d0" },
+              { k:"checkout", l:(lang==="es"?"Salir":"Check out"),   sub:"Check-out", c:"#2563eb", bg:"#eff6ff", bd:"#bfdbfe" },
             ].map(a => (
               <button key={a.k} onClick={() => setAction(a.k)} style={{
                 padding:"16px 12px", borderRadius:12, cursor:"pointer",
@@ -250,9 +262,9 @@ export default function CheckinPage() {
                     Tienes {myTasks.length} tarea(s) asignada(s) en este barco.
                   </div>
                 )}
-                <label style={lbl}>Tarea (opcional)</label>
+                <label style={lbl}>{L("Tarea (opcional)","Task (optional)")}</label>
                 <select value={taskId} onChange={e => setTaskId(e.target.value)} style={inp}>
-                  <option value="">Trabajo general / otra cosa</option>
+                  <option value="">{L("Trabajo general / otra cosa","General work / something else")}</option>
                   {list.map(t => (
                     <option key={t.id} value={t.id}>
                       {t.task}{t.equipment ? ` — ${t.equipment}` : ""}{isMyTask(t, name) ? "  ⭐ asignada a ti" : ""}
@@ -272,9 +284,9 @@ export default function CheckinPage() {
           <Card title="¿Qué hiciste?">
             {tasks.length > 0 && (
               <>
-                <label style={lbl}>¿Completaste alguna tarea? (opcional)</label>
+                <label style={lbl}>{L("¿Completaste alguna tarea? (opcional)","Did you complete a task? (optional)")}</label>
                 <select value={taskId} onChange={e => setTaskId(e.target.value)} style={inp}>
-                  <option value="">No completé ninguna tarea</option>
+                  <option value="">{L("No completé ninguna tarea","I didn't complete any task")}</option>
                   {[...tasks].sort((a,b) => (isMyTask(b,name)?1:0)-(isMyTask(a,name)?1:0)).map(t => (
                     <option key={t.id} value={t.id}>
                       {t.task}{t.equipment ? ` — ${t.equipment}` : ""}{isMyTask(t,name) ? "  ⭐" : ""}
@@ -294,7 +306,7 @@ export default function CheckinPage() {
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={4}
-              placeholder="Ej: Lavé el barco completo. El motor de estribor tiene una fuga pequeña de aceite, hay que revisarla."
+              placeholder={L("Ej: Lavé el barco completo. El motor de estribor tiene una fuga pequeña de aceite, hay que revisarla.","e.g. Washed the whole boat. The starboard engine has a small oil leak that needs checking.")}
               style={{...inp, resize:"vertical", fontFamily:"inherit"}}
             />
             <div style={{fontSize:11,color:"#94a3b8",marginTop:4,lineHeight:1.5}}>
@@ -320,7 +332,7 @@ export default function CheckinPage() {
         {/* Actividad reciente */}
         {recentLogs.length > 0 && (
           <div style={{marginTop:28}}>
-            <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>ACTIVIDAD RECIENTE</div>
+            <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>{L("ACTIVIDAD RECIENTE","RECENT ACTIVITY")}</div>
             {recentLogs.slice(0, 4).map((l, i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"1px solid #f1f5f9",fontSize:12}}>
                 <span style={{color:"#475569"}}>
