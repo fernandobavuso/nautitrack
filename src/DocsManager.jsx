@@ -6,7 +6,8 @@ import { useLang } from "./i18n.jsx";
 // o guardar links. Persiste en la tabla vessel_documents + Storage bucket "documentos".
 
 export default function DocsManager({ vessel, user }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [docs, setDocs] = useState([]);
   const [folders, setFolders] = useState([]); // nombres de carpetas
   const [currentFolder, setCurrentFolder] = useState(""); // "" = raíz
@@ -114,7 +115,7 @@ export default function DocsManager({ vessel, user }) {
     load();
   };
 
-  if (loading) return <div style={{padding:30,textAlign:"center",color:"#94a3b8"}}>Cargando...</div>;
+  if (loading) return <div style={{padding:30,textAlign:"center",color:"#94a3b8"}}>{L("Cargando...","Loading...")}</div>;
 
   // Documentos visibles en la carpeta actual (excluye marcadores de carpeta)
   const visibleDocs = docs.filter(d => d.kind !== "folder" && (d.folder || "") === currentFolder);
@@ -125,11 +126,11 @@ export default function DocsManager({ vessel, user }) {
       <div style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
         <div style={{fontSize:13,color:"#64748b"}}>
           {currentFolder ? (
-            <span><button onClick={()=>setCurrentFolder("")} style={{background:"none",border:"none",color:"#2563eb",cursor:"pointer",fontWeight:600,padding:0}}>Documentos</button> / <strong>{currentFolder}</strong></span>
+            <span><button onClick={()=>setCurrentFolder("")} style={{background:"none",border:"none",color:"#2563eb",cursor:"pointer",fontWeight:600,padding:0}}>{L("Documentos","Documents")}</button> / <strong>{currentFolder}</strong></span>
           ) : "Tus documentos, organizados en carpetas. Sube tus archivos a la nube."}
         </div>
         <div style={{display:"flex",gap:8}}>
-          {!currentFolder && <button onClick={()=>setMode(mode==="folder"?null:"folder")} style={btnOutline}>Nueva carpeta</button>}
+          {!currentFolder && <button onClick={()=>setMode(mode==="folder"?null:"folder")} style={btnOutline}>{L("Nueva carpeta","New folder")}</button>}
           <label style={{...btnPrimary,cursor:uploading?"default":"pointer",opacity:uploading?.6:1}}>
             {uploading ? t("common.loading") : t("docs.upload")}
             <input type="file" style={{display:"none"}} onChange={handleFile} disabled={uploading}/>
@@ -140,10 +141,10 @@ export default function DocsManager({ vessel, user }) {
       {/* Panel nueva carpeta */}
       {mode==="folder" && (
         <div style={panel}>
-          <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:10}}>Nueva carpeta</div>
+          <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:10}}>{L("Nueva carpeta","New folder")}</div>
           <div style={{display:"flex",gap:8}}>
-            <input value={newFolder} onChange={e=>setNewFolder(e.target.value)} placeholder="Ej: Pólizas, Zarpes, Registros" style={{...inp,flex:1}}/>
-            <button onClick={createFolder} style={btnPrimary}>Crear</button>
+            <input value={newFolder} onChange={e=>setNewFolder(e.target.value)} placeholder={L("Ej: Pólizas, Zarpes, Registros","e.g. Policies, Clearances, Registrations")} style={{...inp,flex:1}}/>
+            <button onClick={createFolder} style={btnPrimary}>{L("Crear","Create")}</button>
           </div>
         </div>
       )}
@@ -155,7 +156,7 @@ export default function DocsManager({ vessel, user }) {
 
       {/* Título opcional para el archivo a subir */}
       {!currentFolder && (
-        <div style={{fontSize:11,color:"#94a3b8",marginBottom:10}}>Sugerencia: crea carpetas para organizar (Pólizas, Zarpes, Registros...) y entra en una antes de subir.</div>
+        <div style={{fontSize:11,color:"#94a3b8",marginBottom:10}}>{L("Sugerencia: crea carpetas para organizar (Pólizas, Zarpes, Registros...) y entra en una antes de subir.","Tip: create folders to organize (Policies, Clearances, Registrations...) and open one before uploading.")}</div>
       )}
 
       {/* Carpetas (solo en la raíz) */}
@@ -180,8 +181,8 @@ export default function DocsManager({ vessel, user }) {
         {visibleDocs.length===0 && folders.length===0 && !currentFolder && (
           <div style={{textAlign:"center",padding:"40px 20px",color:"#94a3b8"}}>
             <div style={{marginBottom:10,display:"flex",justifyContent:"center"}}><FileIcon size={34}/></div>
-            <div style={{fontWeight:600}}>Aún no tienes documentos</div>
-            <div style={{fontSize:12,marginTop:4}}>Sube registros, pólizas, zarpes, certificaciones... o guarda links</div>
+            <div style={{fontWeight:600}}>{L("Aún no tienes documentos","You don't have any documents yet")}</div>
+            <div style={{fontSize:12,marginTop:4}}>{L("Sube registros, pólizas, zarpes, certificaciones... o guarda links","Upload registrations, policies, clearances, certifications... or save links")}</div>
           </div>
         )}
         {visibleDocs.length===0 && currentFolder && (
@@ -194,8 +195,8 @@ export default function DocsManager({ vessel, user }) {
               <button onClick={()=>openDoc(doc)} style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left"}}>{doc.title}</button>
               <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{doc.kind==="link"?"Link externo":formatSize(doc.file_size)}{doc.created_at?` · ${new Date(doc.created_at).toLocaleDateString("es-VE")}`:""}</div>
             </div>
-            <button onClick={()=>openDoc(doc)} style={{...btnOutline,padding:"5px 12px",fontSize:11}}>Abrir</button>
-            <button onClick={()=>del(doc)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>Eliminar</button>
+            <button onClick={()=>openDoc(doc)} style={{...btnOutline,padding:"5px 12px",fontSize:11}}>{L("Abrir","Open")}</button>
+            <button onClick={()=>del(doc)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>{L("Eliminar","Delete")}</button>
           </div>
         ))}
       </div>
