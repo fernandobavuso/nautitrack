@@ -405,28 +405,27 @@ export default function StoreView({ user, onLogout }) {
         {/* ── MIS COTIZACIONES ── */}
         {tab==="respuestas"&&(
           <div>
-            <div style={{fontSize:15,fontWeight:800,color:"#0a2540",marginBottom:12,fontFamily:"'Sora',system-ui,sans-serif"}}>{lang==="es"?"Mis cotizaciones":"My quotes"}</div>
+            <div style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.08em",marginBottom:10,textTransform:"uppercase"}}>{lang==="es"?"Mis cotizaciones":"My quotes"}</div>
             {myResponses.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>{t("store.noQuotes")}</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {myResponses.map(r=>{
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,overflow:"hidden"}}>
+              {myResponses.map((r,idx)=>{
                 const won = r.is_winner;
                 const resolved = r.request?.status==="resolved";
                 const st = won ? {bg:"#f0fdf4",c:"#16a34a",l:`✓ ${t("store.won")}`} : resolved ? {bg:"#f8fafc",c:"#94a3b8",l:t("store.notChosen")} : {bg:"#fffbeb",c:"#d97706",l:`⏳ ${t("store.pending")}`};
                 return (
-                  <div key={r.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,padding:18}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:16,fontWeight:700,color:"#0a2540",marginBottom:6}}>{r.request?.item_name||"Repuesto"}</div>
-                        <div style={{display:"flex",gap:14,fontSize:12,color:"#94a3b8",flexWrap:"wrap"}}>
-                          <span>{r.request?.category}</span>
-                          {r.response_type==="have"&&<span style={{color:"#475569",fontWeight:600}}>Cotizaste ${r.price}</span>}
-                          {r.response_type==="have_questions"&&<span>{lang==="es"?"Disponible, con preguntas":"Available, with questions"}</span>}
-                          {r.response_type==="dont_have"&&<span>{lang==="es"?"No disponible":"Not available"}</span>}
-                        </div>
-                        {r.message&&<div style={{fontSize:12,color:"#94a3b8",marginTop:8,fontStyle:"italic"}}>"{r.message}"</div>}
-                      </div>
-                      <span style={{fontSize:11,fontWeight:800,padding:"4px 11px",borderRadius:20,background:st.bg,color:st.c,whiteSpace:"nowrap"}}>{st.l}</span>
+                  <div key={r.id} style={{padding:"13px 15px",borderTop:idx===0?"none":"1px solid #f1f5f9",borderLeft:won?"2px solid #16a34a":"2px solid transparent"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:8,flexWrap:"wrap"}}>
+                      <span style={{fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:700,padding:"3px 7px",borderRadius:5,background:st.bg,color:st.c,letterSpacing:"0.06em",whiteSpace:"nowrap"}}>{st.l.replace(/[✓⏳]\s*/,"").toUpperCase()}</span>
+                      <span style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#94a3b8"}}>{`REQ-${String(r.request_id||r.id).replace(/\D/g,"").slice(-4).padStart(4,"0")}`}</span>
+                      {r.response_type==="have"&&<span style={{marginLeft:"auto",fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#475569"}}>{L("TU OFERTA","YOUR BID")} ${r.price}</span>}
                     </div>
+                    <div style={{fontSize:15,fontWeight:600,color:"#0a2540",marginBottom:3}}>{r.request?.item_name||"Repuesto"}</div>
+                    <div style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.03em"}}>
+                      {[r.request?.category, r.request?.city].filter(Boolean).join(" / ").toUpperCase()}
+                      {r.response_type==="have_questions"&&` · ${(lang==="es"?"CON PREGUNTAS":"WITH QUESTIONS")}`}
+                      {r.response_type==="dont_have"&&` · ${(lang==="es"?"NO DISPONIBLE":"NOT AVAILABLE")}`}
+                    </div>
+                    {r.message&&<div style={{fontSize:12,color:"#64748b",marginTop:7,fontStyle:"italic"}}>"{r.message}"</div>}
                     {won&&(
                       <div style={{marginTop:12,background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"12px 14px"}}>
                         {r.sale_amount&&(
@@ -471,7 +470,7 @@ export default function StoreView({ user, onLogout }) {
         {/* ── PERFIL DE TIENDA ── */}
         {tab==="perfil"&&(
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0f172a",marginBottom:16}}>{L("Mi Tienda","My Store")}</div>
+            <div style={{fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.08em",marginBottom:10,textTransform:"uppercase"}}>{L("Datos de la tienda","Store details")}</div>
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:18,display:"flex",flexDirection:"column",gap:12}}>
               <div>
                 <label style={lbl}>{L("Nombre de la tienda","Store name")} *</label>
@@ -700,7 +699,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
   );
 }
 
-const lbl = {display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:5};
+const lbl = {display:"block",fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:5};
 const inp = {width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#1e293b",background:"#fff",boxSizing:"border-box",outline:"none"};
 
 const storeMenuItem = {display:"block",width:"100%",textAlign:"left",padding:"9px 12px",border:"none",borderRadius:7,cursor:"pointer",background:"transparent",fontSize:13,color:"#1e293b",fontWeight:500};
