@@ -18,35 +18,40 @@ export async function activateSubscription(vessel, plan, period = "monthly", pay
     else exp.setMonth(exp.getMonth() + 1);
     expiresAt = exp.toISOString();
   }
-
-  // 1) Guardar en el campo de la embarcación (lo que lee getPlan)
-  const details = { ...(vessel.details || {}) };
-  details._subscription = {
+  const sub = {
     plan,
     status: plan === "free" ? "free" : "active",
     period,
     started_at: now.toISOString(),
     expires_at: expiresAt,
   };
-  await supabase.from("vessels").update({ details }).eq("id", vessel.id);
+  const ownerId = vessel.owner_id;
 
-  // 2) Registrar la suscripción (tabla dedicada, una por embarcación)
+  // 1) FUENTE DE VERDAD: el plan vive en la CUENTA (perfil del dueño) y cubre toda su flota.
+  await supabase.from("profiles").update({ subscription: sub }).eq("id", ownerId);
+
+  // 2) Estamparlo de una vez en TODOS los barcos de esa cuenta (así surte efecto sin recargar).
+  const { data: ownerVessels } = await supabase.from("vessels").select("id, details").eq("owner_id", ownerId);
+  for (const v of (ownerVessels || [])) {
+    const details = { ...(v.details || {}), _subscription: sub };
+    await supabase.from("vessels").update({ details }).eq("id", v.id);
+  }
+
+  // 3) Historial / ingresos (para el panel de admin).
   const amount = payInfo.amount != null
     ? payInfo.amount
     : (period === "yearly" ? PLANS[plan]?.priceYearly : PLANS[plan]?.priceMonthly) || 0;
   await supabase.from("subscriptions").upsert({
-    vessel_id: vessel.id,
-    owner_id: vessel.owner_id,
+    vessel_id: vessel.id, owner_id: ownerId,
     plan, status: plan === "free" ? "cancelled" : "active",
     billing_period: period, amount, currency: payInfo.currency || "USD",
     method: payInfo.method || "manual",
     started_at: now.toISOString(), expires_at: expiresAt,
   }, { onConflict: "vessel_id" });
 
-  // 3) Registrar el pago en el historial (solo si hubo cobro)
   if (plan !== "free" && amount > 0) {
     await supabase.from("payments").insert({
-      owner_id: vessel.owner_id, vessel_id: vessel.id,
+      owner_id: ownerId, vessel_id: vessel.id,
       kind: "subscription", plan, amount, currency: payInfo.currency || "USD",
       method: payInfo.method || "manual", status: "confirmed",
       reference: payInfo.reference || null,

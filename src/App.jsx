@@ -594,9 +594,17 @@ export default function App() {
 
       const { data, error } = await supabase.from("vessels").select("*").in("owner_id", ownerIds).order("created_at", { ascending: true });
       if (error) { console.error("fetchVessels error:", error.message); setVesselsLoading(false); return; }
+
+      // PLAN POR CUENTA: el plan vive en el perfil del dueño y cubre toda su flota.
+      const { data: ownerProfiles } = await supabase.from("profiles").select("id, subscription").in("id", ownerIds);
+      const accountSubs = {};
+      (ownerProfiles || []).forEach(pr => { if (pr.subscription) accountSubs[pr.id] = pr.subscription; });
+
       const mapped = await Promise.all((data || []).map(async v => {
         const [tasks, log] = await Promise.all([fetchTasks(v.id), fetchLog(v.id)]);
         const d = v.details || {};
+        // Plan de la cuenta (perfil). Si aún no existe, se usa el del barco (compatibilidad).
+        const acctSub = accountSubs[v.owner_id] || d._subscription || { plan: "free" };
         return {
           ...v,
           fuelUnit: v.fuel_unit || "gal",
@@ -606,8 +614,8 @@ export default function App() {
           photo: v.photo_url || null,
           profile:      d._profile      || { firstName:"", lastName:"", phone:"", email:"", marinaAddress:"" },
           config:       d._config       || { distUnit:"nm", speedUnit:"kn", fuelUnit:"gal", tempUnit:"C" },
-          subscription: d._subscription || { plan:"free" },
-          details:      d,
+          subscription: acctSub,
+          details:      { ...d, _subscription: acctSub },   // estampado para que getPlan use el plan de la cuenta
           crewRoster:   d.crew_roster || [],
           motorHours:   d.motor_hours || {},
           tasks, log,
@@ -3674,7 +3682,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
           {tab==="subscription"&&(
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <div style={{background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:12,padding:20,color:"#fff"}}>
-                <div style={{fontSize:11,opacity:.8,letterSpacing:"0.1em",marginBottom:4}}>PLAN ACTUAL · {vessel.name}</div>
+                <div style={{fontSize:11,opacity:.8,letterSpacing:"0.1em",marginBottom:4}}>PLAN ACTUAL · TU CUENTA</div>
                 <div style={{fontSize:24,fontWeight:800,marginBottom:4}}>{currentPlan.name}</div>
                 <div style={{fontSize:20,fontWeight:700}}>
                   ${sub.billing_period==="yearly" ? currentPlan.priceYearly : currentPlan.priceMonthly}
@@ -3686,7 +3694,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
               </div>
 
               <div style={{fontSize:11,color:"#64748b",background:"#f8fafc",borderRadius:8,padding:"9px 12px",lineHeight:1.5}}>
-                El plan se aplica <strong>por embarcación</strong>. Si gestionas varias, cada una tiene el suyo.
+                El plan se aplica <strong>a toda tu cuenta</strong>. Con el plan Flota, todas tus embarcaciones quedan cubiertas.
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
