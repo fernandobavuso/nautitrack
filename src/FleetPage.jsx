@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 import { hasFeature, PremiumLock } from "./plans.jsx";
 
 // Vista consolidada de toda la flota
 export default function FleetPage({ vessels, vessel, user, setVesselId, setPage, setShowProfile }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [costs, setCosts] = useState({}); // {vesselId: {usd, ves}}
   const [loading, setLoading] = useState(true);
 
@@ -53,28 +56,28 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
   return (
     <div style={{maxWidth:1000,margin:"0 auto"}}>
       <div style={{marginBottom:16}}>
-        <div style={{fontSize:20,fontWeight:800,color:"#0f172a"}}>Mi Flota</div>
+        <div style={{fontSize:20,fontWeight:800,color:"#0f172a"}}>{L("Mi Flota","My Fleet")}</div>
         <div style={{fontSize:13,color:"#64748b"}}>Vista consolidada de tus {vessels.length} embarcacion{vessels.length>1?"es":""}</div>
       </div>
 
       {/* Resumen consolidado */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:24}}>
         <div style={card}>
-          <div style={cardLbl}>EMBARCACIONES</div>
+          <div style={cardLbl}>{L("EMBARCACIONES","VESSELS")}</div>
           <div style={cardVal}>{vessels.length}</div>
         </div>
         <div style={card}>
-          <div style={cardLbl}>ALERTAS ACTIVAS</div>
+          <div style={cardLbl}>{L("ALERTAS ACTIVAS","ACTIVE ALERTS")}</div>
           <div style={{...cardVal,color:totalAlerts>0?"#dc2626":"#16a34a"}}>{totalAlerts}</div>
         </div>
         <div style={card}>
-          <div style={cardLbl}>GASTO MES (USD)</div>
+          <div style={cardLbl}>{L("GASTO MES (USD)","MONTH SPEND (USD)")}</div>
           <div style={cardVal}>$ {totalUSD.toLocaleString("en-US",{maximumFractionDigits:0})}</div>
         </div>
       </div>
 
       {/* Lista de barcos */}
-      <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Embarcaciones</div>
+      <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{L("Embarcaciones","Vessels")}</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {vessels.map(v => {
           const st = statusInfo(v);
@@ -92,15 +95,15 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 10px"}}>
-                  <div style={{color:"#94a3b8",marginBottom:2}}>Motor</div>
+                  <div style={{color:"#94a3b8",marginBottom:2}}>{L("Motor","Engine")}</div>
                   <div style={{fontWeight:700,color:"#0f172a"}}>{v.engineHours||0} h</div>
                 </div>
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 10px"}}>
-                  <div style={{color:"#94a3b8",marginBottom:2}}>Combustible</div>
+                  <div style={{color:"#94a3b8",marginBottom:2}}>{L("Combustible","Fuel")}</div>
                   <div style={{fontWeight:700,color:"#0f172a"}}>{v.fuel||0} {v.fuelUnit||"gal"}</div>
                 </div>
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 10px",gridColumn:"1 / -1"}}>
-                  <div style={{color:"#94a3b8",marginBottom:2}}>Gasto este mes</div>
+                  <div style={{color:"#94a3b8",marginBottom:2}}>{L("Gasto este mes","Spend this month")}</div>
                   <div style={{fontWeight:700,color:"#0f172a"}}>
                     {c.usd>0?`$ ${c.usd.toLocaleString("en-US",{maximumFractionDigits:0})}`:"Sin gastos"}
                   </div>

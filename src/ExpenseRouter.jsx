@@ -6,6 +6,8 @@ import { useLang } from "./i18n.jsx";
 // y enruta al lugar correcto. El usuario no tiene que saber la teoría de
 // Bitácora vs Costos — solo responde qué tipo de gasto es.
 export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, onDirectExpense }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const { t } = useLang();
   const [step, setStep] = useState("choose"); // choose | operational | admin
   const [msg, setMsg] = useState("");
@@ -73,14 +75,14 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
         {step==="operational" && (
           <>
             <button onClick={()=>setStep("choose")} style={backBtn}>← Volver</button>
-            <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14,lineHeight:1.4}}>Esta compra se registra en la Bitácora y su monto aparecerá solo en Finanzas. No la anotas dos veces.</div>
-            <label style={lbl}>¿Qué se compró?</label>
-            <input value={op.item} onChange={e=>setOp({...op,item:e.target.value})} placeholder="Ej: Filtro de aceite, combustible..." style={inp}/>
+            <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14,lineHeight:1.4}}>{L("Esta compra se registra en la Bitácora y su monto aparecerá solo en Finanzas. No la anotas dos veces.","This purchase is recorded in the Logbook and its amount appears only in Finance. You don't enter it twice.")}</div>
+            <label style={lbl}>{L("¿Qué se compró?","What was purchased?")}</label>
+            <input value={op.item} onChange={e=>setOp({...op,item:e.target.value})} placeholder={L("Ej: Filtro de aceite, combustible...","e.g. Oil filter, fuel...")} style={inp}/>
             <div style={{display:"flex",gap:8}}>
-              <div style={{flex:1}}><label style={lbl}>Monto (USD)</label><input type="number" value={op.amount} onChange={e=>setOp({...op,amount:e.target.value})} placeholder="0" style={inp}/></div>
-              <div style={{flex:1}}><label style={lbl}>Pago</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
+              <div style={{flex:1}}><label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label><input type="number" value={op.amount} onChange={e=>setOp({...op,amount:e.target.value})} placeholder="0" style={inp}/></div>
+              <div style={{flex:1}}><label style={lbl}>{L("Pago","Payment")}</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
             </div>
-            <div><label style={lbl}>Fecha</label><input type="date" value={op.date} onChange={e=>setOp({...op,date:e.target.value})} style={inp}/></div>
+            <div><label style={lbl}>{L("Fecha","Date")}</label><input type="date" value={op.date} onChange={e=>setOp({...op,date:e.target.value})} style={inp}/></div>
             {msg && <div style={{fontSize:12,color:"#dc2626",marginBottom:10}}>{msg}</div>}
             <button onClick={saveOperational} disabled={saving} style={{...primary,width:"100%",opacity:saving?.6:1}}>{saving?"Guardando...":"Registrar compra"}</button>
           </>
@@ -89,14 +91,14 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
         {step==="admin" && (
           <>
             <button onClick={()=>setStep("choose")} style={backBtn}>← Volver</button>
-            <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14,lineHeight:1.4}}>Este gasto se registra directo en Finanzas. Úsalo para gastos fijos o administrativos del barco.</div>
+            <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14,lineHeight:1.4}}>{L("Este gasto se registra directo en Finanzas. Úsalo para gastos fijos o administrativos del barco.","This expense goes straight to Finance. Use it for fixed or administrative boat costs.")}</div>
             <label style={lbl}>Tipo de gasto</label>
             <select value={adm.category} onChange={e=>setAdm({...adm,category:e.target.value})} style={inp}>
               <option>Seguro</option><option>Marina</option><option>Sueldos</option><option>Matrícula</option><option>Impuestos</option><option>Administrativo</option><option>Otro</option>
             </select>
             <label style={lbl}>Descripción (opcional)</label>
             <input value={adm.description} onChange={e=>setAdm({...adm,description:e.target.value})} placeholder="Ej: Seguro anual, mensualidad marina..." style={inp}/>
-            <div><label style={lbl}>Monto (USD)</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
+            <div><label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
             <label style={{...lbl,display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginTop:8}}>
               <input type="checkbox" checked={adm.recurring} onChange={e=>setAdm({...adm,recurring:e.target.checked})}/>
               Es un gasto fijo mensual (se repite)

@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 import { createInvitation } from "./invitations.jsx";
 
 // Panel donde el dueño de la flota (Fernando) invita a co-gestores
 // (ej: su colega de The Boating Zone) con acceso total a todos sus barcos.
 export default function FleetManagers({ user, onClose }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [managers, setManagers] = useState([]);
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
@@ -82,33 +85,33 @@ export default function FleetManagers({ user, onClose }) {
     <div style={ov} onClick={onClose}>
       <div style={box} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-          <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>Accesos a la app</div>
+          <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif"}}>{L("Accesos a la app","App access")}</div>
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:20}}>×</button>
         </div>
         <div style={{fontSize:13,color:"#64748b",marginBottom:18,lineHeight:1.5}}>
-          Da acceso a la app a otras personas para que gestionen tus barcos contigo. Tendrán <strong>acceso total</strong>: ver y editar todos tus barcos, igual que tú. (Para el personal que solo trabaja en los barcos, usa <strong>Personal</strong>.)
+          Da acceso a la app a otras personas para que gestionen tus barcos contigo. Tendrán <strong>acceso total</strong>: ver y editar todos tus barcos, igual que tú. (Para el personal que solo trabaja en los barcos, usa <strong>{L("Personal","Staff")}</strong>.)
         </div>
 
         {/* Agregar */}
         <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:14,marginBottom:18}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>Dar acceso a alguien</div>
+          <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>{L("Dar acceso a alguien","Give someone access")}</div>
           <div style={{display:"flex",gap:8}}>
             <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@ejemplo.com" style={{...inp,flex:1}}/>
             <button onClick={addManager} disabled={adding} style={{...btnPrimary,opacity:adding?.6:1,whiteSpace:"nowrap"}}>{adding?"Agregando...":"Dar acceso"}</button>
           </div>
-          <div style={{fontSize:10,color:"#94a3b8",marginTop:6}}>Si no tiene cuenta, te generamos un link de invitación para enviarle.</div>
+          <div style={{fontSize:10,color:"#94a3b8",marginTop:6}}>{L("Si no tiene cuenta, te generamos un link de invitación para enviarle.","If they don't have an account, we'll generate an invite link for you to send.")}</div>
         </div>
 
         {/* Link de invitación generado */}
         {inviteLink && (
           <div style={{background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:12,padding:14,marginBottom:18}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#065f46",marginBottom:6}}>Esta persona aún no tiene cuenta — envíale este link</div>
-            <div style={{fontSize:11,color:"#047857",marginBottom:10,lineHeight:1.5}}>Cuando lo abra y cree su cuenta, quedará automáticamente como co-gestor de tu flota con acceso a todos tus barcos.</div>
+            <div style={{fontSize:12,fontWeight:700,color:"#065f46",marginBottom:6}}>{L("Esta persona aún no tiene cuenta — envíale este link","This person doesn't have an account yet — send them this link")}</div>
+            <div style={{fontSize:11,color:"#047857",marginBottom:10,lineHeight:1.5}}>{L("Cuando lo abra y cree su cuenta, quedará automáticamente como co-gestor de tu flota con acceso a todos tus barcos.","When they open it and create their account, they'll automatically become a co-manager of your fleet with access to all your boats.")}</div>
             <div style={{display:"flex",gap:8}}>
               <input readOnly value={inviteLink} style={{...inp,flex:1,fontSize:11,background:"#fff"}} onClick={e=>e.target.select()}/>
-              <button onClick={copyLink} style={{...btnPrimary,whiteSpace:"nowrap"}}>Copiar link</button>
+              <button onClick={copyLink} style={{...btnPrimary,whiteSpace:"nowrap"}}>{L("Copiar link","Copy link")}</button>
             </div>
-            <button onClick={()=>{setInviteLink("");setEmail("");}} style={{background:"none",border:"none",color:"#059669",fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>Listo</button>
+            <button onClick={()=>{setInviteLink("");setEmail("");}} style={{background:"none",border:"none",color:"#059669",fontSize:11,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>{L("Listo","Done")}</button>
           </div>
         )}
 
@@ -116,8 +119,8 @@ export default function FleetManagers({ user, onClose }) {
 
         {/* Lista */}
         <div style={{fontSize:12,fontWeight:700,color:"#0a2540",marginBottom:8}}>Con acceso ({managers.length})</div>
-        {loading ? <div style={{color:"#94a3b8",fontSize:13,padding:10}}>Cargando...</div> :
-         managers.length===0 ? <div style={{color:"#94a3b8",fontSize:13,padding:"10px 0"}}>Aún no le has dado acceso a nadie. Solo tú gestionas tus barcos.</div> :
+        {loading ? <div style={{color:"#94a3b8",fontSize:13,padding:10}}>{L("Cargando...","Loading...")}</div> :
+         managers.length===0 ? <div style={{color:"#94a3b8",fontSize:13,padding:"10px 0"}}>{L("Aún no le has dado acceso a nadie. Solo tú gestionas tus barcos.","You haven't given anyone access yet. Only you manage your boats.")}</div> :
          <div style={{display:"flex",flexDirection:"column",gap:8}}>
            {managers.map(m=>(
              <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
@@ -125,7 +128,7 @@ export default function FleetManagers({ user, onClose }) {
                  <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{m.manager?.full_name || m.manager_email}</div>
                  <div style={{fontSize:11,color:"#94a3b8"}}>{m.manager?.email || m.manager_email} · Acceso total</div>
                </div>
-               <button onClick={()=>removeManager(m)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>Quitar</button>
+               <button onClick={()=>removeManager(m)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>{L("Quitar","Remove")}</button>
              </div>
            ))}
          </div>}

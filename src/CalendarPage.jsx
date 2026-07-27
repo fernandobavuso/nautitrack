@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
@@ -10,6 +11,8 @@ const STATUS_COLOR = {
 const SHIFT_COLOR = { "Agendado":"#d97706", "En proceso":"#2563eb", "Completado":"#16a34a" };
 
 export default function CalendarPage({ vessel, isMobile }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const today = new Date();
   const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [filter, setFilter] = useState("todo"); // todo | tareas | viajes
@@ -87,7 +90,7 @@ export default function CalendarPage({ vessel, isMobile }) {
       {/* Encabezado */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:12}}>
         <div>
-          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>Calendario</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#0f172a",fontFamily:"'Sora',system-ui,sans-serif"}}>{L("Calendario","Calendar")}</div>
           <div style={{fontSize:13,color:"#64748b"}}>{vessel.name}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -139,11 +142,11 @@ export default function CalendarPage({ vessel, isMobile }) {
 
       {/* Leyenda */}
       <div style={{display:"flex",gap:16,marginTop:14,flexWrap:"wrap",fontSize:11,color:"#64748b"}}>
-        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#ef4444"}}/>Tarea vencida</span>
-        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#f59e0b"}}/>Tarea por vencer</span>
-        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#22c55e"}}/>Tarea al día</span>
-        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#d97706"}}/>Turno</span>
-        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#0ea5e9"}}/>Day trip</span>
+        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#ef4444"}}/>{L("Tarea vencida","Overdue task")}</span>
+        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#f59e0b"}}/>{L("Tarea por vencer","Task due soon")}</span>
+        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#22c55e"}}/>{L("Tarea al día","Task on track")}</span>
+        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#d97706"}}/>{L("Turno","Shift")}</span>
+        <span style={{display:"flex",alignItems:"center",gap:5}}><span style={{width:10,height:10,borderRadius:3,background:"#0ea5e9"}}/>{L("Day trip","Day trip")}</span>
       </div>
 
       {/* Detalle del evento */}
