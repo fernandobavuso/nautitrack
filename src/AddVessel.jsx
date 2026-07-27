@@ -3,6 +3,7 @@ import CariveLogo from "./CariveLogo";
 import LocationFields from "./LocationFields.jsx";
 import { IconClipboard, IconBoat, IconAnchor } from "./icons.jsx";
 import { countryName } from "./locations.js";
+import { useLang } from "./i18n.jsx";
 
 // Tipos de embarcación (alfabético; "Otro" siempre al final)
 const VESSEL_TYPES = [
@@ -23,6 +24,8 @@ const VESSEL_TYPES = [
 ].sort((a, b) => (a === "Otro" ? 1 : b === "Otro" ? -1 : a.localeCompare(b, "es")));
 
 export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [step, setStep]     = useState(1);
   const [loading, setLoading] = useState(false);
   const [otherType, setOtherType] = useState(false);
@@ -90,8 +93,8 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
         <div style={s.header}>
           <CariveLogo size={44} />
           <div style={s.headerText}>
-            <div style={s.title}>{isOnboarding ? "Configura tu embarcación" : "Agrega tu primera embarcación"}</div>
-            <div style={s.subtitle}>{isOnboarding ? "Un último paso y tu panel estará listo. Puedes editar todo después." : "Puedes editar todos los detalles después"}</div>
+            <div style={s.title}>{isOnboarding ? L("Configura tu embarcación","Set up your vessel") : L("Agrega tu primera embarcación","Add your first vessel")}</div>
+            <div style={s.subtitle}>{isOnboarding ? L("Un último paso y tu panel estará listo. Puedes editar todo después.","One last step and your dashboard is ready. You can edit everything later.") : L("Puedes editar todos los detalles después","You can edit all details later")}</div>
           </div>
         </div>
 
@@ -105,16 +108,16 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
         {/* Step 1 — Basic info */}
         {step===1&&(
           <div style={s.form}>
-            <div style={{...s.stepTitle,display:"flex",alignItems:"center",gap:8}}><IconClipboard size={17} color="#2563eb"/> Información básica</div>
+            <div style={{...s.stepTitle,display:"flex",alignItems:"center",gap:8}}><IconClipboard size={17} color="#2563eb"/>{L("Información básica","Basic info")}</div>
 
             <div>
-              <label style={s.label}>Nombre de la embarcación *</label>
+              <label style={s.label}>{L("Nombre de la embarcación *","Vessel name *")}</label>
               <input value={form.name} onChange={e=>set("name",e.target.value)}
-                placeholder="Ej: La Gaviota" style={s.input} autoFocus/>
+                placeholder={L("Ej: La Gaviota","e.g. La Gaviota")} style={s.input} autoFocus/>
             </div>
 
             <div>
-              <label style={s.label}>Tipo de embarcación</label>
+              <label style={s.label}>{L("Tipo de embarcación","Vessel type")}</label>
               <select
                 value={VESSEL_TYPES.includes(form.type) ? form.type : (form.type ? "Otro" : "")}
                 onChange={e => {
@@ -124,14 +127,14 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
                 }}
                 style={s.input}
               >
-                <option value="">Selecciona el tipo...</option>
+                <option value="">{L("Selecciona el tipo...","Select type...")}</option>
                 {VESSEL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
               {otherType && (
                 <input
                   value={form.type}
                   onChange={e => set("type", e.target.value)}
-                  placeholder="Escribe el tipo de embarcación"
+                  placeholder={L("Escribe el tipo de embarcación","Enter the vessel type")}
                   style={{...s.input, marginTop:8}}
                   autoFocus
                 />
@@ -151,32 +154,32 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
-                <label style={s.label}>Marca</label>
+                <label style={s.label}>{L("Marca","Brand")}</label>
                 <input value={form.brand} onChange={e=>set("brand",e.target.value)}
-                  placeholder="Ej: Sea Ray" style={s.input}/>
+                  placeholder={L("Ej: Sea Ray","e.g. Sea Ray")} style={s.input}/>
               </div>
               <div>
-                <label style={s.label}>Modelo</label>
+                <label style={s.label}>{L("Modelo","Model")}</label>
                 <input value={form.model} onChange={e=>set("model",e.target.value)}
-                  placeholder="Ej: 65L" style={s.input}/>
+                  placeholder={L("Ej: 65L","e.g. 65L")} style={s.input}/>
               </div>
             </div>
 
             <div>
-              <label style={s.label}>Eslora (pies)</label>
+              <label style={s.label}>{L("Eslora (pies)","Length (ft)")}</label>
               <input type="number" value={form.lengthFt} onChange={e=>set("lengthFt",e.target.value)}
-                placeholder="Ej: 65" style={s.input}/>
+                placeholder={L("Ej: 65","e.g. 65")} style={s.input}/>
             </div>
 
             <div>
-              <label style={s.label}>Nombre del Capitán</label>
+              <label style={s.label}>{L("Nombre del Capitán","Captain name")}</label>
               <input value={form.captain} onChange={e=>set("captain",e.target.value)}
-                placeholder="Ej: Carlos Mendoza" style={s.input}/>
+                placeholder={L("Ej: Carlos Mendoza","e.g. Carlos Mendoza")} style={s.input}/>
             </div>
 
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setStep(1)} style={s.btnOutline}>← Atrás</button>
-              <button onClick={()=>setStep(3)} style={{...s.btn,flex:1}}>Siguiente →</button>
+              <button onClick={()=>setStep(1)} style={s.btnOutline}>← {L("Atrás","Back")}</button>
+              <button onClick={()=>setStep(3)} style={{...s.btn,flex:1}}>{L("Siguiente","Next")} →</button>
             </div>
           </div>
         )}
@@ -187,9 +190,9 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
             <div style={{...s.stepTitle,display:"flex",alignItems:"center",gap:8}}><IconAnchor size={17} color="#2563eb"/> Ubicación del barco</div>
 
             <div>
-              <label style={s.label}>Nombre de la marina / puerto base</label>
+              <label style={s.label}>{L("Nombre de la marina / puerto base","Marina / home port name")}</label>
               <input value={form.marinaName} onChange={e=>set("marinaName",e.target.value)}
-                placeholder="Ej: Marina Bahía Redonda" style={s.input}/>
+                placeholder={L("Ej: Marina Bahía Redonda","e.g. Marina Bahia Redonda")} style={s.input}/>
             </div>
 
             <div style={{display:"grid",gap:10}}>
@@ -204,20 +207,20 @@ export default function AddVessel({ onAdd, onSkip, isOnboarding }) {
             </div>
 
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#0369a1"}}>
-              📡 Usamos ciudad + país para mostrar el clima en tiempo real de tu embarcación
+              📡 {L("Usamos ciudad + país para mostrar el clima en tiempo real de tu embarcación","We use city + country to show real-time weather for your vessel")}
             </div>
 
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setStep(2)} style={s.btnOutline}>← Atrás</button>
+              <button onClick={()=>setStep(2)} style={s.btnOutline}>← {L("Atrás","Back")}</button>
               <button onClick={handleAdd} disabled={loading} style={{...s.btn,flex:1,opacity:loading?0.7:1}}>
-                {loading?"⏳ Guardando...":"🚢 Crear embarcación"}
+                {loading?L("⏳ Guardando...","⏳ Saving..."):L("🚢 Crear embarcación","🚢 Create vessel")}
               </button>
             </div>
           </div>
         )}
 
         {/* Skip */}
-        <button onClick={onSkip} style={s.skipBtn}>{isOnboarding ? "Explorar la app primero (agregar barco después)" : "Saltar por ahora"}</button>
+        <button onClick={onSkip} style={s.skipBtn}>{isOnboarding ? L("Explorar la app primero (agregar barco después)","Explore the app first (add a boat later)") : L("Saltar por ahora","Skip for now")}</button>
       </div>
     </div>
   );
