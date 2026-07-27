@@ -547,6 +547,7 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
             // Preparar WhatsApp (si la tienda tiene número y no lo desactivó)
             if (st.store_phone && st.notify_whatsapp !== false) {
               waTargets.push({
+                storeId: st.id,
                 phone: st.store_phone,
                 name: st.store_name || "tu tienda",
                 distance: distMi!=null ? `${distMi} mi` : (st.store_ships_nationwide ? "envío nacional" : "—"),
@@ -557,6 +558,15 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
 
         // ── WhatsApp automático a las tiendas que califican ──
         // Se envía en paralelo y no bloquea: si una falla, las demás siguen.
+        // Dejar constancia de qué pedido está respondiendo cada tienda por WhatsApp,
+        // para que el webhook sepa a qué solicitud asociar su respuesta.
+        if (waTargets.length && inserted?.id) {
+          supabase.from("wa_sessions").upsert(
+            waTargets.map(t => ({ store_id: t.storeId, request_id: inserted.id, state: "notified", updated_at: new Date().toISOString() })),
+            { onConflict: "store_id" }
+          ).then(({ error }) => { if (error) console.warn("[Carive] wa_sessions:", error.message); });
+        }
+
         Promise.allSettled(
           waTargets.map(t =>
             form.urgent
