@@ -2,11 +2,14 @@ import { useState } from "react";
 import { supabase } from "./supabase";
 import { PLANS } from "./plans.jsx";
 import { PAYMENT_METHODS_INFO } from "./paymentInfo.jsx";
+import { useLang } from "./i18n.jsx";
 
 // Checkout manual: el cliente ve las instrucciones de pago, paga por fuera,
 // y reporta su pago subiendo un comprobante. Queda pendiente hasta que el
 // admin lo aprueba en el Panel de Admin.
 export default function ManualCheckout({ vessel, user, planKey, period, onClose, onReported }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const plan = PLANS[planKey];
   const price = period === "yearly" ? plan.priceYearly : plan.priceMonthly;
   const [method, setMethod] = useState("");
@@ -53,11 +56,11 @@ export default function ManualCheckout({ vessel, user, planKey, period, onClose,
             <div style={{width:56,height:56,borderRadius:"50%",background:"#dcfce7",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:8}}>¡Pago reportado!</div>
+            <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:8}}>{L("¡Pago reportado!","Payment reported!")}</div>
             <div style={{fontSize:13,color:"#64748b",lineHeight:1.6,maxWidth:340,margin:"0 auto"}}>
               Recibimos tu reporte de pago del plan <strong>{plan.name}</strong>. Lo verificaremos y activaremos tu plan en breve (normalmente el mismo día). Te avisaremos cuando esté listo.
             </div>
-            <button onClick={onClose} style={{...btnPrimary,marginTop:18}}>Entendido</button>
+            <button onClick={onClose} style={{...btnPrimary,marginTop:18}}>{L("Entendido","Got it")}</button>
           </div>
         </div>
       </div>
@@ -99,11 +102,11 @@ export default function ManualCheckout({ vessel, user, planKey, period, onClose,
         {chosen && (
           <>
             <div style={{fontSize:12,fontWeight:700,color:"#0a2540",marginBottom:8}}>3. Reporta tu pago</div>
-            <input value={reference} onChange={e=>setReference(e.target.value)} placeholder="Nº de referencia / confirmación (opcional)" style={{...inp,marginBottom:8}}/>
+            <input value={reference} onChange={e=>setReference(e.target.value)} placeholder={L("Nº de referencia / confirmación (opcional)","Reference / confirmation no. (optional)")} style={{...inp,marginBottom:8}}/>
             <label style={{display:"block",marginBottom:14}}>
-              <div style={{fontSize:12,color:"#475569",marginBottom:6}}>Sube tu comprobante (captura o recibo)</div>
+              <div style={{fontSize:12,color:"#475569",marginBottom:6}}>{L("Sube tu comprobante (captura o recibo)","Upload your proof (screenshot or receipt)")}</div>
               <div style={{border:"1.5px dashed #cbd5e1",borderRadius:10,padding:"14px",textAlign:"center",cursor:"pointer",background:"#f8fafc"}}>
-                {proof ? <span style={{fontSize:12,color:"#2563eb",fontWeight:600}}>{proof.name}</span> : <span style={{fontSize:12,color:"#94a3b8"}}>Toca para elegir archivo (imagen o PDF)</span>}
+                {proof ? <span style={{fontSize:12,color:"#2563eb",fontWeight:600}}>{proof.name}</span> : <span style={{fontSize:12,color:"#94a3b8"}}>{L("Toca para elegir archivo (imagen o PDF)","Tap to choose a file (image or PDF)")}</span>}
                 <input type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={e=>setProof(e.target.files?.[0]||null)}/>
               </div>
             </label>
@@ -113,7 +116,7 @@ export default function ManualCheckout({ vessel, user, planKey, period, onClose,
             <button onClick={submit} disabled={uploading} style={{...btnPrimary,width:"100%",opacity:uploading?.6:1}}>
               {uploading ? "Enviando..." : "Reportar mi pago"}
             </button>
-            <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:8}}>Verificaremos tu pago y activaremos tu plan, normalmente el mismo día.</div>
+            <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:8}}>{L("Verificaremos tu pago y activaremos tu plan, normalmente el mismo día.","We'll verify your payment and activate your plan, usually the same day.")}</div>
           </>
         )}
       </div>

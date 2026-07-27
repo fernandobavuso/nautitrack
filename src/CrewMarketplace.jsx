@@ -229,8 +229,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                   onView={()=>setSelectedCrew(app.crew)}
                   actions={
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>acceptApplication(app)} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Aceptar</button>
-                      <button onClick={()=>rejectApplication(app)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Rechazar</button>
+                      <button onClick={()=>acceptApplication(app)} style={{flex:1,padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Aceptar","Accept")}</button>
+                      <button onClick={()=>rejectApplication(app)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Rechazar","Reject")}</button>
                     </div>
                   }/>
               ))}
@@ -245,7 +245,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
           {/* ── POSIBLE TRIPULACIÓN ── */}
           {tab==="posibles"&&(
             <div>
-              <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>Capitanes y tripulantes interesados en trabajar contigo. Revisa su perfil, contáctalos o guárdalos para después.</div>
+              <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{L("Capitanes y tripulantes interesados en trabajar contigo. Revisa su perfil, contáctalos o guárdalos para después.","Captains and crew interested in working with you. Review their profile, contact them or save them for later.")}</div>
               {possibles.length===0&&(
                 <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
                   <div style={{fontWeight:600}}>{L("Sin candidatos por ahora","No candidates yet")}</div>
@@ -271,9 +271,9 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                       </div>
                       <div style={{display:"flex",gap:8}}>
                         <button onClick={()=>setSelectedCrew(c)} style={{flex:1,padding:"8px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Ver perfil","View profile")}</button>
-                        <button onClick={()=>{ updatePossible(item,"contacted"); inviteCrew(c); }} style={{flex:1,padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>Contactar</button>
+                        <button onClick={()=>{ updatePossible(item,"contacted"); inviteCrew(c); }} style={{flex:1,padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Contactar","Contact")}</button>
                         <button onClick={()=>updatePossible(item, saved?"new":"saved")} style={{flex:1,padding:"8px",background:saved?"#fef9c3":"#fff",border:"1px solid #e2e8f0",borderRadius:8,color:saved?"#a16207":"#64748b",fontSize:12,fontWeight:700,cursor:"pointer"}}>{saved?"Guardado":"Guardar"}</button>
-                        <button onClick={()=>updatePossible(item,"declined")} style={{flex:1,padding:"8px",background:"#fff",border:"1px solid #fecaca",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>Declinar</button>
+                        <button onClick={()=>updatePossible(item,"declined")} style={{flex:1,padding:"8px",background:"#fff",border:"1px solid #fecaca",borderRadius:8,color:"#dc2626",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Declinar","Decline")}</button>
                       </div>
                     </div>
                   );
@@ -310,7 +310,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
           {/* ── MI TRIPULACIÓN (asignar capitanes con cuenta) ── */}
           {tab==="miequipo"&&(
             <div>
-              <div style={{fontSize:13,color:"#64748b",marginBottom:14}}>Asigna capitanes o tripulantes que ya tienen cuenta. Al iniciar sesión verán la vista de este barco.</div>
+              <div style={{fontSize:13,color:"#64748b",marginBottom:14}}>{L("Asigna capitanes o tripulantes que ya tienen cuenta. Al iniciar sesión verán la vista de este barco.","Assign captains or crew who already have an account. When they sign in they'll see this boat's view.")}</div>
 
               {/* Lista de asignados */}
               <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
@@ -344,7 +344,7 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
                       </div>
                       <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
                         <input type="checkbox" defaultChecked={cap.can_edit_providers||false} onChange={e=>updateCaptainPerms(cap.id,{can_edit_providers:e.target.checked})} style={{width:15,height:15}}/>
-                        <span style={{fontSize:12,color:"#374151"}}>Puede agregar y editar proveedores</span>
+                        <span style={{fontSize:12,color:"#374151"}}>{L("Puede agregar y editar proveedores","Can add and edit providers")}</span>
                       </label>
                     </div>
                   </div>
@@ -353,28 +353,28 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
 
               {/* Form asignar */}
               <div style={{background:"#fff",border:"1.5px solid #bfdbfe",borderRadius:12,padding:16}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>Asignar a mi barco</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>{L("Asignar a mi barco","Assign to my boat")}</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  <input value={assignForm.full_name} onChange={e=>setAssignForm({...assignForm,full_name:e.target.value})} placeholder="Nombre completo" style={{padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13}}/>
+                  <input value={assignForm.full_name} onChange={e=>setAssignForm({...assignForm,full_name:e.target.value})} placeholder={L("Nombre completo","Full name")} style={{padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13}}/>
                   <select value={assignForm.role} onChange={e=>setAssignForm({...assignForm,role:e.target.value})} style={{padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13}}>
                     {["Capitán","Primer Oficial","Jefe de Máquinas","Electricista","Marinero","Chef","Camarero","Mecánico"].map(r=><option key={r}>{r}</option>)}
                   </select>
                 </div>
                 <input value={assignForm.email} onChange={e=>setAssignForm({...assignForm,email:e.target.value})} placeholder={L("Email (si no tiene cuenta, te damos un link para invitar)","Email (if they have no account, we give you an invite link)")} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:8,boxSizing:"border-box"}}/>
                 <input value={assignForm.phone} onChange={e=>setAssignForm({...assignForm,phone:e.target.value})} placeholder={L("Teléfono (opcional)","Phone (optional)")} style={{width:"100%",padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12,boxSizing:"border-box"}}/>
-                <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Asignar</button>
+                <button onClick={assignCrew} style={{width:"100%",padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Asignar","Assign")}</button>
                 {inviteLink && (
                   <div style={{background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:10,padding:12,marginTop:10}}>
                     <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>{L("No tiene cuenta — invítalo a unirse","No account — invite them to join")}</div>
                     <div style={{display:"flex",gap:6,marginBottom:8}}>
                       <input readOnly value={inviteLink} onClick={e=>e.target.select()} style={{flex:1,padding:"7px 10px",border:"1px solid #a7f3d0",borderRadius:6,fontSize:10,background:"#fff",boxSizing:"border-box"}}/>
-                      <button onClick={copyInviteLink} style={{padding:"7px 12px",background:"#fff",border:"1px solid #a7f3d0",borderRadius:6,color:"#059669",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Copiar</button>
+                      <button onClick={copyInviteLink} style={{padding:"7px 12px",background:"#fff",border:"1px solid #a7f3d0",borderRadius:6,color:"#059669",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{L("Copiar","Copy")}</button>
                     </div>
                     <div style={{display:"flex",gap:6}}>
                       <a href={`https://wa.me/${(assignForm.phone||"").replace(/[^0-9]/g,"")}?text=${encodeURIComponent(`Hola ${assignForm.full_name}, te invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}. Abre este link para crear tu cuenta: ${inviteLink}`)}`} target="_blank" rel="noreferrer" style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(135deg,#16a34a,#22c55e)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>{L("Enviar por WhatsApp","Send via WhatsApp")}</a>
                       <a href={`mailto:${assignForm.email}?subject=${encodeURIComponent("Invitación a Carive")}&body=${encodeURIComponent(`Hola ${assignForm.full_name},\n\nTe invito a unirte como ${assignForm.role} en Carive para gestionar el barco ${vessel.name}.\n\nAbre este link para crear tu cuenta:\n${inviteLink}\n\nSaludos`)}`} style={{flex:1,textAlign:"center",padding:"8px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>{L("Enviar por Email","Send via Email")}</a>
                     </div>
-                    <button onClick={()=>{setInviteLink("");setAssignForm({email:"",full_name:"",role:"Capitán",phone:""});}} style={{background:"none",border:"none",color:"#059669",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>Listo</button>
+                    <button onClick={()=>{setInviteLink("");setAssignForm({email:"",full_name:"",role:"Capitán",phone:""});}} style={{background:"none",border:"none",color:"#059669",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:8,padding:0}}>{L("Listo","Done")}</button>
                   </div>
                 )}
                 {assignMsg&&<div style={{fontSize:11,color:assignMsg.startsWith("✅")?"#16a34a":"#dc2626",marginTop:8,textAlign:"center"}}>{assignMsg}</div>}
@@ -457,7 +457,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           {/* Idiomas */}
           {(crew.languages||[]).length>0&&(
             <div>
-              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>IDIOMAS</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>{L("IDIOMAS","LANGUAGES")}</div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {(crew.languages||[]).map(l=><span key={l} style={{fontSize:12,padding:"3px 10px",background:"#eff6ff",borderRadius:16,color:"#2563eb"}}>{l}</span>)}
               </div>
@@ -473,7 +473,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           {/* Experiencia */}
           {(crew.experience||[]).length>0&&(
             <div>
-              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>EXPERIENCIA</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>{L("EXPERIENCIA","EXPERIENCE")}</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {(crew.experience||[]).map((e,i)=>(
                   <div key={i} style={{background:"#f8fafc",borderRadius:8,padding:"8px 12px"}}>
@@ -487,7 +487,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           {/* Certificaciones */}
           {(crew.certifications||[]).length>0&&(
             <div>
-              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>CERTIFICACIONES</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",letterSpacing:"0.06em",marginBottom:6}}>{L("CERTIFICACIONES","CERTIFICATIONS")}</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {(crew.certifications||[]).map((c,i)=>(
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:"#475569"}}>
@@ -501,7 +501,7 @@ function CrewProfileDetail({ crew, badgeIcons, onClose }) {
           {/* Dato curioso */}
           {crew.fun_facts?.playa_favorita&&(
             <div style={{background:"linear-gradient(135deg,#fffbeb,#fff7ed)",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#92400e",marginBottom:2}}>Playa favorita</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#92400e",marginBottom:2}}>{L("Playa favorita","Favorite beach")}</div>
               <div style={{fontSize:13,color:"#b45309"}}>{crew.fun_facts.playa_favorita}</div>
             </div>
           )}

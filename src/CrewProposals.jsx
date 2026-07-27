@@ -36,7 +36,7 @@ export default function CrewProposals({ user, profile }) {
     load();
   };
 
-  if (loading) return <div style={{padding:30,textAlign:"center",color:"#94a3b8"}}>Cargando...</div>;
+  if (loading) return <div style={{padding:30,textAlign:"center",color:"#94a3b8"}}>{L("Cargando...","Loading...")}</div>;
 
   const pending = proposals.filter(p=>p.crew_status==="pending");
   const responded = proposals.filter(p=>p.crew_status!=="pending");
@@ -49,14 +49,14 @@ export default function CrewProposals({ user, profile }) {
       {proposals.length===0&&(
         <div style={{textAlign:"center",padding:"40px 0",color:"#94a3b8"}}>
           <div style={{fontWeight:600}}>{L("Sin propuestas por ahora","No proposals yet")}</div>
-          <div style={{fontSize:12,marginTop:4}}>Cuando un propietario busque un perfil como el tuyo en tu ciudad, te avisaremos</div>
+          <div style={{fontSize:12,marginTop:4}}>{L("Cuando un propietario busque un perfil como el tuyo en tu ciudad, te avisaremos","When an owner looks for a profile like yours in your city, we'll let you know")}</div>
         </div>
       )}
 
       {/* Pendientes de responder */}
       {pending.length>0&&(
         <div style={{marginBottom:24}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Nuevas</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{L("Nuevas","New")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {pending.map(p=>{
               const s = p.search||{};
@@ -66,14 +66,14 @@ export default function CrewProposals({ user, profile }) {
                   <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>{s.city||""}{s.contract_type?` · ${s.contract_type}`:""}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                     {s.min_experience&&<span style={tag}>{s.min_experience}+ años exp.</span>}
-                    {s.liveaboard&&<span style={tag}>Vive a bordo</span>}
+                    {s.liveaboard&&<span style={tag}>{L("Vive a bordo","Lives aboard")}</span>}
                     {(s.languages||[]).map(l=><span key={l} style={tag}>{l}</span>)}
                     {(s.certifications||[]).map(c=><span key={c} style={tag}>{c}</span>)}
                   </div>
                   {s.notes&&<div style={{fontSize:12,color:"#475569",marginBottom:12,background:"#f8fafc",padding:"10px 12px",borderRadius:8}}>{s.notes}</div>}
                   <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>respond(p,"not_interested")} style={{flex:1,padding:"10px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:8,color:"#64748b",fontSize:13,fontWeight:600,cursor:"pointer"}}>No me interesa</button>
-                    <button onClick={()=>respond(p,"interested")} style={{flex:2,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Me interesa</button>
+                    <button onClick={()=>respond(p,"not_interested")} style={{flex:1,padding:"10px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:8,color:"#64748b",fontSize:13,fontWeight:600,cursor:"pointer"}}>{L("No me interesa","Not interested")}</button>
+                    <button onClick={()=>respond(p,"interested")} style={{flex:2,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Me interesa","I'm interested")}</button>
                   </div>
                 </div>
               );
@@ -85,7 +85,7 @@ export default function CrewProposals({ user, profile }) {
       {/* Ya respondidas */}
       {responded.length>0&&(
         <div>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>Respondidas</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{L("Respondidas","Responded")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {responded.map(p=>{
               const s = p.search||{};

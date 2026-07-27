@@ -101,15 +101,15 @@ export default function DayTripsCrew({ user, profile }) {
 
   const appliedIds = myApps.map(a=>a.trip_id);
 
-  if (loading) return <div style={{textAlign:"center",padding:30,color:"#94a3b8"}}>Cargando viajes...</div>;
+  if (loading) return <div style={{textAlign:"center",padding:30,color:"#94a3b8"}}>{L("Cargando viajes...","Loading trips...")}</div>;
 
   return (
     <div>
       {/* Mis postulaciones ACTIVAS */}
       {myApps.filter(a=>a.trip?.status!=="completed").length>0&&(
         <div style={{marginBottom:20}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>Activas</div>
-          <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Salidas que faltan por hacer</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>{L("Activas","Active")}</div>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>{L("Salidas que faltan por hacer","Trips still to come")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {myApps.filter(a=>a.trip?.status!=="completed").map(a=>{
               const t=a.trip||{};
@@ -123,15 +123,15 @@ export default function DayTripsCrew({ user, profile }) {
                     <div>
                       <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.crew_role||"Viaje"} · {t.vessel_type||""}</div>
                       <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("es-VE"):""}{t.city?` · ${t.city}`:""}</div>
-                      {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>El propietario te contactará. Revisa tus notificaciones.</div>}
+                      {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>{L("El propietario te contactará. Revisa tus notificaciones.","The owner will contact you. Check your notifications.")}</div>}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",background:bg,color,border:`1px solid ${border}`}}>{estado}</span>
-                      <button onClick={()=>removeApp(a.id)} title="Retirar postulación" style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:11,fontWeight:600}}>Retirar</button>
+                      <button onClick={()=>removeApp(a.id)} title="Retirar postulación" style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:11,fontWeight:600}}>{L("Retirar","Withdraw")}</button>
                     </div>
                   </div>
                   {a.status==="accepted"&&t.status!=="completed"&&(
-                    <button onClick={()=>markCompleted(t)} style={{width:"100%",marginTop:10,padding:"8px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,color:"#16a34a",fontSize:12,fontWeight:700,cursor:"pointer"}}>Marcar viaje como completado</button>
+                    <button onClick={()=>markCompleted(t)} style={{width:"100%",marginTop:10,padding:"8px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,color:"#16a34a",fontSize:12,fontWeight:700,cursor:"pointer"}}>{L("Marcar viaje como completado","Mark trip as completed")}</button>
                   )}
                 </div>
               );
@@ -185,8 +185,8 @@ export default function DayTripsCrew({ user, profile }) {
       {/* Mis viajes completados — reseñar al dueño */}
       {completedTrips.length>0&&(
         <div style={{marginTop:20}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>Viajes completados</div>
-          <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>Salidas ya realizadas. Deja tu reseña al propietario.</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4}}>{L("Viajes completados","Completed trips")}</div>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>{L("Salidas ya realizadas. Deja tu reseña al propietario.","Trips already done. Leave a review for the owner.")}</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {completedTrips.map(trip=>(
               <div key={trip.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
@@ -203,25 +203,25 @@ export default function DayTripsCrew({ user, profile }) {
       {applyTrip&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setApplyTrip(null)}>
           <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:380,width:"100%"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Postularme al viaje</div>
+            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>{L("Postularme al viaje","Apply to this trip")}</div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:14}}>{trip_label(applyTrip)}</div>
             {applyTrip.pay_open&&(
               <div style={{marginBottom:12}}>
-                <label style={lbl}>¿Cuánto cobras? *</label>
+                <label style={lbl}>{L("¿Cuánto cobras? *","What do you charge? *")}</label>
                 <div style={{display:"flex",gap:8}}>
                   <select value={proposedCurrency} onChange={e=>setProposedCurrency(e.target.value)} style={{...inp,width:100,flexShrink:0}}>
                     <option value="USD">$ USD</option>
                   </select>
-                  <input type="number" value={proposedPay} onChange={e=>setProposedPay(e.target.value)} placeholder="Ej: 60" style={{...inp,flex:1}}/>
+                  <input type="number" value={proposedPay} onChange={e=>setProposedPay(e.target.value)} placeholder={L("Ej: 60","e.g. 60")} style={{...inp,flex:1}}/>
                 </div>
-                <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>Indica el monto por el viaje completo</div>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>{L("Indica el monto por el viaje completo","Enter the amount for the whole trip")}</div>
               </div>
             )}
-            <label style={lbl}>Mensaje al propietario (opcional)</label>
-            <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder="Preséntate brevemente..." style={{...inp,resize:"vertical",marginBottom:14}}/>
+            <label style={lbl}>{L("Mensaje al propietario (opcional)","Message to the owner (optional)")}</label>
+            <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder={L("Preséntate brevemente...","Introduce yourself briefly...")} style={{...inp,resize:"vertical",marginBottom:14}}/>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setApplyTrip(null)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-              <button onClick={apply} disabled={applyTrip.pay_open&&!proposedPay} style={{flex:2,padding:"10px",background:(applyTrip.pay_open&&!proposedPay)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enviar postulación</button>
+              <button onClick={()=>setApplyTrip(null)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>{L("Cancelar","Cancel")}</button>
+              <button onClick={apply} disabled={applyTrip.pay_open&&!proposedPay} style={{flex:2,padding:"10px",background:(applyTrip.pay_open&&!proposedPay)?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Enviar postulación","Send application")}</button>
             </div>
           </div>
         </div>
@@ -260,7 +260,7 @@ function CrewReviewButton({ trip, user, onDone }) {
     setDone(true); setOpen(false); onDone&&onDone();
   };
 
-  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>Reseña enviada</div>;
+  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>{L("Reseña enviada","Review sent")}</div>;
 
   return (
     <>
@@ -270,14 +270,14 @@ function CrewReviewButton({ trip, user, onDone }) {
       {open&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setOpen(false)}>
           <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:14,textAlign:"center"}}>¿Cómo fue tu experiencia con el barco?</div>
+            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:14,textAlign:"center"}}>{L("¿Cómo fue tu experiencia con el barco?","How was your experience with the boat?")}</div>
             <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:16}}>
               {[1,2,3,4,5].map(n=>(
                 <button key={n} onClick={()=>setRating(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:32,color:n<=rating?"#f59e0b":"#cbd5e1"}}>★</button>
               ))}
             </div>
             <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3} placeholder="¿Cómo te trataron? ¿Pagaron lo acordado? (opcional)" style={{...inp,resize:"vertical",marginBottom:14}}/>
-            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
+            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>{L("Enviar reseña","Send review")}</button>
           </div>
         </div>
       )}

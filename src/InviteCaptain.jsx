@@ -1,8 +1,11 @@
 // Panel para que el dueño invite/gestione capitanes
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { useLang } from "./i18n.jsx";
 
 export default function InviteCaptain({ vessel, onClose }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [captains, setCaptains] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [email,    setEmail]    = useState("");
@@ -81,18 +84,18 @@ export default function InviteCaptain({ vessel, onClose }) {
         <div style={{padding:24}}>
           {/* Formulario de invitación */}
           <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:18,marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:12}}>Agregar Capitán o Tripulante</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:12}}>{L("Agregar Capitán o Tripulante","Add Captain or Crew")}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
               <div>
-                <label style={s.label}>Nombre completo *</label>
-                <input value={name} onChange={e=>setName(e.target.value)} placeholder="Diego Chico" style={s.input}/>
+                <label style={s.label}>{L("Nombre completo *","Full name *")}</label>
+                <input value={name} onChange={e=>setName(e.target.value)} placeholder={L("Diego Chico","John Smith")} style={s.input}/>
               </div>
               <div>
                 <label style={s.label}>Rol</label>
                 <select value={role} onChange={e=>setRole(e.target.value)} style={s.input}>
-                  <option>Capitán</option>
-                  <option>Primer Oficial</option>
-                  <option>Marinero</option>
+                  <option>{L("Capitán","Captain")}</option>
+                  <option>{L("Primer Oficial","First Officer")}</option>
+                  <option>{L("Marinero","Deckhand")}</option>
                 </select>
               </div>
             </div>
@@ -110,12 +113,12 @@ export default function InviteCaptain({ vessel, onClose }) {
           </div>
 
           {/* Lista de capitanes */}
-          <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:10}}>CON ACCESO ACTUALMENTE</div>
+          <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:10}}>{L("CON ACCESO ACTUALMENTE","CURRENTLY WITH ACCESS")}</div>
           {loading&&<div style={{textAlign:"center",padding:20,color:"#64748b"}}>⏳ Cargando...</div>}
           {!loading&&captains.length===0&&(
             <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
               <div style={{fontSize:32,marginBottom:8}}>👨‍✈️</div>
-              <div>Sin tripulación con acceso aún</div>
+              <div>{L("Sin tripulación con acceso aún","No crew with access yet")}</div>
             </div>
           )}
           <div style={{display:"flex",flexDirection:"column",gap:8}}>

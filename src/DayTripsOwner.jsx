@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { getReputations, Stars } from "./reputation.jsx";
 import { notify } from "./notifications";
+import { useLang } from "./i18n.jsx";
 
 // Preferencias estilo Uber que el dueño puede activar
 const TRIP_PREFERENCES = [
@@ -18,6 +19,8 @@ const TRIP_TYPES = ["Paseo","Pesca","Buceo / Snorkel","Evento / Fiesta","Traslad
 
 // ── PANEL DAY TRIPS PARA EL DUEÑO ──
 export default function DayTripsOwner({ vessel, user }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [trips, setTrips] = useState([]);
   const [reps, setReps] = useState({});
   const [loading, setLoading] = useState(true);
@@ -182,7 +185,7 @@ export default function DayTripsOwner({ vessel, user }) {
     loadTrips();
   };
 
-  if (loading) return <div style={{textAlign:"center",padding:30,color:"#94a3b8"}}>Cargando...</div>;
+  if (loading) return <div style={{textAlign:"center",padding:30,color:"#94a3b8"}}>{L("Cargando...","Loading...")}</div>;
 
   return (
     <div>
@@ -192,27 +195,27 @@ export default function DayTripsOwner({ vessel, user }) {
         </button>
       ) : (
         <div style={{background:"#fff",border:"1.5px solid #bfdbfe",borderRadius:12,padding:16,marginBottom:16}}>
-          <div style={{fontSize:14,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>Nueva solicitud de tripulante</div>
+          <div style={{fontSize:14,fontWeight:700,color:"#1d4ed8",marginBottom:14}}>{L("Nueva solicitud de tripulante","New crew request")}</div>
 
-          <label style={lbl}>¿Para cuál embarcación?</label>
+          <label style={lbl}>{L("¿Para cuál embarcación?","For which vessel?")}</label>
           <select value={form.vessel_label} onChange={e=>setForm({...form,vessel_label:e.target.value})} style={inp}>
             <option value="mi_embarcacion">Mi embarcación ({vessel.name})</option>
-            <option value="otra">Otra embarcación</option>
+            <option value="otra">{L("Otra embarcación","Another vessel")}</option>
           </select>
 
           {/* Datos de otra embarcación */}
           {form.vessel_label==="otra"&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:10,padding:12,background:"#f8fafc",borderRadius:8}}>
               <div>
-                <label style={lbl}>Marca</label>
-                <input value={form.other_vessel_brand} onChange={e=>setForm({...form,other_vessel_brand:e.target.value})} placeholder="Sea Ray" style={inp}/>
+                <label style={lbl}>{L("Marca","Brand")}</label>
+                <input value={form.other_vessel_brand} onChange={e=>setForm({...form,other_vessel_brand:e.target.value})} placeholder={L("Sea Ray","Sea Ray")} style={inp}/>
               </div>
               <div>
-                <label style={lbl}>Tipo</label>
-                <input value={form.other_vessel_type} onChange={e=>setForm({...form,other_vessel_type:e.target.value})} placeholder="Yate Motor" style={inp}/>
+                <label style={lbl}>{L("Tipo","Type")}</label>
+                <input value={form.other_vessel_type} onChange={e=>setForm({...form,other_vessel_type:e.target.value})} placeholder={L("Yate Motor","Motor Yacht")} style={inp}/>
               </div>
               <div>
-                <label style={lbl}>Eslora (pies)</label>
+                <label style={lbl}>{L("Eslora (pies)","Length (ft)")}</label>
                 <input value={form.other_vessel_length} onChange={e=>setForm({...form,other_vessel_length:e.target.value})} placeholder="48" style={inp}/>
               </div>
             </div>
@@ -220,13 +223,13 @@ export default function DayTripsOwner({ vessel, user }) {
 
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
             <div>
-              <label style={lbl}>Rol buscado</label>
+              <label style={lbl}>{L("Rol buscado","Role needed")}</label>
               <select value={form.crew_role} onChange={e=>setForm({...form,crew_role:e.target.value})} style={inp}>
                 {TRIP_ROLES.map(r=><option key={r}>{r}</option>)}
               </select>
             </div>
             <div>
-              <label style={lbl}>Duración</label>
+              <label style={lbl}>{L("Duración","Duration")}</label>
               <select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})} style={inp}>
                 {DURATIONS.map(d=><option key={d}>{d}</option>)}
               </select>
@@ -237,20 +240,20 @@ export default function DayTripsOwner({ vessel, user }) {
             </div>
             {form.duration==="Varios días"&&(
               <div>
-                <label style={lbl}>Fecha de fin</label>
+                <label style={lbl}>{L("Fecha de fin","End date")}</label>
                 <input type="date" value={form.end_date} onChange={e=>setForm({...form,end_date:e.target.value})} style={inp}/>
               </div>
             )}
             <div>
-              <label style={lbl}>N° de personas a bordo</label>
-              <input type="number" value={form.num_persons} onChange={e=>setForm({...form,num_persons:e.target.value})} placeholder="Ej: 6" style={inp}/>
+              <label style={lbl}>{L("N° de personas a bordo","People aboard")}</label>
+              <input type="number" value={form.num_persons} onChange={e=>setForm({...form,num_persons:e.target.value})} placeholder={L("Ej: 6","e.g. 6")} style={inp}/>
             </div>
             <div>
-              <label style={lbl}>Hora de salida</label>
+              <label style={lbl}>{L("Hora de salida","Departure time")}</label>
               <input type="time" value={form.departure_time} onChange={e=>setForm({...form,departure_time:e.target.value})} style={inp}/>
             </div>
             <div>
-              <label style={lbl}>Tipo de salida</label>
+              <label style={lbl}>{L("Tipo de salida","Trip type")}</label>
               <select value={form.trip_type} onChange={e=>setForm({...form,trip_type:e.target.value})} style={inp}>
                 {TRIP_TYPES.map(t=><option key={t}>{t}</option>)}
               </select>
@@ -259,14 +262,14 @@ export default function DayTripsOwner({ vessel, user }) {
 
           {/* Punto de encuentro */}
           <div style={{marginTop:10}}>
-            <label style={lbl}>Punto de encuentro</label>
-            <input value={form.meeting_point} onChange={e=>setForm({...form,meeting_point:e.target.value})} placeholder="Ej: Marina Bahía Redonda, muelle 3" style={inp}/>
+            <label style={lbl}>{L("Punto de encuentro","Meeting point")}</label>
+            <input value={form.meeting_point} onChange={e=>setForm({...form,meeting_point:e.target.value})} placeholder={L("Ej: Marina Bahía Redonda, muelle 3","e.g. Marina Bay, dock 3")} style={inp}/>
           </div>
 
           {/* Opción de pernocta solo si es varios días */}
           {form.duration==="Varios días"&&(
             <div style={{marginTop:10}}>
-              <label style={lbl}>¿Dónde duerme el tripulante?</label>
+              <label style={lbl}>{L("¿Dónde duerme el tripulante?","Where does the crew sleep?")}</label>
               <select value={form.sleep_option} onChange={e=>setForm({...form,sleep_option:e.target.value})} style={inp}>
                 {SLEEP_OPTIONS.map(o=><option key={o}>{o}</option>)}
               </select>
@@ -275,17 +278,17 @@ export default function DayTripsOwner({ vessel, user }) {
 
           {/* Paga */}
           <div style={{marginTop:10}}>
-            <label style={lbl}>Paga</label>
+            <label style={lbl}>{L("Paga","Pay")}</label>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               <input type="checkbox" id="payopen" checked={form.pay_open} onChange={e=>setForm({...form,pay_open:e.target.checked})} style={{width:15,height:15}}/>
-              <label htmlFor="payopen" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>Abierto a propuestas (que el tripulante diga cuánto cobra)</label>
+              <label htmlFor="payopen" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>{L("Abierto a propuestas (que el tripulante diga cuánto cobra)","Open to offers (let the crew name their rate)")}</label>
             </div>
             {!form.pay_open&&(
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <select value={form.pay_currency} onChange={e=>setForm({...form,pay_currency:e.target.value})} style={{...inp,width:110,flexShrink:0}}>
-                  <option value="USD">Dólares ($)</option>
+                  <option value="USD">{L("Dólares ($)","Dollars ($)")}</option>
                 </select>
-                <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder="Ej: 50" style={{...inp,flex:1}}/>
+                <input value={form.pay_amount} onChange={e=>setForm({...form,pay_amount:e.target.value})} placeholder={L("Ej: 50","e.g. 50")} style={{...inp,flex:1}}/>
                 <span style={{fontSize:13,color:"#64748b",whiteSpace:"nowrap"}}>
                   {form.duration==="Varios días"?"por día":`por ${form.duration}`}
                 </span>
@@ -295,8 +298,8 @@ export default function DayTripsOwner({ vessel, user }) {
 
           {/* Preferencias estilo Uber */}
           <div style={{marginTop:14}}>
-            <label style={lbl}>Mis expectativas (opcional)</label>
-            <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>Como pedir un Uber — marca lo que esperas del tripulante</div>
+            <label style={lbl}>{L("Mis expectativas (opcional)","My expectations (optional)")}</label>
+            <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>{L("Como pedir un Uber — marca lo que esperas del tripulante","Like ordering an Uber — check what you expect from the crew")}</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {TRIP_PREFERENCES.map(p=>(
                 <button key={p} onClick={()=>togglePref(p)} style={{
@@ -312,12 +315,12 @@ export default function DayTripsOwner({ vessel, user }) {
 
           <div style={{marginTop:14,display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8}}>
             <input type="checkbox" id="onlyverif" checked={form.only_verified} onChange={e=>setForm({...form,only_verified:e.target.checked})} style={{width:15,height:15}}/>
-            <label htmlFor="onlyverif" style={{fontSize:12,color:"#15803d",cursor:"pointer",fontWeight:600}}>Solo recibir postulaciones de tripulantes con identidad verificada</label>
+            <label htmlFor="onlyverif" style={{fontSize:12,color:"#15803d",cursor:"pointer",fontWeight:600}}>{L("Solo recibir postulaciones de tripulantes con identidad verificada","Only accept applications from identity-verified crew")}</label>
           </div>
 
           <div style={{marginTop:12}}>
-            <label style={lbl}>Notas adicionales</label>
-            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={2} placeholder="Ej: Salida de pesca temprano, traer protección solar..." style={{...inp,resize:"vertical"}}/>
+            <label style={lbl}>{L("Notas adicionales","Additional notes")}</label>
+            <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={2} placeholder={L("Ej: Salida de pesca temprano, traer protección solar...","e.g. Early fishing trip, bring sunscreen...")} style={{...inp,resize:"vertical"}}/>
           </div>
 
           {reach!=null&&(
@@ -331,8 +334,8 @@ export default function DayTripsOwner({ vessel, user }) {
           )}
 
           <div style={{display:"flex",gap:8,marginTop:14}}>
-            <button onClick={()=>setCreating(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
-            <button onClick={publishTrip} style={{flex:2,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Publicar solicitud</button>
+            <button onClick={()=>setCreating(false)} style={{flex:1,padding:"10px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>{L("Cancelar","Cancel")}</button>
+            <button onClick={publishTrip} style={{flex:2,padding:"10px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Publicar solicitud","Post request")}</button>
           </div>
         </div>
       )}
@@ -342,7 +345,7 @@ export default function DayTripsOwner({ vessel, user }) {
         {trips.length===0&&!creating&&(
           <div style={{textAlign:"center",padding:"30px 0",color:"#94a3b8"}}>
             <div style={{fontSize:36,marginBottom:6}}></div>
-            <div style={{fontWeight:600,fontSize:13}}>Sin solicitudes de viaje</div>
+            <div style={{fontWeight:600,fontSize:13}}>{L("Sin solicitudes de viaje","No trip requests")}</div>
           </div>
         )}
         {trips.map(trip=>{
@@ -398,7 +401,7 @@ export default function DayTripsOwner({ vessel, user }) {
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1500,padding:16}} onClick={()=>setSelectedTrip(null)}>
           <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:440,maxHeight:"80vh",overflowY:"auto",padding:20}} onClick={e=>e.stopPropagation()}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>Postulaciones</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0f172a"}}>{L("Postulaciones","Applications")}</div>
               <button onClick={()=>setSelectedTrip(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#94a3b8"}}>✕</button>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -416,7 +419,7 @@ export default function DayTripsOwner({ vessel, user }) {
                     <div style={{flex:1}}>
                       <div style={{fontSize:14,fontWeight:700,color:"#0f172a",display:"flex",alignItems:"center",gap:6}}>
                         {name}
-                        {verified&&<span style={{fontSize:10,background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:12,fontWeight:700}}>Verificado</span>}
+                        {verified&&<span style={{fontSize:10,background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:12,fontWeight:700}}>{L("Verificado","Verified")}</span>}
                       </div>
                       <div style={{fontSize:12,color:"#0ea5e9",fontWeight:600}}>{c.crew_role}{c.secondary_role?` · ${c.secondary_role}`:""}</div>
                       <div style={{fontSize:11,color:"#94a3b8"}}>{c.nationality}{c.work_zone?` · ${c.work_zone}`:""}</div>
@@ -434,7 +437,7 @@ export default function DayTripsOwner({ vessel, user }) {
 
                   {(c.experience||[]).length>0&&(
                     <div style={{marginBottom:8}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>EXPERIENCIA</div>
+                      <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>{L("EXPERIENCIA","EXPERIENCE")}</div>
                       {(c.experience||[]).slice(0,3).map((e,i)=>(
                         <div key={i} style={{fontSize:11,color:"#475569"}}>• {e.brand} {e.length?`${e.length} pies`:""} {e.role?`— ${e.role}`:""}</div>
                       ))}
@@ -443,7 +446,7 @@ export default function DayTripsOwner({ vessel, user }) {
 
                   {(c.certifications||[]).length>0&&(
                     <div style={{marginBottom:8}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>CERTIFICACIONES</div>
+                      <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>{L("CERTIFICACIONES","CERTIFICATIONS")}</div>
                       {(c.certifications||[]).slice(0,3).map((cert,i)=>(
                         <div key={i} style={{fontSize:11,color:"#475569"}}>• {cert.name==="Otro"?cert.custom_name:cert.name}</div>
                       ))}
@@ -452,11 +455,11 @@ export default function DayTripsOwner({ vessel, user }) {
 
                   {app.proposed_pay&&<div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginBottom:4}}>Propone cobrar: {app.proposed_currency==="VES"?"Bs.":"$"} {app.proposed_pay}</div>}
                   {app.message&&<div style={{fontSize:12,color:"#475569",marginBottom:10,fontStyle:"italic",background:"#fff",padding:"8px 10px",borderRadius:8,border:"1px solid #e2e8f0"}}>"{app.message}"</div>}
-                  <button onClick={()=>acceptApplication(selectedTrip,app)} style={{width:"100%",padding:"9px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Seleccionar este tripulante</button>
+                  <button onClick={()=>acceptApplication(selectedTrip,app)} style={{width:"100%",padding:"9px",background:"linear-gradient(135deg,#16a34a,#22c55e)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Seleccionar este tripulante","Select this crew member")}</button>
                 </div>
               );})}
               {(selectedTrip.applications||[]).filter(a=>a.status==="pending").length===0&&(
-                <div style={{textAlign:"center",padding:20,color:"#94a3b8",fontSize:13}}>Sin postulaciones todavía</div>
+                <div style={{textAlign:"center",padding:20,color:"#94a3b8",fontSize:13}}>{L("Sin postulaciones todavía","No applications yet")}</div>
               )}
             </div>
           </div>
@@ -494,7 +497,7 @@ function ReviewButton({ trip, user, onDone }) {
     setDone(true); setOpen(false); onDone&&onDone();
   };
 
-  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>Reseña enviada</div>;
+  if (done) return <div style={{textAlign:"center",fontSize:12,color:"#16a34a",fontWeight:600,padding:"6px 0"}}>{L("Reseña enviada","Review sent")}</div>;
 
   return (
     <>
@@ -504,14 +507,14 @@ function ReviewButton({ trip, user, onDone }) {
       {open&&(
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setOpen(false)}>
           <div style={{background:"#fff",borderRadius:16,padding:24,maxWidth:360,width:"100%"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:14,textAlign:"center"}}>¿Cómo te fue con el tripulante?</div>
+            <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:14,textAlign:"center"}}>{L("¿Cómo te fue con el tripulante?","How did it go with the crew member?")}</div>
             <div style={{display:"flex",justifyContent:"center",gap:6,marginBottom:16}}>
               {[1,2,3,4,5].map(n=>(
                 <button key={n} onClick={()=>setRating(n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:32,opacity:n<=rating?1:0.3}}>★</button>
               ))}
             </div>
             <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3} placeholder="¿Cómo fue tu experiencia? (opcional)" style={{...inp,resize:"vertical",marginBottom:14}}/>
-            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>Enviar reseña</button>
+            <button onClick={submit} disabled={!rating} style={{width:"100%",padding:"11px",background:rating?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#cbd5e1",border:"none",borderRadius:8,color:"#fff",fontSize:14,fontWeight:700,cursor:rating?"pointer":"default"}}>{L("Enviar reseña","Send review")}</button>
           </div>
         </div>
       )}

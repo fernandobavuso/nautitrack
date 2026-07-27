@@ -877,11 +877,11 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                   <div>
                     <label style={s.label}>{T("cw.firstName")} *</label>
-                    <input value={profile.first_name||""} onChange={e=>set("first_name",e.target.value)} placeholder="Carlos" style={s.input}/>
+                    <input value={profile.first_name||""} onChange={e=>set("first_name",e.target.value)} placeholder={L("Carlos","Carlos")} style={s.input}/>
                   </div>
                   <div>
                     <label style={s.label}>{T("cw.lastName")} *</label>
-                    <input value={profile.last_name||""} onChange={e=>set("last_name",e.target.value)} placeholder="Mendoza" style={s.input}/>
+                    <input value={profile.last_name||""} onChange={e=>set("last_name",e.target.value)} placeholder={L("Mendoza","Mendoza")} style={s.input}/>
                   </div>
                 </div>
 
@@ -896,7 +896,7 @@ export default function CrewProfile({ user, onLogout }) {
                 </div>
 
                 <div style={{marginBottom:10}}>
-                  <label style={s.label}>Email</label>
+                  <label style={s.label}>{L("Email","Email")}</label>
                   <input value={profile.email||user.email||""} onChange={e=>set("email",e.target.value)} style={{...s.input,background:"#f8fafc"}} readOnly/>
                   <div style={{fontSize:10,color:"#94a3b8",marginTop:4}}>{L("Para cambiar tu email contacta soporte en info@carive.co","To change your email contact support at info@carive.co")}</div>
                 </div>
@@ -959,7 +959,7 @@ export default function CrewProfile({ user, onLogout }) {
                 <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:4}}>{T("cw.funFact")}</div>
                 <div style={{fontSize:11,color:"#b45309",marginBottom:12}}>{T("cw.funFactDesc")}</div>
                 <input value={(profile.fun_facts||{}).playa_favorita||""} onChange={e=>setProfile(p=>({...p,fun_facts:{...(p.fun_facts||{}),playa_favorita:e.target.value}}))}
-                  placeholder="Ej: Playa Medina, Venezuela" style={{...s.input,borderColor:"#fde68a",background:"#fff"}}/>
+                  placeholder={L("Ej: Playa Medina, Venezuela","e.g. South Beach, Miami")} style={{...s.input,borderColor:"#fde68a",background:"#fff"}}/>
               </div>
 
             </div>
@@ -1080,11 +1080,11 @@ export default function CrewProfile({ user, onLogout }) {
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:10}}>
                 <div>
                   <label style={s.label}>{T("cw.boatBrand")}</label>
-                  <input value={newExp.brand} onChange={e=>setNewExp({...newExp,brand:e.target.value})} placeholder="Ej: Sea Ray" style={s.input}/>
+                  <input value={newExp.brand} onChange={e=>setNewExp({...newExp,brand:e.target.value})} placeholder={L("Ej: Sea Ray","e.g. Sea Ray")} style={s.input}/>
                 </div>
                 <div>
                   <label style={s.label}>{T("cw.length")}</label>
-                  <input value={newExp.length} onChange={e=>setNewExp({...newExp,length:e.target.value})} placeholder="Ej: 65" style={s.input}/>
+                  <input value={newExp.length} onChange={e=>setNewExp({...newExp,length:e.target.value})} placeholder={L("Ej: 65","e.g. 65")} style={s.input}/>
                 </div>
                 <div>
                   <label style={s.label}>{T("cw.yourRole")}</label>
