@@ -8,22 +8,22 @@ import { distanceKm, kmToMi } from "./geo.js";
 import StoreOnboarding from "./StoreOnboarding.jsx";
 import { useLang } from "./i18n.jsx";
 
-const STORE_CATEGORIES = [
-  // Motor y propulsión (lo más grande del mercado)
-  "Motores","Accesorios de Motor","Filtros","Aceites y Lubricantes","Correas",
-  "Transmisiones","Hélices","Sistemas de combustible","Mangueras y Abrazaderas",
-  // Eléctrico y electrónica
-  "Eléctrico","Baterías","Iluminación","Electrónica/Navegación","Indicadores y Sensores",
-  // Sistemas del barco
-  "Bombas","Plomería","Refrigeración / A/C","Ventilación","Desalinizadores",
-  "Dirección / Timón","Cocina e Interior",
-  // Casco y cubierta
-  "Ferretería marina","Ánodos","Pinturas","Fibra de vidrio","Tapicería","Toldos y Lonas",
-  "Anclas y Fondeo","Cabos y Amarres",
-  // Seguridad y otros
-  "Seguridad","Salvavidas","Limpieza","Mantenimiento General","Pesca","Buceo",
-  "Otro",
+const CATEGORY_GROUPS = [
+  { es:"Motor y propulsión", en:"Engine & propulsion", items:[
+    "Motores","Accesorios de Motor","Filtros","Aceites y Lubricantes","Correas",
+    "Transmisiones","Hélices","Sistemas de combustible","Mangueras y Abrazaderas"] },
+  { es:"Eléctrico y electrónica", en:"Electrical & electronics", items:[
+    "Eléctrico","Baterías","Iluminación","Electrónica/Navegación","Indicadores y Sensores"] },
+  { es:"Sistemas del barco", en:"Boat systems", items:[
+    "Bombas","Plomería","Refrigeración / A/C","Ventilación","Desalinizadores",
+    "Dirección / Timón","Cocina e Interior"] },
+  { es:"Casco y cubierta", en:"Hull & deck", items:[
+    "Ferretería marina","Ánodos","Pinturas","Fibra de vidrio","Tapicería","Toldos y Lonas",
+    "Anclas y Fondeo","Cabos y Amarres"] },
+  { es:"Seguridad y otros", en:"Safety & other", items:[
+    "Seguridad","Salvavidas","Limpieza","Mantenimiento General","Pesca","Buceo","Otro"] },
 ];
+const STORE_CATEGORIES = CATEGORY_GROUPS.flatMap(g => g.items);
 
 // Traducción de categorías (se muestra en inglés, se guarda en español)
 const CAT_EN = {
@@ -58,6 +58,8 @@ export default function StoreView({ user, onLogout }) {
   const [respondTo, setRespondTo] = useState(null);
   const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem("nt_store_welcomed") !== "1");
   const [showStoreMenu, setShowStoreMenu] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
+  const [catSearch, setCatSearch] = useState("");
 
   useEffect(() => { loadProfile(); loadTiers().then(setCommissionTiers); }, []);
   useEffect(() => { if (profile) { loadRequests(); loadResponses(); } }, [profile]);
@@ -131,6 +133,7 @@ export default function StoreView({ user, onLogout }) {
     setMyResponses(data||[]);
   };
 
+  const selCats = profile?.store_categories || [];
   const toggleCat = (c) => setProfile(p=>({...p, store_categories: (p.store_categories||[]).includes(c) ? p.store_categories.filter(x=>x!==c) : [...(p.store_categories||[]), c]}));
 
   // Pausar / activar la tienda (deja de recibir pedidos nuevos)
@@ -510,15 +513,73 @@ export default function StoreView({ user, onLogout }) {
               <div>
                 <label style={lbl}>{L("Categorías que manejas","Categories you carry")} *</label>
                 <div style={{fontSize:10,color:"#94a3b8",marginBottom:8}}>{L("Solo recibirás solicitudes de estas categorías","You will only receive requests in these categories")}</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                  {STORE_CATEGORIES.map(c=>(
-                    <button key={c} onClick={()=>toggleCat(c)} style={{padding:"5px 11px",border:"1.5px solid",borderRadius:16,fontSize:11,cursor:"pointer",
-                      background:(profile.store_categories||[]).includes(c)?"#eff6ff":"#f8fafc",
-                      borderColor:(profile.store_categories||[]).includes(c)?"#2563eb":"#e2e8f0",
-                      color:(profile.store_categories||[]).includes(c)?"#2563eb":"#64748b",
-                      fontWeight:(profile.store_categories||[]).includes(c)?700:400}}>{catL(c, lang)}</button>
-                  ))}
+                {/* Selector desplegable con búsqueda y grupos */}
+                <div style={{position:"relative"}}>
+                  <button onClick={()=>setCatOpen(o=>!o)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#fff",border:`1px solid ${catOpen?"#2563eb":"#e2e8f0"}`,borderRadius:9,cursor:"pointer",textAlign:"left"}}>
+                    <span style={{flex:1,fontSize:13,color:selCats.length?"#0f172a":"#94a3b8"}}>
+                      {selCats.length
+                        ? `${selCats.length} ${selCats.length===1?L("categoría seleccionada","category selected"):L("categorías seleccionadas","categories selected")}`
+                        : L("Selecciona tus categorías...","Select your categories...")}
+                    </span>
+                    <span style={{fontSize:10,color:"#94a3b8"}}>{catOpen?"▲":"▼"}</span>
+                  </button>
+
+                  {catOpen && (
+                    <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:5,background:"#fff",border:"1px solid #e2e8f0",borderRadius:11,boxShadow:"0 12px 32px rgba(10,37,64,.14)",zIndex:300,maxHeight:340,display:"flex",flexDirection:"column"}}>
+                      <div style={{padding:9,borderBottom:"1px solid #f1f5f9"}}>
+                        <input autoFocus value={catSearch} onChange={e=>setCatSearch(e.target.value)}
+                          placeholder={L("Buscar categoría...","Search category...")}
+                          style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+                      </div>
+                      <div style={{overflowY:"auto",padding:"4px 0"}}>
+                        {CATEGORY_GROUPS.map(g=>{
+                          const items = g.items.filter(c => !catSearch || catL(c,lang).toLowerCase().includes(catSearch.toLowerCase()));
+                          if (!items.length) return null;
+                          const allOn = items.every(c=>selCats.includes(c));
+                          return (
+                            <div key={g.es}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px 4px",background:"#f8fafc"}}>
+                                <span style={{flex:1,fontSize:10,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#64748b",letterSpacing:"0.07em",textTransform:"uppercase"}}>{lang==="en"?g.en:g.es}</span>
+                                <button onClick={()=>setProfile(pr=>({...pr, store_categories: allOn
+                                    ? (pr.store_categories||[]).filter(x=>!items.includes(x))
+                                    : [...new Set([...(pr.store_categories||[]), ...items])]}))}
+                                  style={{background:"none",border:"none",cursor:"pointer",fontSize:10,fontWeight:700,color:"#2563eb",padding:0}}>
+                                  {allOn?L("Quitar","Clear"):L("Todas","All")}
+                                </button>
+                              </div>
+                              {items.map(c=>{
+                                const on = selCats.includes(c);
+                                return (
+                                  <label key={c} style={{display:"flex",alignItems:"center",gap:9,padding:"7px 12px",cursor:"pointer",background:on?"#f0f7ff":"transparent"}}>
+                                    <input type="checkbox" checked={on} onChange={()=>toggleCat(c)} style={{width:14,height:14,cursor:"pointer",accentColor:"#2563eb"}}/>
+                                    <span style={{fontSize:13,color:on?"#0f172a":"#475569",fontWeight:on?600:400}}>{catL(c, lang)}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{padding:"8px 10px",borderTop:"1px solid #f1f5f9",display:"flex",gap:8,alignItems:"center"}}>
+                        <span style={{flex:1,fontSize:11,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",color:"#94a3b8"}}>{selCats.length} {L("SELECCIONADAS","SELECTED")}</span>
+                        <button onClick={()=>{setCatOpen(false);setCatSearch("");}} style={{padding:"6px 14px",background:"#0a2540",border:"none",borderRadius:7,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>{L("Listo","Done")}</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Resumen de lo seleccionado */}
+                {selCats.length>0 && (
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:9}}>
+                    {selCats.map(c=>(
+                      <span key={c} style={{display:"inline-flex",alignItems:"center",gap:5,background:"#eff6ff",border:"1px solid #bfdbfe",color:"#1e40af",fontSize:11,padding:"3px 8px",borderRadius:14}}>
+                        {catL(c, lang)}
+                        <button onClick={()=>toggleCat(c)} style={{background:"none",border:"none",cursor:"pointer",color:"#1e40af",fontSize:13,lineHeight:1,padding:0}}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{fontSize:10,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
                   {L("¿No ves tu categoría? Marca ","Don't see your category? Select ")}
                   <strong>{L("Otro","Other")}</strong>
