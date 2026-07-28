@@ -45,7 +45,7 @@ async function sendText(to, body) {
 
 // Buscar la tienda por su teléfono (comparando solo dígitos, sin importar formato)
 async function findStore(fromDigits) {
-  const { data } = await supabase
+  const { data } = await db()
     .from('profiles')
     .select('id, store_name, store_phone, role')
     .not('store_phone', 'is', null);
