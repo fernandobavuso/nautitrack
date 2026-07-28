@@ -12,10 +12,19 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const SUPA_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://shwdahlvrjgcnzmlygaa.supabase.co';
+const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Se crea de forma perezosa: si faltara la clave, la verificación del webhook
+// debe seguir funcionando en vez de tumbar toda la función.
+let _supabase = null;
+function db() {
+  if (!_supabase) {
+    if (!SUPA_KEY) throw new Error('Falta SUPABASE_SERVICE_KEY en el entorno');
+    _supabase = createClient(SUPA_URL, SUPA_KEY);
+  }
+  return _supabase;
+}
 
 const WA_TK = process.env.WHATSAPP_TOKEN    || process.env.WA_TOKEN;
 const WA_ID = process.env.WHATSAPP_PHONE_ID || process.env.WA_PHONE_ID;
@@ -48,12 +57,12 @@ async function findStore(fromDigits) {
 
 // Estado de conversación: qué está respondiendo esta tienda ahora mismo
 async function getSession(storeId) {
-  const { data } = await supabase.from('wa_sessions')
+  const { data } = await db().from('wa_sessions')
     .select('*').eq('store_id', storeId).order('updated_at', { ascending: false }).limit(1);
   return (data && data[0]) || null;
 }
 async function setSession(storeId, patch) {
-  await supabase.from('wa_sessions').upsert(
+  await db().from('wa_sessions').upsert(
     { store_id: storeId, ...patch, updated_at: new Date().toISOString() },
     { onConflict: 'store_id' }
   );
@@ -61,23 +70,23 @@ async function setSession(storeId, patch) {
 
 // Crear la cotización (misma tabla y forma que usa el portal)
 async function createResponse({ requestId, storeId, type, price, message }) {
-  const { error } = await supabase.from('part_responses').insert({
+  const { error } = await db().from('part_responses').insert({
     request_id: requestId, store_id: storeId, response_type: type,
     price: type === 'have' ? price : null, currency: 'USD', message: message || null,
   });
   if (error) { console.warn('[wa-webhook] no se pudo crear la cotización:', error.message); return false; }
 
   // Avisar al dueño en la app, igual que desde el portal
-  const { data: req } = await supabase.from('part_requests')
+  const { data: req } = await db().from('part_requests')
     .select('owner_id, item_name').eq('id', requestId).maybeSingle();
-  const { data: store } = await supabase.from('profiles')
+  const { data: store } = await db().from('profiles')
     .select('store_name').eq('id', storeId).maybeSingle();
   if (req?.owner_id) {
     const name = store?.store_name || 'Una tienda';
     const label = type === 'have' ? `${name} tiene el repuesto`
       : type === 'have_questions' ? `${name} respondió con preguntas`
       : `${name} no tiene el repuesto`;
-    await supabase.from('notifications').insert({
+    await db().from('notifications').insert({
       user_id: req.owner_id, type: 'part_response',
       title: 'Respuesta a tu solicitud',
       body: `${label}: ${req.item_name}`, link: 'costs',
@@ -130,7 +139,7 @@ export default async function handler(req, res) {
         return;
       }
 
-      const { data: reqRow } = await supabase.from('part_requests')
+      const { data: reqRow } = await db().from('part_requests')
         .select('item_name, status').eq('id', requestId).maybeSingle();
       if (reqRow?.status && reqRow.status !== 'open') {
         await sendText(from, `Ese pedido ya se cerró (${reqRow.item_name}). Te avisamos cuando llegue otro.`);
@@ -162,12 +171,12 @@ export default async function handler(req, res) {
 
       // Comandos rápidos, funcionen o no dentro de un pedido
       if (['pausa', 'pausar', 'stop', 'baja'].includes(low)) {
-        await supabase.from('profiles').update({ store_paused: true }).eq('id', store.id);
+        await db().from('profiles').update({ store_paused: true }).eq('id', store.id);
         await sendText(from, 'Tu tienda quedó en pausa: no recibirás pedidos nuevos. Escribe ACTIVAR cuando quieras volver.');
         return;
       }
       if (['activar', 'activa', 'volver'].includes(low)) {
-        await supabase.from('profiles').update({ store_paused: false }).eq('id', store.id);
+        await db().from('profiles').update({ store_paused: false }).eq('id', store.id);
         await sendText(from, 'Tu tienda está activa otra vez. Ya puedes recibir pedidos.');
         return;
       }
