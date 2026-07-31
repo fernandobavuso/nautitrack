@@ -2016,6 +2016,13 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     initial?.equipment ? String(initial.equipment).split(" · ").map(x=>x.trim()).filter(Boolean) : []
   );
   const toggleEquip = (eq) => setEquipList2(l => l.includes(eq) ? l.filter(x=>x!==eq) : [...l, eq]);
+  // Marcar/desmarcar un sistema completo de una vez
+  const toggleSystemEquip = (sysId) => {
+    const items = getEquipmentList(vessel, sysId).filter(x => x !== "Otro");
+    setEquipList2(l => items.every(i => l.includes(i))
+      ? l.filter(x => !items.includes(x))
+      : [...new Set([...l, ...items])]);
+  };
   const [otherEquip,setOtherEquip]   = useState("");
   const [equipHours,setEquipHours]   = useState(initial?.equipHours||"");
   const [fuelUnit,setFuelUnit]       = useState(initial?.fuelUnit||vessel.fuelUnit||"gal");
@@ -2045,6 +2052,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
 
   const allSystems    = getAllSystems(vessel);
   const selectedSys   = allSystems.find(s=>s.id===systemId);
+  // En Visita el sistema ya no se elige: se deduce de los equipos marcados
+  const inSys = (sysId) => getEquipmentList(vessel, sysId).some(eq => equipList2.includes(eq));
+  const visitHasMotors = inSys("motores");
+  const visitHasGen    = inSys("generador");
   const equipList     = systemId ? getEquipmentList(vessel, systemId) : [];
   const needsHours    = selectedSys?.trackHours && equipment && equipment!=="Otro";
   const provNames     = (vessel.providers||[]).map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
@@ -2089,10 +2100,11 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
       const visitEquip = equipList2.length
         ? equipList2.map(x => x==="Otro" ? (otherEquip.trim()||"Otro") : x).join(" · ")
         : finalEquip;
-      entry={...entry, visitTypes, visitType:visitTypes[0]||"", systemId, equipment:visitEquip, ...(sup && {supervised: sup})};
+      const visitSys = visitHasMotors ? "motores" : (visitHasGen ? "generador" : systemId);
+      entry={...entry, visitTypes, visitType:visitTypes[0]||"", systemId:visitSys, equipment:visitEquip, ...(sup && {supervised: sup})};
     }
     // Actualizar horas si la visita fue una inspección de motores/generador
-    if (type==="Visita" && visitTypes.includes("Inspección") && (systemId==="motores"||systemId==="generador")) {
+    if (type==="Visita" && visitTypes.includes("Inspección") && (visitHasMotors||visitHasGen)) {
       entry={...entry,engineHrsOut:engOut,genHrsOut:genOut};
     }
     onSave(entry);
@@ -2143,42 +2155,70 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
           </div>
 
           {type==="Visita"&&(<>
-            {/* Sistema/equipo solo tiene sentido en inspecciones técnicas */}
+            {/* Inspección: marcar equipos de cualquier sistema, incluso el barco entero */}
             {hasVisit("Inspección") && (
               <div>
-                <label style={s.label}>Sistema</label>
-                <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");setEquipList2([]);}} style={s.input}>
-                  <option value="">{lang==="es"?"Seleccionar sistema...":"Select system..."}</option>
-                  {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.label}</option>)}
-                </select>
-              </div>
-            )}
-            {hasVisit("Inspección") && systemId && (
-              <div>
-                <label style={s.label}>{lang==="es"?"Equipo(s) revisado(s)":"Equipment checked"}</label>
+                <label style={s.label}>{lang==="es"?"¿Qué revisaste?":"What did you check?"}</label>
+
                 {equipList2.length>0 && (
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                     {equipList2.map(eq=>(
                       <span key={eq} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#1e40af",border:"1px solid #bfdbfe",borderRadius:20,padding:"4px 10px",fontSize:12,fontWeight:600}}>
                         {eq}
                         <button type="button" onClick={()=>toggleEquip(eq)} style={{background:"none",border:"none",color:"#1e40af",cursor:"pointer",fontSize:15,lineHeight:1,padding:0}}>×</button>
                       </span>
                     ))}
+                    <button type="button" onClick={()=>setEquipList2([])}
+                      style={{background:"none",border:"none",color:"#64748b",fontSize:11,cursor:"pointer",textDecoration:"underline"}}>
+                      {lang==="es"?"limpiar todo":"clear all"}
+                    </button>
                   </div>
                 )}
-                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                  {equipList.filter(eq=>!equipList2.includes(eq)).map(eq=>(
-                    <button key={eq} type="button" onClick={()=>toggleEquip(eq)}
-                      style={{padding:"6px 12px",borderRadius:20,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#475569",fontSize:12,cursor:"pointer"}}>
-                      + {eq}
+
+                <div style={{border:"1px solid #e2e8f0",borderRadius:10,maxHeight:260,overflowY:"auto"}}>
+                  {allSystems.map(sys=>{
+                    const items = getEquipmentList(vessel, sys.id).filter(x=>x!=="Otro");
+                    if (!items.length) return null;
+                    const allOn = items.every(i=>equipList2.includes(i));
+                    return (
+                      <div key={sys.id} style={{borderBottom:"1px solid #f1f5f9"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 11px",background:"#f8fafc"}}>
+                          <span style={{flex:1,fontSize:12,fontWeight:700,color:"#475569"}}>{sys.label}</span>
+                          <button type="button" onClick={()=>toggleSystemEquip(sys.id)}
+                            style={{background:"none",border:"none",cursor:"pointer",fontSize:11,fontWeight:700,color:"#2563eb",padding:0}}>
+                            {allOn ? (lang==="es"?"Quitar":"Clear") : (lang==="es"?"Todo":"All")}
+                          </button>
+                        </div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"8px 11px"}}>
+                          {items.map(eq=>{
+                            const on = equipList2.includes(eq);
+                            return (
+                              <button key={eq} type="button" onClick={()=>toggleEquip(eq)}
+                                style={{padding:"5px 11px",borderRadius:20,border:`1px solid ${on?"#2563eb":"#e2e8f0"}`,background:on?"#eff6ff":"#fff",color:on?"#1e40af":"#475569",fontSize:12,fontWeight:on?600:400,cursor:"pointer"}}>
+                                {on?"✓ ":"+ "}{eq}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{display:"flex",gap:6,padding:"8px 11px"}}>
+                    <button type="button" onClick={()=>toggleEquip("Otro")}
+                      style={{padding:"5px 11px",borderRadius:20,border:`1px solid ${equipList2.includes("Otro")?"#2563eb":"#e2e8f0"}`,background:equipList2.includes("Otro")?"#eff6ff":"#fff",color:equipList2.includes("Otro")?"#1e40af":"#475569",fontSize:12,cursor:"pointer"}}>
+                      {equipList2.includes("Otro")?"✓ ":"+ "}{lang==="es"?"Otro":"Other"}
                     </button>
-                  ))}
+                  </div>
                 </div>
+
                 <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>
-                  {lang==="es"?"Puedes marcar varios equipos en una misma visita":"You can select several items in one visit"}
+                  {lang==="es"
+                    ? "Marca todo lo que revisaste, de cualquier sistema. Usa \"Todo\" para un sistema completo."
+                    : "Check everything you inspected, from any system. Use \"All\" for a whole system."}
                 </div>
               </div>
             )}
+
             {hasVisit("Inspección") && equipList2.includes("Otro")&&<div><label style={s.label}>{lang==="es"?"Especificar equipo":"Specify equipment"}</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder={lang==="es"?"Nombre del equipo...":"Equipment name..."} style={s.input}/></div>}
             {/* En una supervisión, registrar a quién se supervisó */}
             {hasVisit("Supervisión de técnico") && (
@@ -2204,15 +2244,15 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
             {/* Horas de motor/generador (solo en inspecciones técnicas) */}
-            {hasVisit("Inspección") && (systemId==="motores"||systemId==="generador")&&(
+            {hasVisit("Inspección") && (visitHasMotors||visitHasGen)&&(
               <div>
                 <label style={s.label}>Horas actuales del equipo</label>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
-                  {systemId==="motores"&&getMotorLabels(vessel).map(m=>(
+                  {visitHasMotors&&getMotorLabels(vessel).map(m=>(
                     <div key={m}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{m}</label>
                     <input type="number" value={engOut[m]||""} onChange={e=>setEngOut(v=>({...v,[m]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
                   ))}
-                  {systemId==="generador"&&getGenLabels(vessel).map(g=>(
+                  {visitHasGen&&getGenLabels(vessel).map(g=>(
                     <div key={g}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{g}</label>
                     <input type="number" value={genOut[g]||""} onChange={e=>setGenOut(v=>({...v,[g]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
                   ))}
