@@ -2011,6 +2011,11 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [serviceType,setServiceType] = useState(initial?.serviceType||"");
   const [systemId,setSystemId]       = useState(initial?.systemId||"");
   const [equipment,setEquipment]     = useState(initial?.equipment||"");
+  // Visita: varios equipos en una sola entrada (se guardan separados por " · ")
+  const [equipList2,setEquipList2]   = useState(
+    initial?.equipment ? String(initial.equipment).split(" · ").map(x=>x.trim()).filter(Boolean) : []
+  );
+  const toggleEquip = (eq) => setEquipList2(l => l.includes(eq) ? l.filter(x=>x!==eq) : [...l, eq]);
   const [otherEquip,setOtherEquip]   = useState("");
   const [equipHours,setEquipHours]   = useState(initial?.equipHours||"");
   const [fuelUnit,setFuelUnit]       = useState(initial?.fuelUnit||vessel.fuelUnit||"gal");
@@ -2081,7 +2086,10 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     // Visita: guardar el subtipo (qué clase de visita fue)
     if (type==="Visita") {
       const sup = supervised === "Otro" ? (otherSupervised.trim() || "Otro") : supervised;
-      entry={...entry, visitTypes, visitType:visitTypes[0]||"", systemId, equipment:finalEquip, ...(sup && {supervised: sup})};
+      const visitEquip = equipList2.length
+        ? equipList2.map(x => x==="Otro" ? (otherEquip.trim()||"Otro") : x).join(" · ")
+        : finalEquip;
+      entry={...entry, visitTypes, visitType:visitTypes[0]||"", systemId, equipment:visitEquip, ...(sup && {supervised: sup})};
     }
     // Actualizar horas si la visita fue una inspección de motores/generador
     if (type==="Visita" && visitTypes.includes("Inspección") && (systemId==="motores"||systemId==="generador")) {
@@ -2139,14 +2147,39 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             {hasVisit("Inspección") && (
               <div>
                 <label style={s.label}>Sistema</label>
-                <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");}} style={s.input}>
-                  <option value="">Seleccionar sistema...</option>
+                <select value={systemId} onChange={e=>{setSystemId(e.target.value);setEquipment("");setEquipList2([]);}} style={s.input}>
+                  <option value="">{lang==="es"?"Seleccionar sistema...":"Select system..."}</option>
                   {allSystems.map(sys=><option key={sys.id} value={sys.id}>{sys.label}</option>)}
                 </select>
               </div>
             )}
-            {hasVisit("Inspección") && systemId&&<div><label style={s.label}>Equipo</label><select value={equipment} onChange={e=>setEquipment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{equipList.map(eq=><option key={eq} value={eq}>{eq}</option>)}</select></div>}
-            {hasVisit("Inspección") && equipment==="Otro"&&<div><label style={s.label}>Especificar equipo</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder="Nombre del equipo..." style={s.input}/></div>}
+            {hasVisit("Inspección") && systemId && (
+              <div>
+                <label style={s.label}>{lang==="es"?"Equipo(s) revisado(s)":"Equipment checked"}</label>
+                {equipList2.length>0 && (
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                    {equipList2.map(eq=>(
+                      <span key={eq} style={{display:"inline-flex",alignItems:"center",gap:6,background:"#eff6ff",color:"#1e40af",border:"1px solid #bfdbfe",borderRadius:20,padding:"4px 10px",fontSize:12,fontWeight:600}}>
+                        {eq}
+                        <button type="button" onClick={()=>toggleEquip(eq)} style={{background:"none",border:"none",color:"#1e40af",cursor:"pointer",fontSize:15,lineHeight:1,padding:0}}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {equipList.filter(eq=>!equipList2.includes(eq)).map(eq=>(
+                    <button key={eq} type="button" onClick={()=>toggleEquip(eq)}
+                      style={{padding:"6px 12px",borderRadius:20,border:"1px solid #e2e8f0",background:"#f8fafc",color:"#475569",fontSize:12,cursor:"pointer"}}>
+                      + {eq}
+                    </button>
+                  ))}
+                </div>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>
+                  {lang==="es"?"Puedes marcar varios equipos en una misma visita":"You can select several items in one visit"}
+                </div>
+              </div>
+            )}
+            {hasVisit("Inspección") && equipList2.includes("Otro")&&<div><label style={s.label}>{lang==="es"?"Especificar equipo":"Specify equipment"}</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder={lang==="es"?"Nombre del equipo...":"Equipment name..."} style={s.input}/></div>}
             {/* En una supervisión, registrar a quién se supervisó */}
             {hasVisit("Supervisión de técnico") && (
               <div>
