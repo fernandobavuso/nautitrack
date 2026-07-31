@@ -569,7 +569,7 @@ export default function App() {
   }, []);
 
   const updateLogEntry = useCallback(async (vesselId, entryId, entry) => {
-    await supabase.from("log_entries").update({
+    const { data, error } = await supabase.from("log_entries").update({
       date: entry.date, type: entry.type,
       service_type: entry.serviceType, system_id: entry.systemId,
       equipment: entry.equipment, description: entry.desc,
@@ -584,14 +584,21 @@ export default function App() {
       fuel_out: entry.fuelOut, fuel_in: entry.fuelIn,
       eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
       gen_out: entry.genHrsOut, gen_in: entry.genHrsIn, clima: entry.salidaClima,
-    }).eq("id", entryId);
+    }).eq("id", entryId).select();
+    if (error) { console.error("[Carive] no se pudo editar la entrada:", error.message); alert("No se pudo guardar el cambio: " + error.message); return; }
+    if (!data || data.length === 0) {
+      console.error("[Carive] la edición no afectó ninguna fila (¿permiso de UPDATE en log_entries?)");
+      alert("No se pudo guardar el cambio. Puede faltar el permiso de edición en la base de datos.");
+      return;
+    }
     setVessels(vs => vs.map(v => v.id === vesselId
       ? { ...v, log: (v.log || []).map(e => e.id === entryId ? { ...entry, id: entryId } : e) }
       : v));
   }, []);
 
   const deleteLogEntry = useCallback(async (vesselId, entryId) => {
-    await supabase.from("log_entries").delete().eq("id", entryId);
+    const { error: delErr } = await supabase.from("log_entries").delete().eq("id", entryId);
+    if (delErr) { console.error("[Carive] no se pudo eliminar:", delErr.message); alert("No se pudo eliminar: " + delErr.message); return; }
     setVessels(vs => vs.map(v => v.id === vesselId
       ? { ...v, log: (v.log || []).filter(e => e.id !== entryId) }
       : v));
