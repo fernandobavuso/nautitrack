@@ -403,6 +403,8 @@ export default function CrewMarketplace({ vessel, user, onClose }) {
 
 // Tarjeta compacta de tripulante
 function CrewCard({ crew, rep, badgeIcons, onView, actions }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   if (!crew) return null;
   const badges = crew.badges||[];
   const name = crew.full_name?.trim() || `${crew.first_name||""} ${crew.last_name||""}`.trim() || "Tripulante";
@@ -433,6 +435,8 @@ function CrewCard({ crew, rep, badgeIcons, onView, actions }) {
 
 // Modal con el perfil completo del tripulante (sin contacto)
 function CrewProfileDetail({ crew, badgeIcons, onClose }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1500,padding:16}} onClick={onClose}>
       <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:520,maxHeight:"88vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>

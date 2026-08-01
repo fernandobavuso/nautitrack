@@ -236,6 +236,8 @@ function trip_label(t){ return `${t.crew_role} · ${new Date(t.trip_date).toLoca
 
 // Botón + modal para que el tripulante reseñe al dueño/barco
 function CrewReviewButton({ trip, user, onDone }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");

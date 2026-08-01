@@ -295,6 +295,8 @@ export default function CaptainView({ vessel, user, onLogout }) {
 
 // ── Sub-componente: Tab de bitácora del capitán ──
 function CaptainLogTab({ vessel, user }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [entries,   setEntries]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,  setShowForm]  = useState(false);

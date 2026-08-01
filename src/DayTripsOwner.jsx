@@ -473,6 +473,8 @@ export default function DayTripsOwner({ vessel, user }) {
 
 // Botón + modal para dejar reseña
 function ReviewButton({ trip, user, onDone }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");

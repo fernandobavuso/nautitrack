@@ -460,6 +460,8 @@ const REQ_CATEGORIES = [
 ];
 
 function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", captainLimit }) {
+  const { lang } = useLang();
+  const L = (es, en) => (lang === "en" ? en : es);
   const [form, setForm] = useState({
     item_name: item?.name||"", category: item?.category||"Filtros",
     part_num: item?.part_num||"", description:"", urgent:false, est_amount:"", scope:"city",
