@@ -1018,9 +1018,7 @@ const NAV_GROUPS = [
     { key:"records", label:"Records" },
     { key:"docs", label:"Documentos" },
   ]},
-  { key:"gest", label:"Gestión", items:[
-    { key:"providers", label:"Proveedores" },
-  ]},
+  { key:"providers", label:"Proveedores", single:true },
 ];
 
 function NavGroups({ page, setPage, showFleet, isAdminUser }) {
@@ -1137,6 +1135,12 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                   <button onClick={()=>{setPage("fleet");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="fleet"?"#eff6ff":"transparent",color:page==="fleet"?"#0ea5e9":"#1e293b",fontWeight:page==="fleet"?700:500,fontSize:14}}>Mi Flota</button>
                 )}
                 <button onClick={()=>{setPage("home");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="home"?"#eff6ff":"transparent",color:page==="home"?"#0ea5e9":"#1e293b",fontWeight:page==="home"?700:500,fontSize:14}}>Inicio</button>
+                {NAV_GROUPS.filter(g=>g.single).map(g=>(
+                  <button key={g.key} onClick={()=>{setPage(g.key);setMobileMenuOpen(false);}}
+                    style={{display:"block",width:"100%",textAlign:"left",padding:"10px 12px",background:page===g.key?"#f0f9ff":"none",border:"none",borderRadius:8,fontSize:14,fontWeight:page===g.key?700:500,color:page===g.key?"#0369a1":"#334155",cursor:"pointer"}}>
+                    {tr(`nav.${g.key}`) !== `nav.${g.key}` ? tr(`nav.${g.key}`) : g.label}
+                  </button>
+                ))}
                 {NAV_GROUPS.filter(g=>!g.single).map(g=>(
                   <div key={g.key} style={{marginTop:10}}>
                     <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,letterSpacing:"0.08em",padding:"4px 14px"}}>{g.label.toUpperCase()}</div>
