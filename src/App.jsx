@@ -568,6 +568,36 @@ export default function App() {
       : v));
   }, []);
 
+  // Los proveedores son de la CUENTA, no de un barco: un gestor usa el mismo
+  // mecánico y el mismo taller para toda su flota.
+  // Une los proveedores de todos los barcos del dueño en una sola lista
+  // (sin duplicados por nombre+empresa) y la deja igual en toda la flota.
+  const mergeProvidersOnce = useCallback(async (ownerId, ownerVessels) => {
+    const lists = ownerVessels.map(v => v.providers || []);
+    const total = lists.reduce((a, l) => a + l.length, 0);
+    if (total === 0) return null;
+    const seen = new Set(); const merged = [];
+    lists.flat().forEach(pr => {
+      const key = `${(pr.firstName||"").trim().toLowerCase()}|${(pr.lastName||"").trim().toLowerCase()}|${(pr.company||"").trim().toLowerCase()}`;
+      if (!seen.has(key)) { seen.add(key); merged.push(pr); }
+    });
+    // ¿Ya están todos igual? entonces no hay nada que hacer
+    const allSame = lists.every(l => l.length === merged.length);
+    if (allSame) return null;
+    const ids = ownerVessels.map(v => v.id);
+    await supabase.from("vessels").update({ providers: merged }).in("id", ids);
+    return merged;
+  }, []);
+
+  const updateProviders = useCallback(async (ownerId, list) => {
+    const { data: own } = await supabase.from("vessels").select("id").eq("owner_id", ownerId);
+    const ids = (own || []).map(v => v.id);
+    if (!ids.length) return;
+    const { error } = await supabase.from("vessels").update({ providers: list }).in("id", ids);
+    if (error) { console.error("[Carive] no se pudieron guardar los proveedores:", error.message); alert("No se pudo guardar: " + error.message); return; }
+    setVessels(vs => vs.map(v => ids.includes(v.id) ? { ...v, providers: list } : v));
+  }, []);
+
   const updateLogEntry = useCallback(async (vesselId, entryId, entry) => {
     const { data, error } = await supabase.from("log_entries").update({
       date: entry.date, type: entry.type,
@@ -645,8 +675,9 @@ export default function App() {
     // bien y luego se pisa".
     try {
       const { data: cur } = await supabase.from("vessels")
-        .select("fuel, engine_hours, gen_hours, details").eq("id", updated.id).single();
+        .select("fuel, engine_hours, gen_hours, providers, details").eq("id", updated.id).single();
       if (cur) {
+        payload.providers    = cur.providers ?? payload.providers;
         payload.fuel         = cur.fuel;
         payload.engine_hours = cur.engine_hours;
         payload.gen_hours    = cur.gen_hours;
@@ -700,6 +731,16 @@ export default function App() {
         };
       }));
       setVessels(mapped);
+
+      // Unificar proveedores de la flota (una sola vez, si hacen falta)
+      const byOwner = {};
+      mapped.forEach(v => { (byOwner[v.owner_id] = byOwner[v.owner_id] || []).push(v); });
+      Object.entries(byOwner).forEach(([oid, vs]) => {
+        if (vs.length < 2) return;
+        mergeProvidersOnce(oid, vs).then(merged => {
+          if (merged) setVessels(cur => cur.map(v => v.owner_id === oid ? { ...v, providers: merged } : v));
+        });
+      });
       if (mapped.length > 0) {
         const saved = localStorage.getItem("nt_vessel_id");
         const found = saved && mapped.find(v => String(v.id) === saved);
@@ -972,7 +1013,7 @@ export default function App() {
         )}
         {page==="home"    && <HomePage    vessel={vessel} setPage={setPage} vessels={vessels} updateVessel={updateVessel} />}
         {page==="tasks"   && <TasksPage   vessel={vessel} updateVessel={updateVessel} addTask={(t)=>addTask(vessel.id,user.id,t)} updateTask={(taskId,patch)=>updateTask(vessel.id,taskId,patch)} deleteTask={(taskId)=>deleteTask(vessel.id,taskId)} />}
-        {page==="providers" && <ProvidersModal vessel={vessel} updateVessel={updateVessel} asPage />}
+        {page==="providers" && <ProvidersModal vessel={vessel} vessels={vessels} updateProviders={updateProviders} asPage />}
         {page==="admin" && isAdmin(user) && <AdminPanel user={user} asPage />}
         {page==="calendar" && <CalendarPage vessel={vessel} vessels={vessels} isMobile={isMobile} />}
         {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} updateLogEntry={(id,e)=>updateLogEntry(vessel.id,id,e)} deleteLogEntry={(id)=>deleteLogEntry(vessel.id,id)} />}
@@ -4325,7 +4366,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
   );
 }
 
-function ProvidersModal({ vessel, updateVessel, onClose, asPage }) {
+function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
   const [providers,setProviders] = useState(vessel.providers||[]);
   const [showAdd,setShowAdd]     = useState(false);
   const [form,setForm]           = useState({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});
@@ -4333,16 +4374,16 @@ function ProvidersModal({ vessel, updateVessel, onClose, asPage }) {
   const addProvider=()=>{
     if(!form.firstName||!form.company) return;
     const u=[...providers,{...form,id:Date.now()}];
-    setProviders(u);updateVessel({...vessel,providers:u});
+    setProviders(u);updateProviders(vessel.owner_id, u);
     setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});setShowAdd(false);
   };
-  const remove=(id)=>{const u=providers.filter(p=>p.id!==id);setProviders(u);updateVessel({...vessel,providers:u});};
+  const remove=(id)=>{const u=providers.filter(p=>p.id!==id);setProviders(u);updateProviders(vessel.owner_id, u);};
 
   // Contenido interno (compartido entre modo página y modo modal)
   const inner = (
     <>
         <div style={asPage?{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}:s.modalHeader}>
-          <div><div style={{fontSize:asPage?20:16,fontWeight:asPage?800:700,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>Proveedores</div><div style={{fontSize:asPage?13:12,color:"#64748b",marginTop:2}}>Directorio de proveedores y técnicos de {vessel.name}</div></div>
+          <div><div style={{fontSize:asPage?20:16,fontWeight:asPage?800:700,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>Proveedores</div><div style={{fontSize:asPage?13:12,color:"#64748b",marginTop:2}}>{(vessels||[]).length>1 ? "Directorio compartido por toda tu flota" : `Directorio de proveedores y técnicos de ${vessel.name}`}</div></div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}><button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar</button>{!asPage&&<button onClick={onClose} style={s.modalClose}>✕</button>}</div>
         </div>
         <ProvidersBody {...{providers,showAdd,setShowAdd,form,set,addProvider,remove,asPage,onClose}} />
