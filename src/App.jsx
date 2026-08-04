@@ -1179,7 +1179,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {NAV_GROUPS.filter(g=>g.single).map(g=>(
                   <button key={g.key} onClick={()=>{setPage(g.key);setMobileMenuOpen(false);}}
                     style={{display:"block",width:"100%",textAlign:"left",padding:"10px 12px",background:page===g.key?"#f0f9ff":"none",border:"none",borderRadius:8,fontSize:14,fontWeight:page===g.key?700:500,color:page===g.key?"#0369a1":"#334155",cursor:"pointer"}}>
-                    {tr(`nav.${g.key}`) !== `nav.${g.key}` ? tr(`nav.${g.key}`) : g.label}
+                    {t(`nav.${g.key}`) !== `nav.${g.key}` ? t(`nav.${g.key}`) : g.label}
                   </button>
                 ))}
                 {NAV_GROUPS.filter(g=>!g.single).map(g=>(
