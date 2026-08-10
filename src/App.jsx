@@ -1621,7 +1621,7 @@ function WeatherBar({ vessel }) {
   );
 }
 function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
-  const { t: tr } = useLang();
+  const { t: tr, lang } = useLang();
   const [filter, setFilter]     = useState("Todas");
   const [expanded, setExpanded] = useState(null);
   const [showAdd, setShowAdd]   = useState(false);
