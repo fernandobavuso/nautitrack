@@ -1628,8 +1628,9 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const [sortBy, setSortBy]       = useState("due_asc");
   const [sysFilter, setSysFilter] = useState("Todos");
   const [whoFilter, setWhoFilter] = useState("Todos");
-  const FILTERS = ["Todas","Por vencer","Vencidas","Completadas"];
+  const FILTERS = ["Todas","Sin completar","Por vencer","Vencidas","Completadas"];
   const filtered = (vessel.tasks||[]).filter(t => {
+    if (filter==="Sin completar") return t.status!=="done";
     if (filter==="Vencidas")    return t.status==="overdue";
     if (filter==="Por vencer")  return t.status==="due";
     if (filter==="Completadas") return t.status==="done";
@@ -1662,9 +1663,9 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
         <div style={{display:"flex",gap:6,flex:1,alignItems:"center",flexWrap:"wrap"}}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0"}}>
-              {({"Todas":tr("tasks.all"),"Por vencer":tr("tasks.due"),"Vencidas":tr("tasks.overdue"),"Completadas":tr("tasks.completed")})[f]||f}
+              {({"Todas":tr("tasks.all"),"Sin completar":(lang==="es"?"Sin completar":"Open"),"Por vencer":tr("tasks.due"),"Vencidas":tr("tasks.overdue"),"Completadas":tr("tasks.completed")})[f]||f}
               <span style={{marginLeft:4,fontSize:10,background:filter===f?"rgba(255,255,255,0.2)":"#e2e8f0",color:filter===f?"#fff":"#64748b",padding:"1px 6px",borderRadius:10}}>
-                {f==="Todas"?(vessel.tasks||[]).length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
+                {f==="Todas"?(vessel.tasks||[]).length:f==="Sin completar"?(vessel.tasks||[]).filter(t=>t.status!=="done").length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
               </span>
             </button>
           ))}
