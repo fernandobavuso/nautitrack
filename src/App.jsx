@@ -2817,6 +2817,7 @@ function RecordTable({ rows }) {
 }
 
 function ReportModal({ vessel, onClose }) {
+  const { lang } = useLang();
   const [sel,setSel]   = useState([]);
   const [from,setFrom] = useState("");
   const [to,setTo]     = useState("");
@@ -3188,8 +3189,16 @@ function ReportModal({ vessel, onClose }) {
   };
 
   const openReport = () => {
+    if (sel.length === 0) { alert(lang==="es"?"Elige al menos una sección para el reporte.":"Pick at least one section for the report."); return; }
     const html = generateHTML();
     const w = window.open("","_blank");
+    if (!w) {   // ventanas emergentes bloqueadas: descargar el archivo
+      const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `reporte_${vessel.name.replace(/\s+/g,"_")}.html`; a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
     w.document.write(html);
     w.document.close();
   };
