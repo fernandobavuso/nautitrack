@@ -618,13 +618,15 @@ export default function App() {
     }).eq("id", entryId).select();
     if (error) { console.error("[Carive] no se pudo editar la entrada:", error.message); alert("No se pudo guardar el cambio: " + error.message); return; }
     if (!data || data.length === 0) {
-      console.error("[Carive] la edición no afectó ninguna fila (¿permiso de UPDATE en log_entries?)");
-      alert("No se pudo guardar el cambio. Puede faltar el permiso de edición en la base de datos.");
-      return;
+      console.error("[Carive] la edición no afectó ninguna fila. id buscado:", entryId, typeof entryId);
+      alert(`No se pudo guardar: la base no encontró la entrada (id ${entryId}).`);
+      return false;
     }
+    console.log("[Carive] entrada actualizada:", data[0]);
     setVessels(vs => vs.map(v => v.id === vesselId
-      ? { ...v, log: (v.log || []).map(e => e.id === entryId ? { ...entry, id: entryId } : e) }
+      ? { ...v, log: (v.log || []).map(e => String(e.id) === String(entryId) ? { ...entry, id: entryId } : e) }
       : v));
+    return true;
   }, []);
 
   const deleteLogEntry = useCallback(async (vesselId, entryId) => {
@@ -1964,9 +1966,10 @@ function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogE
     return list;
   })();
 
-  const saveEntry = useCallback((entry) => {
+  const saveEntry = useCallback(async (entry) => {
     if (editEntry) {
-      updateLogEntry(entry.id, entry);
+      const ok = await updateLogEntry(entry.id, entry);
+      if (ok === false) return;            // hubo error: dejar el modal abierto
     } else {
       addLogEntry(entry);
     }
