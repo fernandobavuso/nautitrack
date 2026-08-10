@@ -126,6 +126,7 @@ const hrsNum = (v) => {
   const n = Number(v);
   return isNaN(n) ? null : n;
 };
+const selSm = {padding:"5px 9px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,color:"#334155",background:"#fff",cursor:"pointer",maxWidth:190};
 const NO_CREW = "Sin tripulación";
 const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
 
@@ -1624,13 +1625,31 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const [filter, setFilter]     = useState("Todas");
   const [expanded, setExpanded] = useState(null);
   const [showAdd, setShowAdd]   = useState(false);
+  const [sortBy, setSortBy]       = useState("due_asc");
+  const [sysFilter, setSysFilter] = useState("Todos");
+  const [whoFilter, setWhoFilter] = useState("Todos");
   const FILTERS = ["Todas","Por vencer","Vencidas","Completadas"];
   const filtered = (vessel.tasks||[]).filter(t => {
     if (filter==="Vencidas")    return t.status==="overdue";
     if (filter==="Por vencer")  return t.status==="due";
     if (filter==="Completadas") return t.status==="done";
     return true;
+  })
+  .filter(t => sysFilter==="Todos" || t.system===sysFilter)
+  .filter(t => whoFilter==="Todos" || t.assigned===whoFilter)
+  .sort((a,b) => {
+    const RANK = { overdue:0, due:1, ok:2, done:3 };
+    const dt = (x) => x.nextDue || "9999-12-31";
+    if (sortBy==="due_asc")   return dt(a).localeCompare(dt(b));
+    if (sortBy==="due_desc")  return dt(b).localeCompare(dt(a));
+    if (sortBy==="status")    return (RANK[a.status]??9)-(RANK[b.status]??9) || dt(a).localeCompare(dt(b));
+    if (sortBy==="name")      return String(a.name||"").localeCompare(String(b.name||""));
+    if (sortBy==="system")    return String(a.system||"").localeCompare(String(b.system||"")) || dt(a).localeCompare(dt(b));
+    if (sortBy==="who")       return String(a.assigned||"").localeCompare(String(b.assigned||"")) || dt(a).localeCompare(dt(b));
+    return 0;
   });
+  const taskSystems = [...new Set((vessel.tasks||[]).map(t=>t.system).filter(Boolean))].sort();
+  const taskPeople  = [...new Set((vessel.tasks||[]).map(t=>t.assigned).filter(Boolean))].sort();
   const PILL = { overdue:{bg:"#ef4444",c:"#fff",l:tr("tasks.overdue")}, due:{bg:"#f59e0b",c:"#fff",l:tr("tasks.due")}, ok:{bg:"#22c55e",c:"#fff",l:tr("tasks.onTrack")}, done:{bg:"#64748b",c:"#fff",l:tr("tasks.done")} };
   const allSystems = getAllSystems(vessel);
   const [editingTask, setEditingTask] = useState(null);
@@ -1653,6 +1672,41 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
           <button style={s.btnPrimary} onClick={() => setShowAdd(true)}>＋ {tr("tasks.new")}</button>
         </div>
       </div>
+
+      {/* Ordenar y filtrar */}
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
+        <label style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>{lang==="es"?"Ordenar:":"Sort:"}</label>
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={selSm}>
+          <option value="due_asc">{lang==="es"?"Vencimiento — más próximo":"Due — soonest"}</option>
+          <option value="due_desc">{lang==="es"?"Vencimiento — más lejano":"Due — latest"}</option>
+          <option value="status">{lang==="es"?"Estado (vencidas primero)":"Status (overdue first)"}</option>
+          <option value="name">{lang==="es"?"Nombre":"Name"}</option>
+          <option value="system">{lang==="es"?"Sistema":"System"}</option>
+          <option value="who">{lang==="es"?"Asignado a":"Assigned to"}</option>
+        </select>
+        {taskSystems.length>0 && (
+          <select value={sysFilter} onChange={e=>setSysFilter(e.target.value)} style={selSm}>
+            <option value="Todos">{lang==="es"?"Todos los sistemas":"All systems"}</option>
+            {taskSystems.map(x=><option key={x} value={x}>{x}</option>)}
+          </select>
+        )}
+        {taskPeople.length>0 && (
+          <select value={whoFilter} onChange={e=>setWhoFilter(e.target.value)} style={selSm}>
+            <option value="Todos">{lang==="es"?"Todas las personas":"Everyone"}</option>
+            {taskPeople.map(x=><option key={x} value={x}>{x}</option>)}
+          </select>
+        )}
+        {(sysFilter!=="Todos"||whoFilter!=="Todos") && (
+          <button onClick={()=>{setSysFilter("Todos");setWhoFilter("Todos");}}
+            style={{background:"none",border:"none",color:"#2563eb",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+            {lang==="es"?"limpiar filtros":"clear filters"}
+          </button>
+        )}
+        <div style={{fontSize:11,color:"#94a3b8",marginLeft:"auto"}}>
+          {filtered.length} {lang==="es"?"tareas":"tasks"}
+        </div>
+      </div>
+
       <div style={{overflowX:"auto"}}>
         <table style={s.table}>
           <thead><tr style={{background:"#1e3a5f"}}>{[tr("tasks.system"),tr("tasks.equipment"),tr("tasks.task"),tr("tasks.assigned"),tr("tasks.interval"),tr("tasks.nextDue"),tr("tasks.status"),tr("tasks.notes")].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
