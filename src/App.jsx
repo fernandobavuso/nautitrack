@@ -109,6 +109,23 @@ const DEFAULT_SYSTEMS = [
 const LOG_COLOR       = { Visita:"#16a34a", Servicio:"#2563eb", Combustible:"#d97706", Salida:"#7c3aed", Compra:"#0891b2" };
 // Tipos de bitácora. "Visita" tiene un subtipo (qué clase de visita fue),
 // para no perder el detalle: cada subtipo tiene su costo y proveedor distinto.
+// Campos numéricos: la base rechaza "" ("invalid input syntax for type numeric").
+const num = (v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+};
+// Horas de motor: el formulario usa un objeto {motor: horas} pero la columna es
+// numérica. Se guarda la más alta; vacío -> null.
+const hrsNum = (v) => {
+  if (v === "" || v === null || v === undefined) return null;
+  if (typeof v === "object") {
+    const vals = Object.values(v).map(Number).filter(n => !isNaN(n));
+    return vals.length ? Math.max(...vals) : null;
+  }
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+};
 const NO_CREW = "Sin tripulación";
 const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
 
@@ -458,17 +475,17 @@ export default function App() {
       date: entry.date, type: entry.type,
       service_type: entry.serviceType, system_id: entry.systemId,
       equipment: entry.equipment, description: entry.desc,
-      performed_by: entry.performedBy, fuel_qty: entry.fuelQty,
-      fuel_unit: entry.fuelUnit, equip_hours: entry.equipHours,
+      performed_by: entry.performedBy, fuel_qty: num(entry.fuelQty),
+      fuel_unit: entry.fuelUnit, equip_hours: num(entry.equipHours),
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
-      cost_usd: entry.costUSD, cost_bs: entry.costBs, payment: entry.payment,
-      item: entry.item, dest: entry.dest, persons: entry.persons,
+      cost_usd: num(entry.costUSD), cost_bs: num(entry.costBs), payment: entry.payment,
+      item: entry.item, dest: entry.dest, persons: num(entry.persons),
       owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
       dept_time: entry.deptTime, arr_time: entry.arrTime,
-      fuel_out: entry.fuelOut, fuel_in: entry.fuelIn,
-      eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
-      gen_out: entry.genHrsOut, gen_in: entry.genHrsIn, clima: entry.salidaClima,
+      fuel_out: num(entry.fuelOut), fuel_in: num(entry.fuelIn),
+      eng_out: hrsNum(entry.engineHrsOut), eng_in: hrsNum(entry.engineHrsIn),
+      gen_out: hrsNum(entry.genHrsOut), gen_in: hrsNum(entry.genHrsIn), clima: entry.salidaClima,
     }).select().single();
     if (insErr) {
       console.error("[Carive] no se pudo guardar la entrada:", insErr.message);
@@ -610,17 +627,17 @@ export default function App() {
       date: entry.date, type: entry.type,
       service_type: entry.serviceType, system_id: entry.systemId,
       equipment: entry.equipment, description: entry.desc,
-      performed_by: entry.performedBy, fuel_qty: entry.fuelQty,
-      fuel_unit: entry.fuelUnit, equip_hours: entry.equipHours,
+      performed_by: entry.performedBy, fuel_qty: num(entry.fuelQty),
+      fuel_unit: entry.fuelUnit, equip_hours: num(entry.equipHours),
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
-      cost_usd: entry.costUSD, payment: entry.payment,
-      item: entry.item, dest: entry.dest, persons: entry.persons,
+      cost_usd: num(entry.costUSD), payment: entry.payment,
+      item: entry.item, dest: entry.dest, persons: num(entry.persons),
       owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
       dept_time: entry.deptTime, arr_time: entry.arrTime,
-      fuel_out: entry.fuelOut, fuel_in: entry.fuelIn,
-      eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
-      gen_out: entry.genHrsOut, gen_in: entry.genHrsIn, clima: entry.salidaClima,
+      fuel_out: num(entry.fuelOut), fuel_in: num(entry.fuelIn),
+      eng_out: hrsNum(entry.engineHrsOut), eng_in: hrsNum(entry.engineHrsIn),
+      gen_out: hrsNum(entry.genHrsOut), gen_in: hrsNum(entry.genHrsIn), clima: entry.salidaClima,
     }).eq("id", entryId).select();
     if (error) { console.error("[Carive] no se pudo editar la entrada:", error.message); alert("No se pudo guardar el cambio: " + error.message); return; }
     if (!data || data.length === 0) {
