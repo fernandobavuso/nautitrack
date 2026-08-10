@@ -453,7 +453,7 @@ export default function App() {
   }, []);
 
   const addLogEntry = useCallback(async (vesselId, ownerId, entry) => {
-    const { data } = await supabase.from("log_entries").insert({
+    const { data, error: insErr } = await supabase.from("log_entries").insert({
       vessel_id: vesselId, owner_id: ownerId,
       date: entry.date, type: entry.type,
       service_type: entry.serviceType, system_id: entry.systemId,
@@ -470,6 +470,12 @@ export default function App() {
       eng_out: entry.engineHrsOut, eng_in: entry.engineHrsIn,
       gen_out: entry.genHrsOut, gen_in: entry.genHrsIn, clima: entry.salidaClima,
     }).select().single();
+    if (insErr) {
+      console.error("[Carive] no se pudo guardar la entrada:", insErr.message);
+      alert("No se pudo guardar la entrada: " + insErr.message);
+      return;
+    }
+    if (!data) { alert("No se pudo guardar la entrada."); return; }
     if (data) {
       const mapped = { ...entry, id: data.id };
       // Si la entrada tiene costo, registrarlo automáticamente en Costos
