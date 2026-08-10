@@ -1925,15 +1925,43 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
     </div>
   );
 }
+function LongCell({ text, limit = 90 }) {
+  const { lang } = useLang();
+  const [open, setOpen] = useState(false);
+  const str = String(text ?? "");
+  if (str.length <= limit) return <>{str}</>;
+  return (
+    <>
+      {open ? str : str.slice(0, limit).trimEnd() + "…"}{" "}
+      <button onClick={() => setOpen(o => !o)}
+        style={{background:"none",border:"none",padding:0,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+        {open ? (lang==="es"?"ver menos":"show less") : (lang==="es"?"ver todo":"show all")}
+      </button>
+    </>
+  );
+}
+
 function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogEntry }) {
   const { t: tr, lang } = useLang();
   const [showModal, setShowModal]       = useState(false);
   const [editEntry, setEditEntry]       = useState(null);
   const [filter, setFilter]             = useState("Todos");
+  const [sortBy, setSortBy]             = useState("date_desc");
+  const [whoFilter, setWhoFilter]       = useState("Todos");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteReason, setDeleteReason] = useState("");
 
-  const filtered = filter==="Todos" ? (vessel.log||[]) : (vessel.log||[]).filter(e=>e.type===filter);
+  const whoList = [...new Set((vessel.log||[]).map(e=>e.performedBy).filter(Boolean))].sort();
+  const filtered = (() => {
+    let list = filter==="Todos" ? [...(vessel.log||[])] : (vessel.log||[]).filter(e=>e.type===filter);
+    if (whoFilter!=="Todos") list = list.filter(e=>e.performedBy===whoFilter);
+    const byDate = (a,b) => String(b.date||"").localeCompare(String(a.date||""));
+    if (sortBy==="date_desc") list.sort(byDate);
+    else if (sortBy==="date_asc") list.sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+    else if (sortBy==="type") list.sort((a,b)=>String(a.type||"").localeCompare(String(b.type||"")) || byDate(a,b));
+    else if (sortBy==="who") list.sort((a,b)=>String(a.performedBy||"").localeCompare(String(b.performedBy||"")) || byDate(a,b));
+    return list;
+  })();
 
   const saveEntry = useCallback((entry) => {
     if (editEntry) {
@@ -1992,6 +2020,31 @@ function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogE
           <button style={s.btnPrimary} onClick={()=>{setEditEntry(null);setShowModal(true);}}>＋ {tr("log.new")}</button>
         </div>
       </div>
+
+      {/* Ordenar y filtrar por persona */}
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
+        <label style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>{lang==="es"?"Ordenar:":"Sort:"}</label>
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
+          style={{padding:"5px 9px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,color:"#334155",background:"#fff",cursor:"pointer"}}>
+          <option value="date_desc">{lang==="es"?"Fecha — más reciente":"Date — newest"}</option>
+          <option value="date_asc">{lang==="es"?"Fecha — más antigua":"Date — oldest"}</option>
+          <option value="type">{lang==="es"?"Tipo":"Type"}</option>
+          <option value="who">{lang==="es"?"Realizado por":"Performed by"}</option>
+        </select>
+        {whoList.length>0 && (
+          <>
+            <label style={{fontSize:11,color:"#94a3b8",fontWeight:600,marginLeft:4}}>{lang==="es"?"Persona:":"Person:"}</label>
+            <select value={whoFilter} onChange={e=>setWhoFilter(e.target.value)}
+              style={{padding:"5px 9px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,color:"#334155",background:"#fff",cursor:"pointer",maxWidth:180}}>
+              <option value="Todos">{lang==="es"?"Todas":"Everyone"}</option>
+              {whoList.map(w=><option key={w} value={w}>{w}</option>)}
+            </select>
+          </>
+        )}
+        <div style={{fontSize:11,color:"#94a3b8",marginLeft:"auto"}}>
+          {filtered.length} {lang==="es"?"entradas":"entries"}
+        </div>
+      </div>
       <div style={{overflowX:"auto"}}>
         <table style={s.table}>
           <thead><tr style={{background:"#1e3a5f"}}>{[tr("log.date"),tr("log.type"),tr("log.desc"),tr("tasks.photos"),tr("log.by"),""].map(h=><th key={h} style={s.th}>{h}</th>)}</tr></thead>
@@ -2001,8 +2054,20 @@ function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogE
               <tr key={i} style={{...s.trow,":hover":{background:"#f8fafc"}}}>
                 <td style={{...s.td,color:"#64748b",whiteSpace:"nowrap"}}>{fmtDate(e.date)}</td>
                 <td style={s.td}><span style={{background:LOG_COLOR[e.type]+"18",color:LOG_COLOR[e.type],padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>{logTypeL(e.type, lang)}{e.serviceType?` · ${e.serviceType}`:""}{(e.visitTypes&&e.visitTypes.length)?` · ${e.visitTypes.map(v=>visitTypeL(v,lang)).join(", ")}`:(e.visitType?` · ${visitTypeL(e.visitType, lang)}`:"")}</span></td>
-                <td style={{...s.td,color:"#334155",maxWidth:320}}>
-                  {e.type==="Salida"?`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||"Pendiente"}`:e.type==="Compra"?`${e.item||""} · $${e.costUSD||0}`:e.desc||""}
+                <td style={{...s.td,color:"#334155",maxWidth:340,minWidth:200,whiteSpace:"normal"}}>
+                  {e.type==="Salida"
+                    ? <>
+                        {`${e.dest||""} · ${e.persons||""}p · ${e.deptTime||"—"} → ${e.arrTime||(lang==="es"?"Pendiente":"Pending")}`}
+                        {!e.arrTime && (
+                          <button onClick={()=>{setEditEntry(e);setShowModal(true);}}
+                            style={{display:"block",marginTop:5,padding:"3px 9px",background:"#fef3c7",border:"1px solid #fcd34d",borderRadius:6,color:"#92400e",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                            ⏳ {lang==="es"?"Completar regreso":"Complete return"}
+                          </button>
+                        )}
+                      </>
+                    : e.type==="Compra"
+                      ? `${e.item||""} · $${e.costUSD||0}`
+                      : <LongCell text={e.desc||""} limit={110}/>}
                 </td>
                 <td style={s.td}>{(e.photos||[]).length>0?(
   <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
@@ -2621,20 +2686,6 @@ function RecordsPage({ vessel }) {
 }
 
 // Celda de texto largo: recorta y permite expandir, para que no se lea en vertical
-function LongCell({ text, limit = 90 }) {
-  const [open, setOpen] = useState(false);
-  const str = String(text ?? "");
-  if (str.length <= limit) return <>{str}</>;
-  return (
-    <>
-      {open ? str : str.slice(0, limit).trimEnd() + "…"}{" "}
-      <button onClick={() => setOpen(o => !o)}
-        style={{background:"none",border:"none",padding:0,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-        {open ? "ver menos" : "ver todo"}
-      </button>
-    </>
-  );
-}
 
 const TH_EN = {"Fecha":"Date","Tipo":"Type","Equipo":"Equipment","Descripción":"Description","Realizado por":"Performed by","Fotos":"Photos","Cantidad":"Quantity","Notas":"Notes","Registrado por":"Logged by","Marca":"Brand","Modelo":"Model","N° Parte":"Part No.","Pago":"Payment","Horas":"Hours","Costo":"Cost","Detalle":"Detail","Notas / Proveedor":"Notes / Supplier","Destino":"Destination","Personas":"People","Salida":"Departure","Regreso":"Return","Clima":"Weather","Dueño":"Owner","Sistema / Equipo":"System / Equipment","Equipo / Sistema":"Equipment / System","Unidad":"Unit"};
 
