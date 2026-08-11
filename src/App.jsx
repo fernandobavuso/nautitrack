@@ -126,6 +126,33 @@ const hrsNum = (v) => {
   const n = Number(v);
   return isNaN(n) ? null : n;
 };
+// Estado de una tarea calculado SIEMPRE con la fecha de hoy (antes se guardaba en la
+// base y quedaba congelado: una tarea seguía "al día" en verde aunque ya hubiera
+// vencido). Devuelve también los días que faltan para mostrarlos en la lista.
+function taskStatus(t) {
+  if (t.status === "done") return { key:"done", days:null };
+  if (t.nextDue) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const due = new Date(t.nextDue + "T00:00:00");
+    const days = Math.round((due - today) / 86400000);
+    if (days < 0)  return { key:"overdue", days };
+    if (days <= 7) return { key:"due",     days };   // esta semana
+    if (days <= 30) return { key:"soon",   days };   // este mes
+    return { key:"ok", days };
+  }
+  return { key: t.status || "ok", days:null };
+}
+
+// Texto corto: "hace 3 días", "hoy", "en 5 días"
+function dueLabel(days, lang) {
+  if (days === null || days === undefined) return "";
+  if (days === 0)  return lang==="es" ? "hoy" : "today";
+  if (days === 1)  return lang==="es" ? "mañana" : "tomorrow";
+  if (days === -1) return lang==="es" ? "ayer" : "yesterday";
+  if (days < 0)    return lang==="es" ? `hace ${-days} días` : `${-days} days ago`;
+  return lang==="es" ? `en ${days} días` : `in ${days} days`;
+}
+
 const selSm = {padding:"5px 9px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,color:"#334155",background:"#fff",cursor:"pointer",maxWidth:190};
 const NO_CREW = "Sin tripulación";
 const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
@@ -407,7 +434,7 @@ export default function App() {
       notes: t.notes, photos: t.photos || [],
       dueHours: t.due_hours, everyHours: t.every_hours, motorName: t.motor,
       createdByName: t.created_by_name, createdByRole: t.created_by_role,
-    }));
+    })).map(t => { const st = taskStatus(t); return { ...t, status: st.key, daysLeft: st.days }; });
   };
 
   const fetchLog = async (vesselId) => {
@@ -1632,14 +1659,14 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const filtered = (vessel.tasks||[]).filter(t => {
     if (filter==="Sin completar") return t.status!=="done";
     if (filter==="Vencidas")    return t.status==="overdue";
-    if (filter==="Por vencer")  return t.status==="due";
+    if (filter==="Por vencer")  return t.status==="due" || t.status==="soon";
     if (filter==="Completadas") return t.status==="done";
     return true;
   })
   .filter(t => sysFilter==="Todos" || t.system===sysFilter)
   .filter(t => whoFilter==="Todos" || t.assigned===whoFilter)
   .sort((a,b) => {
-    const RANK = { overdue:0, due:1, ok:2, done:3 };
+    const RANK = { overdue:0, due:1, soon:2, ok:3, done:4 };
     const dt = (x) => x.nextDue || "9999-12-31";
     if (sortBy==="due_asc")   return dt(a).localeCompare(dt(b));
     if (sortBy==="due_desc")  return dt(b).localeCompare(dt(a));
@@ -1651,7 +1678,13 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   });
   const taskSystems = [...new Set((vessel.tasks||[]).map(t=>t.system).filter(Boolean))].sort();
   const taskPeople  = [...new Set((vessel.tasks||[]).map(t=>t.assigned).filter(Boolean))].sort();
-  const PILL = { overdue:{bg:"#ef4444",c:"#fff",l:tr("tasks.overdue")}, due:{bg:"#f59e0b",c:"#fff",l:tr("tasks.due")}, ok:{bg:"#22c55e",c:"#fff",l:tr("tasks.onTrack")}, done:{bg:"#64748b",c:"#fff",l:tr("tasks.done")} };
+  const PILL = {
+    overdue:{bg:"#ef4444",c:"#fff",l:lang==="es"?"Vencida":"Overdue"},
+    due:    {bg:"#f59e0b",c:"#fff",l:lang==="es"?"Esta semana":"This week"},
+    soon:   {bg:"#fde68a",c:"#92400e",l:lang==="es"?"Próxima":"Upcoming"},
+    ok:     {bg:"#dcfce7",c:"#166534",l:lang==="es"?"Al día":"On track"},
+    done:   {bg:"#64748b",c:"#fff",l:lang==="es"?"Completada":"Done"},
+  };
   const allSystems = getAllSystems(vessel);
   const [editingTask, setEditingTask] = useState(null);
   const handleAddTask = (task) => { addTask(task); setShowAdd(false); };
@@ -1665,7 +1698,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
             <button key={f} onClick={() => setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0"}}>
               {({"Todas":tr("tasks.all"),"Sin completar":(lang==="es"?"Sin completar":"Open"),"Por vencer":tr("tasks.due"),"Vencidas":tr("tasks.overdue"),"Completadas":tr("tasks.completed")})[f]||f}
               <span style={{marginLeft:4,fontSize:10,background:filter===f?"rgba(255,255,255,0.2)":"#e2e8f0",color:filter===f?"#fff":"#64748b",padding:"1px 6px",borderRadius:10}}>
-                {f==="Todas"?(vessel.tasks||[]).length:f==="Sin completar"?(vessel.tasks||[]).filter(t=>t.status!=="done").length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
+                {f==="Todas"?(vessel.tasks||[]).length:f==="Sin completar"?(vessel.tasks||[]).filter(t=>t.status!=="done").length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due"||t.status==="soon").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
               </span>
             </button>
           ))}
@@ -1724,7 +1757,19 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                     <td style={{...s.td,fontWeight:500,color:"#1e293b"}}>{task.name}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.assigned?.split(" ")[0]}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.interval}</td>
-                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>{task.interval==="Por horas"?`${task.dueHours}h · ${task.motorName||"motor"}`:fmtDate(task.nextDue)}</td>
+                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>
+                  {task.interval==="Por horas"
+                    ? `${task.dueHours}h · ${task.motorName||"motor"}`
+                    : <>
+                        {fmtDate(task.nextDue)}
+                        {task.daysLeft!==null && task.daysLeft!==undefined && task.status!=="done" && (
+                          <div style={{fontSize:10,marginTop:2,fontWeight:600,
+                            color: task.status==="overdue" ? "#dc2626" : task.status==="due" ? "#b45309" : "#94a3b8"}}>
+                            {dueLabel(task.daysLeft, lang)}
+                          </div>
+                        )}
+                      </>}
+                </td>
                     <td style={s.td}><span style={{...s.statusPill,background:p.bg,color:p.c}}>{p.l}</span></td>
                     <td style={{...s.td,color:"#94a3b8",fontSize:12,maxWidth:180}}>{task.notes||"—"}</td>
                   </tr>
