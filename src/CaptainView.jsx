@@ -33,8 +33,8 @@ export default function CaptainView({ vessel, user, onLogout }) {
     setLogsLoad(false);
   };
 
-  const fmtTime = (ts) => new Date(ts).toLocaleTimeString("es-VE", { hour:"2-digit", minute:"2-digit", hour12:true });
-  const fmtDate = (ts) => new Date(ts).toLocaleDateString("es-VE", { weekday:"short", day:"numeric", month:"short" });
+  const fmtTime = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true });
+  const fmtDate = (ts) => new Date(ts).toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short" });
 
   const overdueTasks = (vessel.tasks||[]).filter(t=>t.status==="overdue");
   const dueTasks     = (vessel.tasks||[]).filter(t=>t.status==="due");

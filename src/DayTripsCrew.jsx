@@ -122,7 +122,7 @@ export default function DayTripsCrew({ user, profile }) {
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div>
                       <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.crew_role||"Viaje"} · {t.vessel_type||""}</div>
-                      <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("es-VE"):""}{t.city?` · ${t.city}`:""}</div>
+                      <div style={{fontSize:11,color:"#64748b"}}>{t.trip_date?new Date(t.trip_date).toLocaleDateString("en-US"):""}{t.city?` · ${t.city}`:""}</div>
                       {a.status==="accepted"&&<div style={{fontSize:11,color:"#16a34a",marginTop:2,fontWeight:600}}>{L("El propietario te contactará. Revisa tus notificaciones.","The owner will contact you. Check your notifications.")}</div>}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -158,7 +158,7 @@ export default function DayTripsCrew({ user, profile }) {
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.vessel_type||"Embarcación"}</div>
                   {trip.trip_type&&<div style={{fontSize:11,color:"#2563eb",fontWeight:600}}>{trip.trip_type}</div>}
-                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")}{trip.departure_time?` · ${trip.departure_time}`:""} · {trip.duration}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("en-US")}{trip.departure_time?` · ${trip.departure_time}`:""} · {trip.duration}</div>
                   <div style={{fontSize:12,color:"#64748b"}}>{trip.city||"—"}{trip.num_persons?` · ${trip.num_persons} personas`:""}</div>
                   {trip.meeting_point&&<div style={{fontSize:11,color:"#94a3b8",marginTop:1}}>Encuentro: {trip.meeting_point}</div>}
                 </div>
@@ -191,7 +191,7 @@ export default function DayTripsCrew({ user, profile }) {
             {completedTrips.map(trip=>(
               <div key={trip.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.vessel_type||"Embarcación"}</div>
-                <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.city||"—"}</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>{new Date(trip.trip_date).toLocaleDateString("en-US")} · {trip.city||"—"}</div>
                 <CrewReviewButton trip={trip} user={user} onDone={loadCompleted}/>
               </div>
             ))}
@@ -232,7 +232,7 @@ export default function DayTripsCrew({ user, profile }) {
   );
 }
 
-function trip_label(t){ return `${t.crew_role} · ${new Date(t.trip_date).toLocaleDateString("es-VE")} · ${t.duration}`; }
+function trip_label(t){ return `${t.crew_role} · ${new Date(t.trip_date).toLocaleDateString("en-US")} · ${t.duration}`; }
 
 // Botón + modal para que el tripulante reseñe al dueño/barco
 function CrewReviewButton({ trip, user, onDone }) {

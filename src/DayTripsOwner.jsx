@@ -128,7 +128,7 @@ export default function DayTripsOwner({ vessel, user }) {
       // Enviar a cada uno (sin bloquear la UI)
       matched.forEach(c => {
         const phone = `${(c.phone_code||"+58").replace(/[^0-9+]/g,"")}${(c.phone||"").replace(/[^0-9]/g,"")}`;
-        const message = `Hola${c.first_name?" "+c.first_name:""}, hay un nuevo viaje disponible en Carive para ${form.crew_role} en ${cityLabel||"tu zona"} el ${new Date(form.trip_date).toLocaleDateString("es-VE")}. Paga: ${pay}. Entra a la app para postularte: https://app.carive.co`;
+        const message = `Hola${c.first_name?" "+c.first_name:""}, hay un nuevo viaje disponible en Carive para ${form.crew_role} en ${cityLabel||"tu zona"} el ${new Date(form.trip_date).toLocaleDateString("en-US")}. Paga: ${pay}. Entra a la app para postularte: https://app.carive.co`;
         fetch('/api/whatsapp', {
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ to: phone, message }),
@@ -143,7 +143,7 @@ export default function DayTripsOwner({ vessel, user }) {
     // Notificar al tripulante seleccionado
     notify(app.crew_id, {
       type:"selected", title:"¡Te seleccionaron!",
-      body:`Fuiste elegido para el viaje de ${trip.crew_role} el ${new Date(trip.trip_date).toLocaleDateString("es-VE")}`,
+      body:`Fuiste elegido para el viaje de ${trip.crew_role} el ${new Date(trip.trip_date).toLocaleDateString("en-US")}`,
       link:"daytrips",
     });
     setMsg("Tripulante seleccionado");
@@ -356,7 +356,7 @@ export default function DayTripsOwner({ vessel, user }) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{trip.crew_role} · {trip.duration}</div>
-                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("es-VE")} · {trip.city||"—"}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{new Date(trip.trip_date).toLocaleDateString("en-US")} · {trip.city||"—"}</div>
                   <div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginTop:2}}>{trip.pay_open?"Paga: abierta a propuestas":`Paga: ${trip.pay_amount}`}</div>
                 </div>
                 <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,whiteSpace:"nowrap",

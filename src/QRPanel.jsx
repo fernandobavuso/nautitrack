@@ -64,8 +64,8 @@ export default function QRPanel({ vessel, onClose }) {
     setTimeout(()=>w.print(), 500);
   };
 
-  const fmtTime = (ts) => new Date(ts).toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit",hour12:true});
-  const fmtDate = (ts) => new Date(ts).toLocaleDateString("es-VE",{weekday:"short",day:"numeric",month:"short"});
+  const fmtTime = (ts) => new Date(ts).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:true});
+  const fmtDate = (ts) => new Date(ts).toLocaleDateString("en-US",{weekday:"short",day:"numeric",month:"short"});
 
   // Quién está a bordo ahora (último action por persona)
   const onBoard = (() => {

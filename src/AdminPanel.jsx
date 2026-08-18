@@ -162,7 +162,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
   const growth = [];
   for (let i=5;i>=0;i--) {
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-    const label = d.toLocaleDateString("es",{month:"short"});
+    const label = d.toLocaleDateString("en-US",{month:"short"});
     const count = allUsers.filter(u => { if(!u.created_at) return false; const c=new Date(u.created_at); return c.getFullYear()===d.getFullYear()&&c.getMonth()===d.getMonth(); }).length;
     growth.push({ label, count });
   }
@@ -191,7 +191,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
     const rows = [["Nombre","Email","Rol","Alta","Estado","Barcos"]];
     liveUsers.forEach(u => {
       const boats = vessels.filter(v=>v.owner_id===u.id).length;
-      rows.push([u.full_name||"", u.email||"", u.role||"", u.created_at?new Date(u.created_at).toLocaleDateString("es"):"", u.disabled?"Deshabilitada":"Activa", boats]);
+      rows.push([u.full_name||"", u.email||"", u.role||"", u.created_at?new Date(u.created_at).toLocaleDateString("en-US"):"", u.disabled?"Deshabilitada":"Activa", boats]);
     });
     const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8;"});
@@ -272,7 +272,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
     const base = u.comp_until && new Date(u.comp_until) > new Date() ? new Date(u.comp_until) : new Date();
     base.setMonth(base.getMonth() + months);
     await supabase.from("profiles").update({ comp_until: base.toISOString() }).eq("id", u.id);
-    setMsg(`${months} mes(es) de cortesía para ${u.full_name||u.email} (hasta ${base.toLocaleDateString("es")})`);
+    setMsg(`${months} mes(es) de cortesía para ${u.full_name||u.email} (hasta ${base.toLocaleDateString("en-US")})`);
     setTimeout(()=>setMsg(""),3500);
     setSelectedUser(su => su && su.id===u.id ? {...su, comp_until: base.toISOString()} : su);
     loadAll();
@@ -434,7 +434,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
                             {req.urgent&&<span style={{marginLeft:6,background:"#fef2f2",color:"#dc2626",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:20}}>URGENTE</span>}
                           </div>
                         </div>
-                        <div style={{fontSize:12,color:"#94a3b8"}}>{new Date(req.created_at).toLocaleDateString("es")}</div>
+                        <div style={{fontSize:12,color:"#94a3b8"}}>{new Date(req.created_at).toLocaleDateString("en-US")}</div>
                       </div>
                       <div style={{fontSize:11,fontWeight:700,color:"#475569",marginBottom:8}}>{matches.length} tienda{matches.length!==1?"s":""} calific{matches.length!==1?"an":"a"}</div>
                       {matches.length===0 ? (
@@ -522,7 +522,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
                 <div key={s.id} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,padding:"11px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{s.request?.item_name||"Repuesto"}</div>
-                    <div style={{fontSize:11,color:"#64748b"}}>{s.store?.store_name||"Tienda"}{s.confirmed_at?` · ${new Date(s.confirmed_at).toLocaleDateString("es-VE")}`:""}</div>
+                    <div style={{fontSize:11,color:"#64748b"}}>{s.store?.store_name||"Tienda"}{s.confirmed_at?` · ${new Date(s.confirmed_at).toLocaleDateString("en-US")}`:""}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:13,fontWeight:800,color:"#16a34a"}}>+${s.commission_amount||0}</div>
@@ -572,7 +572,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
                     </div>
                     {exp&&plan!=="free"&&(
                       <div style={{fontSize:11,color:expired?"#dc2626":"#64748b",marginBottom:10}}>
-                        {expired?`Venció el ${exp.toLocaleDateString("es-VE")}`:`Vence el ${exp.toLocaleDateString("es-VE")}`}
+                        {expired?`Venció el ${exp.toLocaleDateString("en-US")}`:`Vence el ${exp.toLocaleDateString("en-US")}`}
                       </div>
                     )}
                     <div style={{fontSize:10,color:"#94a3b8",fontWeight:700,marginBottom:6}}>ACTIVAR / RENOVAR</div>
@@ -612,7 +612,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
                     <span style={{fontSize:11,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"3px 10px",borderRadius:20}}>{roleLabel}</span>
                     {u.deleted_at&&<span style={{fontSize:11,fontWeight:700,color:"#64748b",background:"#f1f5f9",padding:"3px 10px",borderRadius:20}}>Eliminada</span>}
                     {u.disabled&&!u.deleted_at&&<span style={{fontSize:11,fontWeight:700,color:"#dc2626",background:"#fee2e2",padding:"3px 10px",borderRadius:20}}>Deshabilitada</span>}
-                    {compActive&&<span style={{fontSize:11,fontWeight:700,color:"#16a34a",background:"#f0fdf4",padding:"3px 10px",borderRadius:20}}>Cortesía hasta {new Date(u.comp_until).toLocaleDateString("es")}</span>}
+                    {compActive&&<span style={{fontSize:11,fontWeight:700,color:"#16a34a",background:"#f0fdf4",padding:"3px 10px",borderRadius:20}}>Cortesía hasta {new Date(u.comp_until).toLocaleDateString("en-US")}</span>}
                   </div>
                 </div>
                 <button onClick={()=>setSelectedUser(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#94a3b8"}}>✕</button>
@@ -622,7 +622,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
                 {/* Datos */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
                   {[
-                    {l:"Registrado", v:u.created_at?new Date(u.created_at).toLocaleDateString("es"):"—"},
+                    {l:"Registrado", v:u.created_at?new Date(u.created_at).toLocaleDateString("en-US"):"—"},
                     {l:"Barcos", v:boats.length},
                     {l:"Ciudad", v:u.store_city||u.city||"—"},
                     {l:"Teléfono", v:u.store_phone||u.phone||"—"},

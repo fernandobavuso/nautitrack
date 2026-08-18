@@ -61,13 +61,14 @@ function getInitials(nameOrEmail) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-// ── DATE FORMAT — DD/MM/AAAA (Venezuela) ─────────────────────────────────────
+// ── FORMATO DE FECHA — MM/DD/AAAA (estándar de EE.UU.) ───────────────────────
+// Formato de fecha estadounidense (mes/día/año), el estándar del mercado de Miami.
 function fmtDate(d) {
   if (!d) return "—";
-  if (d.includes("/")) return d; // already formatted
+  if (d.includes("/")) return d; // ya viene formateada
   const [y,m,day] = d.split("-");
   if (!y||!m||!day) return d;
-  return `${day}/${m}/${y}`;
+  return `${m}/${day}/${y}`;
 }
 function todayISO() {
   return new Date().toISOString().split("T")[0];
@@ -488,7 +489,7 @@ export default function App() {
       // Avisar al asignado por WhatsApp si tiene teléfono registrado en Personal
       if (task.assigneePhone) {
         const dateStr = task.nextDue
-          ? new Date(task.nextDue + "T00:00:00").toLocaleDateString("es", { day:"numeric", month:"short", year:"numeric" })
+          ? new Date(task.nextDue + "T00:00:00").toLocaleDateString("en-US", { day:"numeric", month:"short", year:"numeric" })
           : "sin fecha";
         const cleanName = (task.assigned || "").replace(/\s*\(.*\)$/, "").trim();
         notifyTaskAssigned(task.assigneePhone, cleanName, task.boatName || "", task.name || "", dateStr)
@@ -1459,7 +1460,7 @@ function IndicatorsCard({ vessel }) {
   const pendingTasks = (vessel.tasks||[]).filter(t=>t.status!=="done"&&t.nextDue).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
   const nextService = pendingTasks[0];
   const nextServiceVal = nextService
-    ? new Date(nextService.nextDue).toLocaleDateString(lang==="en"?"en-US":"es",{day:"numeric",month:"short"})
+    ? new Date(nextService.nextDue).toLocaleDateString("en-US",{day:"numeric",month:"short"})
     : tr("dash.none");
   return (
     <div style={{...s.card,flex:1}}>
@@ -2884,7 +2885,7 @@ function ReportModal({ vessel, onClose }) {
 
   const parseInputDate = (d) => {
     if (!d) return null;
-    if (d.includes("/")) { const [day,m,y]=d.split("/"); return `${y}-${m.padStart(2,"0")}-${day.padStart(2,"0")}`; }
+    if (d.includes("/")) { const [m,day,y]=d.split("/"); return `${y}-${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`; }
     return d;
   };
   const filterByDate = (items, dateField) => {
@@ -2901,7 +2902,7 @@ function ReportModal({ vessel, onClose }) {
   };
 
   const generateHTML = () => {
-    const today = new Date().toLocaleDateString("es-VE", {day:"2-digit",month:"2-digit",year:"numeric"});
+    const today = new Date().toLocaleDateString("en-US", {day:"2-digit",month:"2-digit",year:"numeric"});
     const d = vessel.details || {};
     const filteredLog   = filterByDate(vessel.log||[], "date");
     const filteredTasks = vessel.tasks || [];
@@ -2912,7 +2913,7 @@ function ReportModal({ vessel, onClose }) {
     const compras       = filteredLog.filter(e=>e.type==="Compra");
     const totalCost     = compras.reduce((a,e)=>a+(e.costUSD||0),0);
     const totalFuel     = fuelLog.reduce((a,e)=>a+(parseFloat(e.fuelQty)||0),0);
-    const fmtD = (d) => { if(!d)return"—"; const p=d.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; };
+    const fmtD = (d) => { if(!d)return"—"; const p=d.split("-"); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; };
 
     const CSS = `
       *{margin:0;padding:0;box-sizing:border-box;}
@@ -3275,15 +3276,15 @@ function ReportModal({ vessel, onClose }) {
             ))}
           </div>
 
-          {/* Period — text inputs DD/MM/AAAA instead of date picker */}
+          {/* Periodo — campos de texto MM/DD/AAAA en vez de selector de fecha */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={s.label}>Desde <span style={{color:"#94a3b8",fontWeight:400}}>(DD/MM/AAAA)</span></label>
-              <input value={from} onChange={e=>setFrom(e.target.value)} placeholder="01/06/2026" style={s.input}/>
+              <label style={s.label}>{lang==="es"?"Desde":"From"} <span style={{color:"#94a3b8",fontWeight:400}}>(MM/DD/AAAA)</span></label>
+              <input value={from} onChange={e=>setFrom(e.target.value)} placeholder="06/01/2026" style={s.input}/>
             </div>
             <div>
-              <label style={s.label}>Hasta <span style={{color:"#94a3b8",fontWeight:400}}>(DD/MM/AAAA)</span></label>
-              <input value={to} onChange={e=>setTo(e.target.value)} placeholder="30/06/2026" style={s.input}/>
+              <label style={s.label}>{lang==="es"?"Hasta":"To"} <span style={{color:"#94a3b8",fontWeight:400}}>(MM/DD/AAAA)</span></label>
+              <input value={to} onChange={e=>setTo(e.target.value)} placeholder="06/30/2026" style={s.input}/>
             </div>
           </div>
 
@@ -3330,7 +3331,7 @@ function ReportModal({ vessel, onClose }) {
             );
           }
           const period = from&&to?`del ${from} al ${to}`:"actual";
-          const subject = `Reporte de ${vessel.name} — ${new Date().toLocaleDateString("es")}`;
+          const subject = `Reporte de ${vessel.name} — ${new Date().toLocaleDateString("en-US")}`;
           const body = `Estimado/a ${ownerName||"propietario"},\n\nAdjunto el reporte de gestión de su embarcación ${vessel.name} correspondiente al período ${period}.\n\nEl reporte incluye el estado general, mantenimientos realizados y demás información relevante de la gestión.\n\nQuedo a su disposición para cualquier consulta.\n\nSaludos cordiales,\nThe Boating Zone`;
           const mailto = `mailto:${ownerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
           return (
@@ -3597,7 +3598,7 @@ function DocsPage({ vessel, user }) {
                   </div>
                   <div style={{padding:"14px 16px"}}>
                     <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4,lineHeight:1.4}}>{m.name}</div>
-                    <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>{m.file_size ? fmtSize(m.file_size) : ""} · {new Date(m.created_at).toLocaleDateString("es-VE")}</div>
+                    <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>{m.file_size ? fmtSize(m.file_size) : ""} · {new Date(m.created_at).toLocaleDateString("en-US")}</div>
                     <div style={{display:"flex",gap:6}}>
                       <a href={m.file_url} target="_blank" rel="noreferrer" style={{...s.btnOutline,padding:"5px 10px",fontSize:11,textDecoration:"none",display:"flex",alignItems:"center",gap:4,flex:1,justifyContent:"center"}}>
                         📖 Abrir
@@ -3945,7 +3946,7 @@ function NotificationsModal({ vessel, user, onClose }) {
                       <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:n.status==="sent"?"#dcfce7":"#fee2e2",color:n.status==="sent"?"#16a34a":"#dc2626"}}>{n.status==="sent"?"✓ Enviado":"✗ Fallido"}</span>
                       <span style={{fontSize:11,color:"#64748b"}}>{n.recipient}</span>
                     </div>
-                    <span style={{fontSize:10,color:"#94a3b8"}}>{new Date(n.created_at).toLocaleDateString("es-VE")}</span>
+                    <span style={{fontSize:10,color:"#94a3b8"}}>{new Date(n.created_at).toLocaleDateString("en-US")}</span>
                   </div>
                   <div style={{fontSize:12,color:"#475569",whiteSpace:"pre-wrap",maxHeight:60,overflow:"hidden",textOverflow:"ellipsis"}}>{n.message}</div>
                 </div>
@@ -4085,7 +4086,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
                   <span style={{fontSize:13,opacity:.8}}>/{sub.billing_period==="yearly"?"año":"mes"}</span>
                 </div>
                 <div style={{fontSize:12,opacity:.85,marginTop:8}}>
-                  {sub.expires_at ? `Vence: ${new Date(sub.expires_at).toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"})}` : currentPlan.tagline}
+                  {sub.expires_at ? `Vence: ${new Date(sub.expires_at).toLocaleDateString("en-US",{day:"numeric",month:"short",year:"numeric"})}` : currentPlan.tagline}
                 </div>
               </div>
 

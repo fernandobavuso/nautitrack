@@ -601,7 +601,7 @@ export default function CrewProfile({ user, onLogout }) {
             <div style={{background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:18,padding:isMobile?"20px":"24px 28px",color:"#fff",marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
                 <div>
-                  <div style={{fontSize:12,opacity:0.7,marginBottom:4,textTransform:"capitalize"}}>{new Date().toLocaleDateString(lang==="en"?"en-US":"es-VE",{weekday:"long",day:"numeric",month:"long"})}</div>
+                  <div style={{fontSize:12,opacity:0.7,marginBottom:4,textTransform:"capitalize"}}>{new Date().toLocaleDateString("en-US",{weekday:"long",day:"numeric",month:"long"})}</div>
                   <div style={{fontSize:24,fontWeight:800}}>{L("Hola","Hi")}{profile.first_name?`, ${profile.first_name}`:""}</div>
                   <div style={{fontSize:13,opacity:0.85,marginTop:2}}>{(profile.badges||[]).includes("verified")?L("Estás listo para navegar","You're ready to sail"):L("Completa tu verificación para empezar","Complete your verification to get started")}</div>
                 </div>
@@ -1226,7 +1226,7 @@ export default function CrewProfile({ user, onLogout }) {
                                   <div style={{padding:"8px 10px"}}>
                                     <div style={{fontSize:11,fontWeight:600,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
                                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
-                                      <span style={{fontSize:9,color:"#94a3b8"}}>{new Date(doc.uploaded).toLocaleDateString(lang==="en"?"en-US":"es-VE")}</span>
+                                      <span style={{fontSize:9,color:"#94a3b8"}}>{new Date(doc.uploaded).toLocaleDateString("en-US")}</span>
                                       {doc.type!=="cedula"&&<button onClick={()=>deleteDocument(realIdx)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:13}}>🗑</button>}
                                     </div>
                                   </div>

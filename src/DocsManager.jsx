@@ -193,7 +193,7 @@ export default function DocsManager({ vessel, user }) {
             <span style={{flexShrink:0,color:doc.kind==="link"?"#0ea5e9":"#2563eb"}}>{doc.kind==="link"?<LinkIcon/>:<FileIcon/>}</span>
             <div style={{flex:1,minWidth:0}}>
               <button onClick={()=>openDoc(doc)} style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left"}}>{doc.title}</button>
-              <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{doc.kind==="link"?"Link externo":formatSize(doc.file_size)}{doc.created_at?` · ${new Date(doc.created_at).toLocaleDateString("es-VE")}`:""}</div>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{doc.kind==="link"?"Link externo":formatSize(doc.file_size)}{doc.created_at?` · ${new Date(doc.created_at).toLocaleDateString("en-US")}`:""}</div>
             </div>
             <button onClick={()=>openDoc(doc)} style={{...btnOutline,padding:"5px 12px",fontSize:11}}>{L("Abrir","Open")}</button>
             <button onClick={()=>del(doc)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>{L("Eliminar","Delete")}</button>

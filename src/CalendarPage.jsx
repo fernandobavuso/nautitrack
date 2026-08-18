@@ -212,7 +212,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
             </div>
             <div style={{fontSize:18,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:6}}>{selected.title}</div>
             {selected.sub && <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>{selected.sub}</div>}
-            <div style={{fontSize:13,color:"#475569"}}>📅 {new Date(selected.date+"T12:00:00").toLocaleDateString("es-VE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+            <div style={{fontSize:13,color:"#475569"}}>📅 {new Date(selected.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
             {selected.kind==="shift" && selected.raw.hours && <div style={{fontSize:13,color:"#475569",marginTop:4}}>⏱️ {selected.raw.hours}h × ${selected.raw.rate||0} = ${((Number(selected.raw.hours)||0)*(Number(selected.raw.rate)||0)).toLocaleString("en-US")}</div>}
             {selected.kind==="shift" && <div style={{fontSize:13,color:"#475569",marginTop:4}}>📌 {selected.raw.work_status} · {selected.raw.payment_status}</div>}
             {selected.kind==="trip" && selected.raw.departure_time && <div style={{fontSize:13,color:"#475569",marginTop:4}}>🕐 Salida: {selected.raw.departure_time}</div>}

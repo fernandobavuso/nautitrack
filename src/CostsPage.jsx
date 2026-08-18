@@ -167,7 +167,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
             <div style={{width:4,height:36,borderRadius:2,background:CAT_COLORS[e.category]||"#64748b",flexShrink:0}}/>
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span title="Este gasto viene de una compra registrada en la Bitácora. No se anota dos veces." style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle",cursor:"help"}}>desde bitácora</span>:""}</div>
-              <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("es-VE")}</div>
+              <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("en-US")}</div>
             </div>
             <div style={{fontSize:14,fontWeight:800,color:"#0f172a",whiteSpace:"nowrap"}}>
               $ {Number(e.amount).toLocaleString("en-US",{maximumFractionDigits:2})}

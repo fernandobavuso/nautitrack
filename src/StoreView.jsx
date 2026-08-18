@@ -690,7 +690,7 @@ export default function StoreView({ user, onLogout }) {
                     <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"10px 12px",background:"#f8fafc",borderRadius:9}}>
                       <div>
                         <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{r.request?.item_name||"Repuesto"}</div>
-                        <div style={{fontSize:11,color:"#94a3b8"}}>{r.confirmed_at?new Date(r.confirmed_at).toLocaleDateString("es"):""}</div>
+                        <div style={{fontSize:11,color:"#94a3b8"}}>{r.confirmed_at?new Date(r.confirmed_at).toLocaleDateString("en-US"):""}</div>
                       </div>
                       <div style={{textAlign:"right"}}>
                         <div style={{fontSize:13,fontWeight:700,color:"#16a34a"}}>${r.sale_amount||"—"}</div>

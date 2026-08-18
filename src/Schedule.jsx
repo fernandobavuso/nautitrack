@@ -102,8 +102,8 @@ export default function Schedule({ user, vessels = [], onClose }) {
     // Descripción corta de un turno (sin saltos de línea: WhatsApp los rechaza)
     const shiftText = (x, withDate) => {
       const parts = [];
-      if (withDate) parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es", { weekday:"short", day:"numeric", month:"short" }));
-      else          parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es", { day:"numeric", month:"short" }));
+      if (withDate) parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short" }));
+      else          parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString("en-US", { day:"numeric", month:"short" }));
       if (x.vessel_name) parts.push(x.vessel_name);
       if (x.description) parts.push(x.description);
       if (x.hours)       parts.push(`${x.hours}h`);
@@ -411,7 +411,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
                     <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{s.person_name}</div>
                       <div style={{fontSize:12,color:"#64748b",marginTop:1}}>
-                        {new Date(s.shift_date+"T00:00:00").toLocaleDateString(lang==="en"?"en-US":"es",{day:"numeric",month:"short"})} · {dayName(s.shift_date)}
+                        {new Date(s.shift_date+"T00:00:00").toLocaleDateString("en-US",{day:"numeric",month:"short"})} · {dayName(s.shift_date)}
                         {s.vessel_name && <> · <span style={{color:"#2563eb",fontWeight:600}}>{s.vessel_name}</span></>}
                       </div>
                       {s.description && <div style={{fontSize:12,color:"#475569",marginTop:3}}>{s.description}</div>}

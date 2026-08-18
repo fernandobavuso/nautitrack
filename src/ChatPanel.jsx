@@ -78,7 +78,7 @@ export default function ChatPanel({ connection, currentUserId, otherName, onClos
                   border:mine?"none":"1px solid #e2e8f0",
                 }}>{m.body}</div>
                 <div style={{fontSize:9,color:"#94a3b8",marginTop:2,textAlign:mine?"right":"left"}}>
-                  {new Date(m.created_at).toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"})}
+                  {new Date(m.created_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"})}
                 </div>
               </div>
             );
