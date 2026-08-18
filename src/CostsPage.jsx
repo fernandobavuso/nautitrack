@@ -62,6 +62,32 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
     loadExpenses();
   };
 
+  // Marcar un gasto adelantado como cobrado (o volver a pendiente)
+  const toggleReimbursed = async (exp) => {
+    const next = !exp.reimbursed;
+    const { data, error } = await supabase.from("expenses")
+      .update({ reimbursed: next }).eq("id", exp.id).select();
+    if (error) { setMsg("Error: " + error.message); setTimeout(()=>setMsg(""),4000); return; }
+    if (!data || data.length === 0) { setMsg(L("No se pudo actualizar el gasto","Could not update the expense")); setTimeout(()=>setMsg(""),4000); return; }
+    setExpenses(list => list.map(x => x.id===exp.id ? { ...x, reimbursed: next } : x));
+    setMsg(next ? L("Marcado como cobrado","Marked as reimbursed") : L("Marcado como pendiente","Marked as pending"));
+    setTimeout(()=>setMsg(""),2500);
+  };
+
+  // Marcar TODOS los pendientes como cobrados de una vez
+  const markAllReimbursed = async () => {
+    const pend = expenses.filter(e=>e.reimbursable && !e.reimbursed);
+    if (!pend.length) return;
+    if (!confirm(L(`¿Marcar ${pend.length} gasto(s) como cobrados?`,`Mark ${pend.length} expense(s) as reimbursed?`))) return;
+    const ids = pend.map(e=>e.id);
+    const { error } = await supabase.from("expenses").update({ reimbursed: true }).in("id", ids);
+    if (error) { setMsg("Error: " + error.message); setTimeout(()=>setMsg(""),4000); return; }
+    setExpenses(list => list.map(x => ids.includes(x.id) ? { ...x, reimbursed: true } : x));
+    setShowReimb(false);
+    setMsg(L("Reembolso saldado","Reimbursement settled"));
+    setTimeout(()=>setMsg(""),2500);
+  };
+
   if (!allowed) {
     return <div style={{padding:"40px 20px"}}><PremiumLock feature="Control de Costos" onUpgrade={()=>setShowProfile&&setShowProfile(true)}/></div>;
   }
@@ -285,9 +311,14 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
                 </button>
               </div>
               {copied==="err" && <div style={{fontSize:11,color:"#dc2626",marginTop:8}}>{L("No se pudo copiar. Selecciona la tabla y copia a mano.","Couldn't copy. Select the table and copy manually.")}</div>}
+
+              <button onClick={markAllReimbursed}
+                style={{width:"100%",marginTop:10,padding:"11px",background:"#f0fdf4",border:"1.5px solid #86efac",borderRadius:9,color:"#15803d",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                ✓ {L(`Ya me pagaron — marcar los ${pend.length} como cobrados`,`I've been paid — mark all ${pend.length} as reimbursed`)}
+              </button>
               <div style={{fontSize:11,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
-                {L("La opción de tabla pega cada dato en su columna. Para marcar estos gastos como cobrados, usa la etiqueta 'Por cobrar' de cada uno.",
-                   "The table option pastes each value into its own column. To mark these as reimbursed, use each expense's 'To bill' tag.")}
+                {L("La opción de tabla pega cada dato en su columna. También puedes marcar los gastos uno a uno con su etiqueta 'Por cobrar'.",
+                   "The table option pastes each value into its own column. You can also mark expenses one by one with their 'To bill' tag.")}
               </div>
             </div>
           </div>
