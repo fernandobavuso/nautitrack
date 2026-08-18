@@ -26,6 +26,8 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
 
   const allowed = hasFeature(vessel, "costs") || accountHasFleet(vessels);
   const isFleetManager = accountHasFleet(vessels);
+  const [showReimb, setShowReimb] = useState(false);
+  const [copied, setCopied]       = useState("");
 
   useEffect(() => { if (allowed) loadExpenses(); }, []);
 
@@ -167,6 +169,10 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
               <div style={{fontSize:12,color:"#92400e",marginTop:2}}>{pend.length} {pend.length===1?L("gasto que adelantaste","expense you advanced"):L("gastos que adelantaste","expenses you advanced")}</div>
             </div>
             <div style={{fontSize:24,fontWeight:800,color:"#b45309"}}>${total.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+            <button onClick={()=>setShowReimb(true)}
+              style={{padding:"8px 14px",background:"#b45309",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {L("Ver resumen","View summary")}
+            </button>
           </div>
         );
       })()}
@@ -204,6 +210,89 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
           </div>
         ))}
       </div>
+
+      {/* Resumen de reembolsos para copiar a QuickBooks */}
+      {showReimb && (() => {
+        const pend  = expenses.filter(e=>e.reimbursable && !e.reimbursed)
+                              .sort((a,b)=>String(a.expense_date).localeCompare(String(b.expense_date)));
+        const total = pend.reduce((a,e)=>a+Number(e.amount||0),0);
+        const money = (n)=>Number(n).toFixed(2);
+        const fdate = (d)=>new Date(d+"T00:00:00").toLocaleDateString("en-US");
+
+        // Texto plano, una línea por gasto
+        const plain = [
+          `${L("Reembolso","Reimbursement")} — ${vessel.name}`,
+          `${L("Generado","Generated")}: ${new Date().toLocaleDateString("en-US")}`,
+          "",
+          ...pend.map(e=>`${fdate(e.expense_date)}  ${e.category}  ${e.description||L("Sin descripción","No description")}  $${money(e.amount)}`),
+          "",
+          `${L("TOTAL","TOTAL")}: $${money(total)}`,
+        ].join("\n");
+
+        // Formato tabla (pegar en Excel/QuickBooks: columnas separadas por tabulador)
+        const tsv = [
+          ["Date","Category","Description","Amount"].join("\t"),
+          ...pend.map(e=>[fdate(e.expense_date), e.category, (e.description||"").replace(/\t/g," "), money(e.amount)].join("\t")),
+        ].join("\n");
+
+        const copy = (text, which) => {
+          navigator.clipboard?.writeText(text)
+            .then(()=>{ setCopied(which); setTimeout(()=>setCopied(""),2000); })
+            .catch(()=>{ setCopied("err"); setTimeout(()=>setCopied(""),2500); });
+        };
+
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:12,overflowY:"auto"}} onClick={()=>setShowReimb(false)}>
+            <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:620,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Resumen de reembolso","Reimbursement summary")}</div>
+                  <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{vessel.name} · {pend.length} {L("gastos","expenses")} · <strong style={{color:"#b45309"}}>${money(total)}</strong></div>
+                </div>
+                <button onClick={()=>setShowReimb(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+              </div>
+
+              <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden",marginBottom:12}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr style={{background:"#f8fafc"}}>
+                    {[L("Fecha","Date"),L("Categoría","Category"),L("Descripción","Description"),L("Monto","Amount")].map(h=>(
+                      <th key={h} style={{textAlign:h===L("Monto","Amount")?"right":"left",padding:"8px 10px",color:"#64748b",fontWeight:700,borderBottom:"1px solid #e2e8f0"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {pend.map(e=>(
+                      <tr key={e.id}>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9",whiteSpace:"nowrap"}}>{fdate(e.expense_date)}</td>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9"}}>{e.category}</td>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9",color:"#475569"}}>{e.description||"—"}</td>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9",textAlign:"right",fontWeight:700,whiteSpace:"nowrap"}}>${money(e.amount)}</td>
+                      </tr>
+                    ))}
+                    <tr style={{background:"#fffbeb"}}>
+                      <td colSpan={3} style={{padding:"9px 10px",fontWeight:800,color:"#92400e"}}>{L("TOTAL","TOTAL")}</td>
+                      <td style={{padding:"9px 10px",textAlign:"right",fontWeight:800,color:"#b45309",whiteSpace:"nowrap"}}>${money(total)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>copy(tsv,"tsv")} style={{flex:1,minWidth:180,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {copied==="tsv" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como tabla (Excel/QuickBooks)","Copy as table (Excel/QuickBooks)")}
+                </button>
+                <button onClick={()=>copy(plain,"plain")} style={{flex:1,minWidth:150,padding:"11px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#334155",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {copied==="plain" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como texto","Copy as text")}
+                </button>
+              </div>
+              {copied==="err" && <div style={{fontSize:11,color:"#dc2626",marginTop:8}}>{L("No se pudo copiar. Selecciona la tabla y copia a mano.","Couldn't copy. Select the table and copy manually.")}</div>}
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
+                {L("La opción de tabla pega cada dato en su columna. Para marcar estos gastos como cobrados, usa la etiqueta 'Por cobrar' de cada uno.",
+                   "The table option pastes each value into its own column. To mark these as reimbursed, use each expense's 'To bill' tag.")}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal registrar gasto */}
       {creating&&(
