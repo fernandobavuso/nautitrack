@@ -28,7 +28,7 @@ import PlansModal from "./PlansModal";
 import StoreView from "./StoreView";
 import AdminPanel, { isAdmin } from "./AdminPanel";
 import { countUnread } from "./notifications";
-import { getPlan, isExpiringSoon, daysLeft, FounderBanner, PLANS } from "./plans.jsx";
+import { getPlan, isExpiringSoon, daysLeft, FounderBanner, PLANS, accountHasFleet } from "./plans.jsx";
 import { useResponsive } from "./useResponsive";
 
 
@@ -534,7 +534,7 @@ export default function App() {
           : entry.type==="Reparación" ? "Reparación" : "Otro";
         const baseDesc = entry.item || entry.equipment || entry.desc || entry.type;
         const desc = entry.performedBy ? `${baseDesc} · por ${entry.performedBy}` : baseDesc;
-        if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log" }).then(()=>{});
+        if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log", reimbursable: !!entry.reimbursable, reimbursed:false }).then(()=>{});
       }
       setVessels(vs => vs.map(v => {
         if (v.id !== vesselId) return v;
@@ -1112,7 +1112,7 @@ export default function App() {
         {page==="providers" && <ProvidersModal vessel={vessel} vessels={vessels} updateProviders={updateProviders} asPage />}
         {page==="admin" && isAdmin(user) && <AdminPanel user={user} asPage />}
         {page==="calendar" && <CalendarPage vessel={vessel} vessels={vessels} isMobile={isMobile} />}
-        {page==="log"     && <LogPage     vessel={vessel} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} updateLogEntry={(id,e)=>updateLogEntry(vessel.id,id,e)} deleteLogEntry={(id)=>deleteLogEntry(vessel.id,id)} />}
+        {page==="log"     && <LogPage     vessel={vessel} vessels={vessels} updateVessel={updateVessel} addLogEntry={(e)=>addLogEntry(vessel.id,user.id,e)} updateLogEntry={(id,e)=>updateLogEntry(vessel.id,id,e)} deleteLogEntry={(id)=>deleteLogEntry(vessel.id,id)} />}
         {page==="records" && <RecordsPage vessel={vessel} />}
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
         {page==="costs"   && <CostsPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
@@ -2117,7 +2117,7 @@ function LongCell({ text, limit = 90 }) {
   );
 }
 
-function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogEntry }) {
+function LogPage({ vessel, vessels, updateVessel, addLogEntry, updateLogEntry, deleteLogEntry }) {
   const { t: tr, lang } = useLang();
   const [showModal, setShowModal]       = useState(false);
   const [editEntry, setEditEntry]       = useState(null);
@@ -2266,13 +2266,14 @@ function LogPage({ vessel, updateVessel, addLogEntry, updateLogEntry, deleteLogE
           </tbody>
         </table>
       </div>
-      {showModal&&<LogEntryModal vessel={vessel} initial={editEntry} onSave={saveEntry} onClose={()=>{setShowModal(false);setEditEntry(null);}}/>}
+      {showModal&&<LogEntryModal vessel={vessel} vessels={vessels} initial={editEntry} onSave={saveEntry} onClose={()=>{setShowModal(false);setEditEntry(null);}}/>}
     </div>
   );
 }
 
 // KEY FIX: LogEntryModal — all state at top, no nested component definitions
-function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
+function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }) {
+  const isFleetAccount = accountHasFleet(vessels);
   const { lang } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
@@ -2302,6 +2303,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
   const [photos,setPhotos]           = useState(initial?.photos||[]);
   const [errors,setErrors]           = useState({});
   const [showErrBanner,setShowErrBanner] = useState(false);
+  const [reimbursable,setReimbursable]   = useState(initial?.reimbursable||false);
   const [showInfo,setShowInfo]       = useState(false);
   const [serviceType,setServiceType] = useState(initial?.serviceType||"");
   const [systemId,setSystemId]       = useState(initial?.systemId||"");
@@ -2389,7 +2391,7 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
     if (type==="Salida")      entry={...entry,ownerAboard,ownerName:ownerAboard?ownerName.trim():"",crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
-    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment};
+    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment,reimbursable};
     // Visita: guardar el subtipo (qué clase de visita fue)
     if (type==="Visita") {
       const sup = supervised === "Otro" ? (otherSupervised.trim() || "Otro") : supervised;
@@ -2750,6 +2752,12 @@ function LogEntryModal({ vessel: vesselProp, initial, onSave, onClose }) {
             <div><label style={s.label}>Número de Parte</label><input value={partNum} onChange={e=>setPartNum(e.target.value)} placeholder="Ej: FF5052-A" style={s.input}/></div>
             <div><label style={s.label}>Costo (USD)</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+            {isFleetAccount && (
+              <label style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"9px 11px",cursor:"pointer"}}>
+                <input type="checkbox" checked={reimbursable} onChange={e=>setReimbursable(e.target.checked)} style={{width:15,height:15}}/>
+                <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>{lang==="es"?"Lo pagué yo — cobrar al dueño":"I paid it — bill the owner"}</span>
+              </label>
+            )}
             <div><label style={s.label}>¿Quién hizo la compra?</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option><option value="Dueño">Dueño</option><option value="Capitán">Capitán</option>{crewOptions.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
             <div><label style={s.label}>Notas adicionales</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#0369a1",display:"flex",gap:8,alignItems:"flex-start"}}>

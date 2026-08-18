@@ -16,7 +16,7 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
   const [saving, setSaving] = useState(false);
 
   // Formulario compra operacional (va a bitácora)
-  const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"" });
+  const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false });
   // Formulario gasto administrativo (va directo a costos)
   const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false, reimbursable:false });
 
@@ -29,6 +29,7 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
       costUSD: op.currency==="USD"?Number(op.amount):null,
       costBs: op.currency==="VES"?Number(op.amount):null,
       payment: op.payment, date: op.date, performedBy: op.by || null, photos:[],
+      reimbursable: isFleetManager ? op.reimbursable : false,
     };
     try { await onLogPurchase(entry); onClose(); }
     catch(e){ setMsg("Error: "+e.message); setSaving(false); }
@@ -86,6 +87,12 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
               <div style={{flex:1}}><label style={lbl}>{L("Pago","Payment")}</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
             </div>
             <div><label style={lbl}>{L("Fecha","Date")}</label><input type="date" value={op.date} onChange={e=>setOp({...op,date:e.target.value})} style={inp}/></div>
+            {isFleetManager && (
+              <label style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 10px",margin:"8px 0",cursor:"pointer"}}>
+                <input type="checkbox" checked={op.reimbursable} onChange={e=>setOp({...op,reimbursable:e.target.checked})}/>
+                <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>{L("Lo pagué yo — cobrar al dueño","I paid it — bill the owner")}</span>
+              </label>
+            )}
             {msg && <div style={{fontSize:12,color:"#dc2626",marginBottom:10}}>{msg}</div>}
             <button onClick={saveOperational} disabled={saving} style={{...primary,width:"100%",opacity:saving?.6:1}}>{saving?"Guardando...":"Registrar compra"}</button>
           </>
