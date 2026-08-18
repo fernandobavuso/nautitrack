@@ -651,6 +651,46 @@ export default function App() {
     setVessels(vs => vs.map(v => ids.includes(v.id) ? { ...v, providers: list } : v));
   }, []);
 
+  // Aplica al barco los datos "vivos" de una entrada de bitácora (nivel de
+  // combustible y horas de motor/generador). Se usa tanto al crear como al EDITAR,
+  // porque completar el regreso de una salida es una edición.
+  const applyEntryReadings = useCallback(async (vesselId, entry) => {
+    const { data: cur } = await supabase.from("vessels").select("fuel, fuel_unit, engine_hours, gen_hours, details").eq("id", vesselId).single();
+    if (!cur) return;
+    const patch = {}; let touched = false;
+
+    const fq = Number(entry.fuelQty), fIn = Number(entry.fuelIn);
+    let newFuel = null;
+    if (entry.type === "Combustible" && entry.fuelQty !== "" && entry.fuelQty != null && !isNaN(fq)) newFuel = fq;
+    else if (entry.type === "Salida" && entry.fuelIn !== "" && entry.fuelIn != null && !isNaN(fIn)) newFuel = fIn;
+    if (newFuel !== null) { patch.fuel = newFuel; patch.fuel_unit = entry.fuelUnit || cur.fuel_unit; touched = true; }
+
+    const engReading = maxHrs(entry.engineHrsIn) ?? maxHrs(entry.engineHrsOut);
+    const genReading = maxHrs(entry.genHrsIn)    ?? maxHrs(entry.genHrsOut);
+    if (engReading != null) { patch.engine_hours = engReading; touched = true; }
+    if (genReading != null) { patch.gen_hours    = genReading; touched = true; }
+
+    const engObj = (entry.engineHrsIn && typeof entry.engineHrsIn === "object") ? entry.engineHrsIn
+                 : (entry.engineHrsOut && typeof entry.engineHrsOut === "object") ? entry.engineHrsOut : null;
+    if (engObj) {
+      const mh = { ...((cur.details || {}).motor_hours || {}) };
+      Object.entries(engObj).forEach(([m, h]) => { const n = Number(h); if (!isNaN(n)) mh[m] = n; });
+      patch.details = { ...(cur.details || {}), motor_hours: mh };
+      touched = true;
+    }
+    if (!touched) return;
+
+    const { error } = await supabase.from("vessels").update(patch).eq("id", vesselId);
+    if (error) { console.error("[Carive] no se pudieron aplicar las lecturas:", error.message); return; }
+    setVessels(vs => vs.map(v => v.id === vesselId ? {
+      ...v,
+      ...(patch.fuel !== undefined ? { fuel: patch.fuel, fuelUnit: patch.fuel_unit } : {}),
+      ...(patch.engine_hours !== undefined ? { engineHours: patch.engine_hours } : {}),
+      ...(patch.gen_hours !== undefined ? { genHours: patch.gen_hours } : {}),
+      ...(patch.details ? { details: patch.details, motorHours: patch.details.motor_hours } : {}),
+    } : v));
+  }, []);
+
   const updateLogEntry = useCallback(async (vesselId, entryId, entry) => {
     const { data, error } = await supabase.from("log_entries").update({
       date: entry.date, type: entry.type,
@@ -675,11 +715,12 @@ export default function App() {
       return false;
     }
     console.log("[Carive] entrada actualizada:", data[0]);
+    applyEntryReadings(vesselId, entry);   // completar el regreso debe reflejarse en el panel
     setVessels(vs => vs.map(v => v.id === vesselId
       ? { ...v, log: (v.log || []).map(e => String(e.id) === String(entryId) ? { ...entry, id: entryId } : e) }
       : v));
     return true;
-  }, []);
+  }, [applyEntryReadings]);
 
   const deleteLogEntry = useCallback(async (vesselId, entryId) => {
     const { error: delErr } = await supabase.from("log_entries").delete().eq("id", entryId);
