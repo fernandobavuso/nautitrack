@@ -1491,9 +1491,14 @@ function AlertsCard({ vessel, setPage }) {
 
 function IndicatorsCard({ vessel }) {
   const { t: tr, lang } = useLang();
-  const fuelVal = Number(vessel.fuel)||0;
-  const tankCap = (vessel.details?.fuelTanks||[]).reduce((a,t)=>a+(Number(t.capacity)||0),0);
-  const fuelPct = tankCap>0 ? Math.min(100,(fuelVal/tankCap)*100) : null;
+  const fuelVal  = Number(vessel.fuel)||0;
+  const fuelUnit = vessel.fuelUnit || "gal";
+  const tankCap  = (vessel.details?.fuelTanks||[]).reduce((a,t)=>a+(Number(t.capacity)||0),0);
+  // Si la unidad es %, el valor YA es el porcentaje: no se divide entre la capacidad
+  const isPctUnit = fuelUnit === "%";
+  const fuelPct = isPctUnit
+    ? Math.min(100, fuelVal)
+    : (tankCap>0 ? Math.min(100,(fuelVal/tankCap)*100) : null);
   const fc = fuelPct!=null
     ? (fuelPct>50?"#16a34a":fuelPct>25?"#d97706":"#dc2626")
     : "#0ea5e9";
@@ -1508,7 +1513,10 @@ function IndicatorsCard({ vessel }) {
       <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {[
-          {Icon:IconFuel,val:tankCap>0?`${fuelVal}/${tankCap} ${vessel.fuelUnit||"gal"}`:`${fuelVal} ${vessel.fuelUnit||"gal"}`,lbl:fuelPct!=null?`${tr("dash.fuel")} · ${Math.round(fuelPct)}%`:tr("dash.fuel"),color:fc,bar:fuelPct!=null},
+          {Icon:IconFuel,
+            val: isPctUnit ? `${fuelVal}%` : (tankCap>0 ? `${fuelVal}/${tankCap} ${fuelUnit}` : `${fuelVal} ${fuelUnit}`),
+            lbl: (!isPctUnit && fuelPct!=null) ? `${tr("dash.fuel")} · ${Math.round(fuelPct)}%` : tr("dash.fuel"),
+            color:fc, bar:fuelPct!=null},
           {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false},
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?tr("dash.nextService"):tr("dash.noServices"),color:nextService?"#dc2626":"#94a3b8",bar:false},
