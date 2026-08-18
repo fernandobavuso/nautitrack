@@ -25,6 +25,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
   });
 
   const allowed = hasFeature(vessel, "costs") || accountHasFleet(vessels);
+  const isFleetManager = accountHasFleet(vessels);
 
   useEffect(() => { if (allowed) loadExpenses(); }, []);
 
@@ -42,11 +43,13 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       category:form.category, description:form.description,
       amount:parseFloat(form.amount), currency:form.currency,
       expense_date:form.expense_date, recurring:form.recurring, source:"manual",
+      reimbursable: isFleetManager ? form.reimbursable : false,
+      reimbursed: false,
     });
     if (error) { setMsg("Error: "+error.message); }
     else {
       setMsg("Gasto registrado");
-      setForm({category:"Combustible",description:"",amount:"",currency:"USD",expense_date:new Date().toISOString().slice(0,10),recurring:false});
+      setForm({category:"Combustible",description:"",amount:"",currency:"USD",expense_date:new Date().toISOString().slice(0,10),recurring:false,reimbursable:false});
       setCreating(false); loadExpenses();
     }
     setTimeout(()=>setMsg(""),3000);
@@ -153,6 +156,21 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       )}
 
       {/* Lista de gastos */}
+      {isFleetManager && (() => {
+        const pend = expenses.filter(e=>e.reimbursable && !e.reimbursed);
+        const total = pend.reduce((a,e)=>a+Number(e.amount||0),0);
+        if (!pend.length) return null;
+        return (
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"13px 15px",marginBottom:14,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:170}}>
+              <div style={{fontSize:11,color:"#a16207",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{L("Pendiente de reembolso","Pending reimbursement")}</div>
+              <div style={{fontSize:12,color:"#92400e",marginTop:2}}>{pend.length} {pend.length===1?L("gasto que adelantaste","expense you advanced"):L("gastos que adelantaste","expenses you advanced")}</div>
+            </div>
+            <div style={{fontSize:24,fontWeight:800,color:"#b45309"}}>${total.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+          </div>
+        );
+      })()}
+
       <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:10}}>{L("Movimientos","Transactions")}</div>
       {loading&&<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>{L("Cargando...","Loading...")}</div>}
       {!loading&&filtered.length===0&&(
@@ -169,8 +187,18 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
               <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span title="Este gasto viene de una compra registrada en la Bitácora. No se anota dos veces." style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle",cursor:"help"}}>desde bitácora</span>:""}</div>
               <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("en-US")}</div>
             </div>
-            <div style={{fontSize:14,fontWeight:800,color:"#0f172a",whiteSpace:"nowrap"}}>
-              $ {Number(e.amount).toLocaleString("en-US",{maximumFractionDigits:2})}
+            <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
+              <div style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>
+                $ {Number(e.amount).toLocaleString("en-US",{maximumFractionDigits:2})}
+              </div>
+              {isFleetManager && e.reimbursable && (
+                <button onClick={()=>toggleReimbursed(e)}
+                  title={e.reimbursed ? L("Marcar como pendiente","Mark as pending") : L("Marcar como cobrado","Mark as reimbursed")}
+                  style={{marginTop:3,padding:"2px 8px",borderRadius:20,border:"1px solid",cursor:"pointer",fontSize:10,fontWeight:700,
+                    background:e.reimbursed?"#f0fdf4":"#fffbeb",borderColor:e.reimbursed?"#bbf7d0":"#fde68a",color:e.reimbursed?"#15803d":"#92400e"}}>
+                  {e.reimbursed ? `✓ ${L("Cobrado","Reimbursed")}` : L("Por cobrar","To bill")}
+                </button>
+              )}
             </div>
             <button onClick={()=>del(e.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#cbd5e1",fontSize:16}}>×</button>
           </div>
@@ -200,10 +228,20 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
               <label style={lbl}>{L("Fecha","Date")}</label>
               <input type="date" value={form.expense_date} onChange={e=>setForm({...form,expense_date:e.target.value})} style={inp}/>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
               <input type="checkbox" id="recurring" checked={form.recurring} onChange={e=>setForm({...form,recurring:e.target.checked})} style={{width:15,height:15}}/>
               <label htmlFor="recurring" style={{fontSize:12,color:"#475569",cursor:"pointer"}}>{L("Es un gasto fijo mensual (sueldo, marina, seguro)","It's a fixed monthly expense (payroll, marina, insurance)")}</label>
             </div>
+
+            {isFleetManager && (
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"9px 11px"}}>
+              <input type="checkbox" id="reimbursable" checked={form.reimbursable} onChange={e=>setForm({...form,reimbursable:e.target.checked})} style={{width:15,height:15}}/>
+              <label htmlFor="reimbursable" style={{fontSize:12,color:"#92400e",cursor:"pointer",flex:1}}>
+                <strong>{L("Lo pagué yo — cobrar al dueño","I paid it — bill the owner")}</strong>
+                <div style={{fontSize:11,color:"#a16207",marginTop:2}}>{L("Aparecerá como pendiente de reembolso","It will show as pending reimbursement")}</div>
+              </label>
+            </div>
+            )}
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setCreating(false)} style={{flex:1,padding:"11px",background:"#f1f5f9",border:"none",borderRadius:8,color:"#475569",fontSize:13,fontWeight:600,cursor:"pointer"}}>{L("Cancelar","Cancel")}</button>
               <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:8,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{L("Guardar gasto","Save expense")}</button>

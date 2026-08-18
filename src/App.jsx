@@ -1130,7 +1130,7 @@ export default function App() {
       {showFleetManagers && <FleetManagers user={user} onClose={()=>setShowFleetManagers(false)} />}
       {showFleetCrew && <FleetCrew user={user} onClose={()=>setShowFleetCrew(false)} />}
       {showSchedule && <Schedule user={user} vessels={vessels} onClose={()=>setShowSchedule(false)} />}
-      {showExpenseRouter && <ExpenseRouter vessel={vessel} user={user} onClose={()=>setShowExpenseRouter(false)} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}
+      {showExpenseRouter && <ExpenseRouter vessel={vessel} vessels={vessels} user={user} onClose={()=>setShowExpenseRouter(false)} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}
       {showAdmin && <AdminPanel user={user} onClose={()=>setShowAdmin(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>

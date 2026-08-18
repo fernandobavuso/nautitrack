@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { accountHasFleet } from "./plans.jsx";
 
 // Modal "Registrar gasto": hace UNA pregunta simple (¿compra del día o gasto fijo?)
 // y enruta al lugar correcto. El usuario no tiene que saber la teoría de
 // Bitácora vs Costos — solo responde qué tipo de gasto es.
-export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, onDirectExpense }) {
+export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPurchase, onDirectExpense }) {
   const { lang } = useLang();
   const L = (es, en) => (lang === "en" ? en : es);
+  const isFleetManager = accountHasFleet(vessels);
   const { t } = useLang();
   const [step, setStep] = useState("choose"); // choose | operational | admin
   const [msg, setMsg] = useState("");
@@ -16,7 +18,7 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
   // Formulario compra operacional (va a bitácora)
   const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"" });
   // Formulario gasto administrativo (va directo a costos)
-  const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false });
+  const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false, reimbursable:false });
 
   const saveOperational = async () => {
     if (!op.item.trim() || !op.amount) { setMsg("Completa qué compraste y el monto"); return; }
@@ -40,6 +42,7 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
       category: adm.category, description: adm.description,
       amount: Number(adm.amount), currency: adm.currency,
       expense_date: adm.date, recurring: adm.recurring, source:"direct",
+      reimbursable: isFleetManager ? adm.reimbursable : false, reimbursed: false,
     });
     if (error) { setMsg("Error: "+error.message); setSaving(false); return; }
     onDirectExpense && onDirectExpense();
@@ -103,6 +106,12 @@ export default function ExpenseRouter({ vessel, user, onClose, onLogPurchase, on
               <input type="checkbox" checked={adm.recurring} onChange={e=>setAdm({...adm,recurring:e.target.checked})}/>
               Es un gasto fijo mensual (se repite)
             </label>
+            {isFleetManager && (
+              <label style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 10px",marginTop:8,cursor:"pointer"}}>
+                <input type="checkbox" checked={adm.reimbursable} onChange={e=>setAdm({...adm,reimbursable:e.target.checked})}/>
+                <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>{L("Lo pagué yo — cobrar al dueño","I paid it — bill the owner")}</span>
+              </label>
+            )}
             {msg && <div style={{fontSize:12,color:"#dc2626",margin:"10px 0"}}>{msg}</div>}
             <button onClick={saveAdmin} disabled={saving} style={{...primary,width:"100%",opacity:saving?.6:1,marginTop:10}}>{saving?"Guardando...":"Registrar gasto"}</button>
           </>
