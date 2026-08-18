@@ -1968,7 +1968,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
   };
 
   return (
-    <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalOverlay}>
       <div style={{...s.modalBox,maxWidth:580}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>{initial ? "Editar Tarea" : tr("tasks.new")}</div>
@@ -2391,6 +2391,21 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
     setErrors(e); return Object.keys(e).length===0;
   };
 
+  // Cierre protegido: un formulario largo NUNCA se cierra por un clic fuera, y la
+  // ✕/Cancelar preguntan antes si hay trabajo escrito (evita perder un resumen por
+  // un roce accidental fuera del cuadro).
+  const hasWork = () => (
+    desc.trim() !== (initial?.desc||"").trim() ||
+    photos.length !== (initial?.photos||[]).length ||
+    (!initial && (equipList2.length>0 || item || dest || fuelQty || costUSD))
+  );
+  const safeClose = () => {
+    if (hasWork() && !confirm(lang==="es"
+        ? "Tienes cambios sin guardar. ¿Cerrar y perderlos?"
+        : "You have unsaved changes. Close and lose them?")) return;
+    onClose();
+  };
+
   const handleSave = () => {
     if (!validate()) { setShowErrBanner(true); return; }
     setShowErrBanner(false);
@@ -2419,11 +2434,11 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
   };
 
   return (
-    <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalOverlay}>
       <div style={{...s.modalBox,maxWidth:580}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>📓 {lang==="es"?(initial?"Editar Entrada":"Nueva Entrada"):(initial?"Edit Entry":"New Entry")}</div>
-          <button onClick={onClose} style={s.modalClose}>✕</button>
+          <button onClick={safeClose} style={s.modalClose}>✕</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"20px 24px",display:"flex",flexDirection:"column",gap:14}}>
           {showErrBanner && Object.keys(errors).length>0 && (
@@ -2779,7 +2794,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
 
         </div>
         <div style={s.modalFooter}>
-          <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cancelar":"Cancel"}</button>
+          <button style={s.btnOutline} onClick={safeClose}>{lang==="es"?"Cancelar":"Cancel"}</button>
           <button style={s.btnPrimary} onClick={handleSave}>{lang==="es"?(initial?"Guardar Cambios":"Guardar Entrada"):(initial?"Save Changes":"Save Entry")}</button>
         </div>
       </div>
@@ -3317,7 +3332,7 @@ function ReportModal({ vessel, onClose }) {
   };
 
   return (
-    <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalOverlay}>
       <div style={{...s.modalBox,maxWidth:620}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div>
@@ -4091,7 +4106,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
     pdfReports:"Reportes PDF", multiFleet:"Gestión de flota",
   };
   return (
-    <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalOverlay}>
       <div style={{...s.modalBox,maxWidth:560}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}><div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>👤 Mi Cuenta</div><button onClick={onClose} style={s.modalClose}>✕</button></div>
         <div style={{display:"flex",borderBottom:"1px solid #e2e8f0",padding:"0 24px"}}>
@@ -4340,7 +4355,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
 
 
   return (
-    <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalOverlay}>
       <div style={{...s.modalBox,maxWidth:640}} onClick={e=>e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div>
@@ -4661,7 +4676,7 @@ function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
 
   if (asPage) return <div style={{maxWidth:900,margin:"0 auto"}}>{inner}</div>;
   return (
-    <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalOverlay}>
       <div style={{...s.modalBox,maxWidth:720}} onClick={e=>e.stopPropagation()}>
         {inner}
       </div>

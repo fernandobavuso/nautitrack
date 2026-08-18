@@ -327,7 +327,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
 
       {/* Modal registrar gasto */}
       {creating&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={()=>setCreating(false)}>
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}}>
           <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:16}}>{L("Registrar gasto","Record expense")}</div>
             <div style={{marginBottom:10}}>

@@ -591,7 +591,7 @@ function RequestPartModal({ vessel, user, item, onClose, onDone, role="owner", c
   };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:16}}>
       <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:420,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>{L("Pedir repuesto","Request part")}</div>
         <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{L("Tu solicitud llegará a las tiendas de esta categoría en tu zona","Your request will reach stores in this category in your area")}</div>

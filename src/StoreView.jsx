@@ -749,7 +749,7 @@ function RespondModal({ request, store, user, onClose, onDone }) {
   };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:12,overflowY:"auto"}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:12,overflowY:"auto"}}>
       <div style={{background:"#fff",borderRadius:16,padding:22,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:4}}>{lang==="es"?"Responder solicitud":"Respond to request"}</div>
         <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{request.item_name}</div>
