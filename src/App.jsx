@@ -446,6 +446,7 @@ export default function App() {
       performedBy: e.performed_by, fuelQty: e.fuel_qty, fuelUnit: e.fuel_unit,
       equipHours: e.equip_hours, photos: e.photos || [],
       brand: e.brand, model2: e.model2, partNum: e.part_num,
+      reimbursable: !!e.reimbursable,
       costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
       item: e.item, dest: e.dest, persons: e.persons,
       ownerAboard: e.owner_aboard, ownerName: e.owner_name || "", crewSel: e.crew_sel || [],
@@ -508,6 +509,7 @@ export default function App() {
       fuel_unit: entry.fuelUnit, equip_hours: num(entry.equipHours),
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
+      reimbursable: !!entry.reimbursable,
       cost_usd: num(entry.costUSD), cost_bs: num(entry.costBs), payment: entry.payment,
       item: entry.item, dest: entry.dest, persons: num(entry.persons),
       owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
@@ -700,6 +702,7 @@ export default function App() {
       fuel_unit: entry.fuelUnit, equip_hours: num(entry.equipHours),
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
+      reimbursable: !!entry.reimbursable,
       cost_usd: num(entry.costUSD), payment: entry.payment,
       item: entry.item, dest: entry.dest, persons: num(entry.persons),
       owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
@@ -2243,7 +2246,14 @@ function LogPage({ vessel, vessels, updateVessel, addLogEntry, updateLogEntry, d
                         )}
                       </>
                     : e.type==="Compra"
-                      ? `${e.item||""} · $${e.costUSD||0}`
+                      ? <>
+                          {`${e.item||""} · $${e.costUSD||0}`}
+                          {e.reimbursable && (
+                            <span style={{marginLeft:6,fontSize:10,fontWeight:700,background:"#fffbeb",border:"1px solid #fde68a",color:"#92400e",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap"}}>
+                              {lang==="es"?"por cobrar":"to bill"}
+                            </span>
+                          )}
+                        </>
                       : <LongCell text={e.desc||""} limit={110}/>}
                 </td>
                 <td style={s.td}>{(e.photos||[]).length>0?(
