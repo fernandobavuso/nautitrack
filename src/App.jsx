@@ -1171,6 +1171,11 @@ const NAV_GROUPS = [
 
 function NavGroups({ page, setPage, showFleet, showCompany, isAdminUser }) {
   const [open, setOpen] = useState(null);
+  // El menú no se cierra de inmediato al salir el mouse: da 250ms de gracia para
+  // cruzar del botón al desplegable sin que desaparezca en el camino.
+  const closeTimer = useRef(null);
+  const openNow = (key) => { if (closeTimer.current) clearTimeout(closeTimer.current); setOpen(key); };
+  const closeSoon = () => { if (closeTimer.current) clearTimeout(closeTimer.current); closeTimer.current = setTimeout(()=>setOpen(null), 250); };
   const { t } = useLang();
   const L = {
     home:t("nav.home"), fleet:t("nav.fleet"), op:t("nav.operation"), tasks:t("nav.tasks"),
@@ -1185,7 +1190,7 @@ function NavGroups({ page, setPage, showFleet, showCompany, isAdminUser }) {
   })), ...adminGroup];
 
   return (
-    <div style={{display:"flex",alignItems:"center",gap:4}} onMouseLeave={()=>setOpen(null)}>
+    <div style={{display:"flex",alignItems:"center",gap:4}} onMouseLeave={closeSoon}>
       {groups.map(g => {
         if (g.single) {
           const active = page === g.key;
@@ -1195,18 +1200,20 @@ function NavGroups({ page, setPage, showFleet, showCompany, isAdminUser }) {
         }
         const groupActive = g.items.some(it => it.key === page);
         return (
-          <div key={g.key} style={{position:"relative"}} onMouseEnter={()=>setOpen(g.key)}>
+          <div key={g.key} style={{position:"relative"}} onMouseEnter={()=>openNow(g.key)}>
             <button onClick={()=>setOpen(open===g.key?null:g.key)} style={{...s.navLink,display:"flex",alignItems:"center",gap:4,color:groupActive?"#0ea5e9":"#64748b",borderBottom:groupActive?"2px solid #0ea5e9":"2px solid transparent",fontWeight:groupActive?600:400}}>
               {g.label}<span style={{fontSize:9,color:"#94a3b8"}}>▾</span>
             </button>
             {open===g.key && (
-              <div style={{position:"absolute",top:"100%",left:0,marginTop:4,background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 10px 30px rgba(10,37,64,0.12)",minWidth:150,padding:4,zIndex:40}}>
+              <div style={{position:"absolute",top:"100%",left:0,paddingTop:6,zIndex:40}} onMouseEnter={()=>openNow(g.key)}>
+              <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,boxShadow:"0 10px 30px rgba(10,37,64,0.12)",minWidth:150,padding:4}}>
                 {g.items.map(it => {
                   const active = page === it.key;
                   return (
                     <button key={it.key} onClick={()=>{setPage(it.key);setOpen(null);}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 12px",border:"none",borderRadius:7,cursor:"pointer",background:active?"#eff6ff":"transparent",color:active?"#0ea5e9":"#1e293b",fontWeight:active?700:500,fontSize:13}}>{it.label}</button>
                   );
                 })}
+              </div>
               </div>
             )}
           </div>
