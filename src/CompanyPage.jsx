@@ -19,7 +19,6 @@ export default function CompanyPage({ user, vessels }) {
   const { lang } = useLang();
   const L = (es,en)=>lang==="en"?en:es;
   const [rows, setRows]       = useState([]);
-  const [vesselExp, setVesselExp] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving]   = useState(false);
@@ -38,10 +37,6 @@ export default function CompanyPage({ user, vessels }) {
       .select("*").eq("owner_id", user.id).order("expense_date",{ascending:false});
     if (error) { setMsg(L("No se pudieron cargar los gastos: ","Couldn't load expenses: ")+error.message); }
     setRows(data||[]);
-    // Gastos por barco del mes visible (para el comparativo)
-    const { data: ve } = await supabase.from("expenses")
-      .select("vessel_id, amount, expense_date").eq("owner_id", user.id);
-    setVesselExp(ve||[]);
     setLoading(false);
   };
   useEffect(()=>{ load(); /* eslint-disable-next-line */ },[user?.id]);
@@ -68,12 +63,8 @@ export default function CompanyPage({ user, vessels }) {
     });
     const payees = Object.entries(byPayee).sort((a,b)=>b[1].total-a[1].total);
 
-    const byVessel = {};
-    vesselExp.filter(e=>monthKey(e.expense_date)===month).forEach(e=>{
-      byVessel[e.vessel_id]=(byVessel[e.vessel_id]||0)+Number(e.amount||0);
-    });
-    return { inMonth, total, thirdParty, delta, cats, payees, byVessel };
-  },[rows, vesselExp, month]);
+    return { inMonth, total, thirdParty, delta, cats, payees };
+  },[rows, month]);
 
   // Sugerencias de beneficiario: proveedores de la flota + ya usados
   const payeeSuggestions = useMemo(()=>{
@@ -197,23 +188,6 @@ export default function CompanyPage({ user, vessels }) {
         </div>
       )}
 
-      {/* Costo por barco + empresa */}
-      <div style={{marginBottom:18}}>
-        <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>{L("Costo del mes por barco + empresa","Month cost per vessel + company")}</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {(vessels||[]).map(v=>(
-            <div key={v.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"8px 11px",background:"#f8fafc",borderRadius:8}}>
-              <span style={{color:"#0f172a"}}>{v.name}</span>
-              <span style={{color:"#64748b",fontWeight:600}}>{money(calc.byVessel[v.id]||0)}</span>
-            </div>
-          ))}
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"8px 11px",border:"1.5px solid #bfdbfe",borderRadius:8}}>
-            <span style={{color:"#1e40af",fontWeight:700}}>{L("Empresa (no asignado a barcos)","Company (not tied to vessels)")}</span>
-            <span style={{color:"#1e40af",fontWeight:700}}>{money(calc.total)}</span>
-          </div>
-        </div>
-      </div>
-
       {/* Movimientos del mes */}
       <div>
         <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>{L("Movimientos","Transactions")} · {calc.inMonth.length}</div>
@@ -229,6 +203,7 @@ export default function CompanyPage({ user, vessels }) {
                     <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>
                       {r.category}
                       {r.recurring && <span style={{marginLeft:6,fontSize:10,background:"#f1f5f9",color:"#64748b",borderRadius:20,padding:"2px 7px"}}>{L("fijo","fixed")}</span>}
+                      {r.shift_id && <span style={{marginLeft:6,fontSize:10,background:"#eff6ff",color:"#1e40af",borderRadius:20,padding:"2px 7px"}}>{L("agenda","schedule")}</span>}
                     </div>
                     <div style={{fontSize:11,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {[r.payee, r.description, new Date(r.expense_date+"T00:00:00").toLocaleDateString("en-US")].filter(Boolean).join(" · ")}

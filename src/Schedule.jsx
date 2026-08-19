@@ -81,9 +81,46 @@ export default function Schedule({ user, vessels = [], onClose }) {
     flash(L("Turno agendado", "Shift scheduled"));
   };
 
+  // Trabajos que cuentan como servicio de limpieza (categoría "Limpiezas");
+  // el resto del personal se registra como "Sueldos".
+  const CLEAN_WORKS = ["Lavada","Detailing","Limpieza interior","Buceo / Casco"];
+
   const updateShift = async (id, patch) => {
+    const before = shifts.find(x => x.id === id);
     setShifts(s => s.map(x => x.id === id ? { ...x, ...patch } : x));
-    await supabase.from("work_shifts").update(patch).eq("id", id);
+    const { error } = await supabase.from("work_shifts").update(patch).eq("id", id);
+    if (error) { flash("Error: " + error.message); return; }
+
+    // Al marcar PAGADO, el turno se vuelve un gasto de la empresa (Mi Empresa).
+    // Al volver a Pendiente, se retira ese gasto para no dejar datos falsos.
+    if (patch.payment_status === "Pagado" && before?.payment_status !== "Pagado") {
+      const sh = { ...before, ...patch };
+      const amount = (Number(sh.hours)>0 && Number(sh.rate)>0) ? Number(sh.hours)*Number(sh.rate)
+                   : Number(sh.rate)>0 ? Number(sh.rate) : null;
+      if (amount === null) {
+        flash(L("Pagado. Ponle tarifa (y horas) al turno para registrarlo como gasto de empresa.",
+                "Paid. Add a rate (and hours) to the shift to log it as a company expense."));
+        return;
+      }
+      const works = (sh.works||[]).length ? sh.works.join(", ") : L("Servicio","Service");
+      const isClean = (sh.works||[]).some(w => CLEAN_WORKS.includes(w));
+      const { error: expErr } = await supabase.from("company_expenses").insert({
+        owner_id: user.id, shift_id: id,
+        category: isClean ? "Limpiezas" : "Sueldos",
+        description: `${works}${sh.vessel_name ? ` — ${sh.vessel_name}` : ""}`,
+        payee: sh.person_name || null,
+        amount, currency: "USD", expense_date: sh.shift_date, recurring: false,
+      });
+      if (expErr) {
+        if (!/duplicate|unique/i.test(expErr.message)) flash("Error: " + expErr.message);
+      } else {
+        flash(L(`Pagado y registrado en Mi Empresa: $${amount.toFixed(2)}`,
+                `Paid and logged in My Company: $${amount.toFixed(2)}`));
+      }
+    }
+    if (patch.payment_status === "Pendiente" && before?.payment_status === "Pagado") {
+      await supabase.from("company_expenses").delete().eq("shift_id", id);
+    }
   };
 
   const removeShift = async (id) => {
