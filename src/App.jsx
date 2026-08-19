@@ -13,6 +13,7 @@ import CaptainView from "./CaptainView";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
+import CompanyPage from "./CompanyPage.jsx";
 import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
 import FleetCrew from "./FleetCrew.jsx";
