@@ -48,7 +48,12 @@ export default function Schedule({ user, vessels = [], onClose }) {
       supabase.from("work_shifts").select("*").eq("manager_id", user.id).order("shift_date", { ascending: true }),
       supabase.from("fleet_crew").select("id,name,rate,phone").eq("manager_id", user.id).order("name"),
     ]);
-    setShifts(sh || []); setTeam(tm || []); setLoading(false);
+    // Los turnos creados desde Tareas (task_id) solo cuentan si la persona está
+    // registrada en Personal: la Agenda es del equipo, no del dueño ni de terceros
+    // sueltos. Lo agregado directo en la Agenda (sin task_id) se muestra siempre.
+    const teamNames = new Set((tm||[]).map(t=>(t.name||"").trim().toLowerCase()));
+    const visible = (sh||[]).filter(x => !x.task_id || teamNames.has((x.person_name||"").trim().toLowerCase()));
+    setShifts(visible); setTeam(tm || []); setLoading(false);
   };
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3000); };

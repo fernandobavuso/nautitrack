@@ -38,12 +38,24 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       supabase.from("day_trips").select("*").in("vessel_id", ids).then(({ data }) => setTrips(data || []));
       const owners = [...new Set((vessels || []).map(v => v.owner_id).filter(Boolean))];
       if (owners.length) {
-        supabase.from("work_shifts").select("*").in("manager_id", owners).then(({ data }) => setShifts(data || []));
+        Promise.all([
+          supabase.from("work_shifts").select("*").in("manager_id", owners),
+          supabase.from("fleet_crew").select("name").in("manager_id", owners),
+        ]).then(([{ data }, { data: crew }]) => {
+          const names = new Set((crew||[]).map(c=>(c.name||"").trim().toLowerCase()));
+          setShifts((data||[]).filter(x => !x.task_id || names.has((x.person_name||"").trim().toLowerCase())));
+        });
       }
     } else {
       supabase.from("day_trips").select("*").eq("vessel_id", vessel.id).then(({ data }) => setTrips(data || []));
       if (vessel.owner_id) {
-        supabase.from("work_shifts").select("*").eq("manager_id", vessel.owner_id).eq("vessel_name", vessel.name).then(({ data }) => setShifts(data || []));
+        Promise.all([
+          supabase.from("work_shifts").select("*").eq("manager_id", vessel.owner_id).eq("vessel_name", vessel.name),
+          supabase.from("fleet_crew").select("name").eq("manager_id", vessel.owner_id),
+        ]).then(([{ data }, { data: crew }]) => {
+          const names = new Set((crew||[]).map(c=>(c.name||"").trim().toLowerCase()));
+          setShifts((data||[]).filter(x => !x.task_id || names.has((x.person_name||"").trim().toLowerCase())));
+        });
       }
     }
   }, [vessel?.id, fleetMode, (vessels || []).length]);

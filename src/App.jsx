@@ -472,10 +472,15 @@ export default function App() {
     if (data) {
       const mapped = { ...task, id: data.id };
       setVessels(vs => vs.map(v => v.id === vesselId ? { ...v, tasks: [...(v.tasks||[]), mapped] } : v));
-      // Si la tarea tiene persona y fecha, crear también un turno en la Agenda (aparece en el calendario)
+      // Si la tarea tiene persona y fecha, crear también un turno en la Agenda,
+      // pero SOLO si la persona está registrada en Personal (fleet_crew): la Agenda
+      // es del equipo; tareas del dueño o de terceros no registrados no van ahí.
       if (task.assigned && task.assigned !== "Otro" && task.nextDue) {
         const cleanName = task.assigned.replace(/\s*\(.*\)$/, "").trim();
-        supabase.from("work_shifts").insert({
+        supabase.from("fleet_crew").select("id").eq("manager_id", ownerId).ilike("name", cleanName).limit(1)
+          .then(({ data: crew }) => {
+            if (!crew || !crew.length) return;   // no está en Personal: sin turno
+            supabase.from("work_shifts").insert({
           manager_id: ownerId,
           person_name: cleanName,
           vessel_name: task.boatName || null,
@@ -486,7 +491,8 @@ export default function App() {
           work_status: "Agendado",
           payment_status: "Pendiente",
           task_id: String(data.id),
-        }).then(() => {});
+            }).then(() => {});
+          });
       }
       // Avisar al asignado por WhatsApp si tiene teléfono registrado en Personal
       if (task.assigneePhone) {
