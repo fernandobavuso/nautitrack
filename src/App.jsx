@@ -1120,6 +1120,7 @@ export default function App() {
         {page==="docs"    && <DocsPage vessel={vessel} user={user} />}
         {page==="costs"   && <CostsPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
         {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
+        {page==="company" && <CompanyPage user={user} vessels={vessels} />}
         {page==="inventory" && <InventoryPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} deleteVessel={deleteVessel} canDelete={vessels.length>0} onClose={() => setShowVesselDetails(false)} />}
@@ -1161,17 +1162,17 @@ const NAV_GROUPS = [
   { key:"providers", label:"Proveedores", single:true },
 ];
 
-function NavGroups({ page, setPage, showFleet, isAdminUser }) {
+function NavGroups({ page, setPage, showFleet, showCompany, isAdminUser }) {
   const [open, setOpen] = useState(null);
   const { t } = useLang();
   const L = {
     home:t("nav.home"), fleet:t("nav.fleet"), op:t("nav.operation"), tasks:t("nav.tasks"),
     calendar:t("nav.calendar"), log:t("nav.log"), fin:t("nav.finance"), costs:t("nav.expenses"),
     inventory:t("nav.parts"), reg:t("nav.registries"), records:t("nav.records"), docs:t("nav.docs"),
-    gest:t("nav.management"), providers:t("nav.providers"), admin:t("nav.panel"),
+    gest:t("nav.management"), providers:t("nav.providers"), admin:t("nav.panel"), company:t("nav.company"),
   };
   const adminGroup = isAdminUser ? [{ key:"admin", label:L.admin, single:true }] : [];
-  const groups = [...(showFleet ? [{ key:"fleet", label:L.fleet, single:true }] : []), ...NAV_GROUPS.map(g=>({
+  const groups = [...(showFleet ? [{ key:"fleet", label:L.fleet, single:true }] : []), ...(showCompany ? [{ key:"company", label:(L.company||"Empresa"), single:true }] : []), ...NAV_GROUPS.map(g=>({
     ...g, label: L[g.key]||g.label,
     items: g.items?.map(it=>({ ...it, label: L[it.key]||it.label })),
   })), ...adminGroup];
@@ -1274,6 +1275,9 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {vessels.length>1 && (
                   <button onClick={()=>{setPage("fleet");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="fleet"?"#eff6ff":"transparent",color:page==="fleet"?"#0ea5e9":"#1e293b",fontWeight:page==="fleet"?700:500,fontSize:14}}>Mi Flota</button>
                 )}
+                {accountHasFleet(vessels) && (
+                  <button onClick={()=>{setPage("company");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="company"?"#eff6ff":"transparent",color:page==="company"?"#0ea5e9":"#1e293b",fontWeight:page==="company"?700:500,fontSize:14}}>{t("nav.company")}</button>
+                )}
                 <button onClick={()=>{setPage("home");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="home"?"#eff6ff":"transparent",color:page==="home"?"#0ea5e9":"#1e293b",fontWeight:page==="home"?700:500,fontSize:14}}>Inicio</button>
                 {NAV_GROUPS.filter(g=>g.single).map(g=>(
                   <button key={g.key} onClick={()=>{setPage(g.key);setMobileMenuOpen(false);}}
@@ -1331,7 +1335,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <div style={s.navBrand}>Carive</div>
       </div>
       <div style={s.navLinks}>
-        <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} isAdminUser={isAdminUser} />
+        <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} showCompany={accountHasFleet(vessels)} isAdminUser={isAdminUser} />
       </div>
       <div style={s.navRight}>
         <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>Tripulación</button>

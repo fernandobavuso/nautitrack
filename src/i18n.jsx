@@ -23,6 +23,7 @@ export const DICT = {
   "nav.docs":        { es: "Documentos",   en: "Documents" },
   "nav.management":  { es: "Gestión",      en: "Management" },
   "nav.providers":   { es: "Proveedores",  en: "Providers" },
+  "nav.company":     { es: "Mi Empresa",   en: "My Company" },
   "nav.crew":        { es: "Tripulación",  en: "Crew" },
   "nav.panel":       { es: "Panel",        en: "Panel" },
   "nav.profile":     { es: "Mi Perfil",    en: "My Profile" },
