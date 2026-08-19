@@ -21,6 +21,9 @@ export default function CompanyPage({ user, vessels }) {
   const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [showCut, setShowCut]   = useState(false);
+  const [copied, setCopied]     = useState("");
+  const [splitPct, setSplitPct] = useState(50);
   const [saving, setSaving]   = useState(false);
   const [msg, setMsg]         = useState("");
   const [month, setMonth]     = useState(new Date().toISOString().slice(0,7));
@@ -89,6 +92,25 @@ export default function CompanyPage({ user, vessels }) {
     load();
   };
 
+  const toggleSettled = async (exp) => {
+    const next = !exp.settled;
+    const { data, error } = await supabase.from("company_expenses")
+      .update({ settled: next }).eq("id", exp.id).select();
+    if (error || !data?.length) { setMsg("Error: "+(error?.message||L("no se pudo actualizar","couldn't update"))); setTimeout(()=>setMsg(""),4000); return; }
+    setRows(list=>list.map(x=>x.id===exp.id?{...x,settled:next}:x));
+  };
+
+  const markAllSettled = async () => {
+    const pend = rows.filter(r=>!r.settled);
+    if (!pend.length) return;
+    if (!confirm(L(`¿Marcar ${pend.length} gasto(s) como saldados con tu socio?`,`Mark ${pend.length} expense(s) as settled with your partner?`))) return;
+    const ids = pend.map(r=>r.id);
+    const { error } = await supabase.from("company_expenses").update({ settled: true }).in("id", ids);
+    if (error) { setMsg("Error: "+error.message); setTimeout(()=>setMsg(""),4000); return; }
+    setRows(list=>list.map(x=>ids.includes(x.id)?{...x,settled:true}:x));
+    setShowCut(false);
+  };
+
   const del = async (id) => {
     if (!confirm(L("¿Eliminar este gasto?","Delete this expense?"))) return;
     const { error } = await supabase.from("company_expenses").delete().eq("id", id);
@@ -146,6 +168,26 @@ export default function CompanyPage({ user, vessels }) {
       </div>
 
       {loading ? <div style={{padding:40,textAlign:"center",color:"#94a3b8",fontSize:13}}>{L("Cargando...","Loading...")}</div> : <>
+
+      {/* Corte con el socio: todo lo no saldado, sin importar el mes */}
+      {(()=>{
+        const pend = rows.filter(r=>!r.settled);
+        if (!pend.length) return null;
+        const tot = pend.reduce((a,r)=>a+Number(r.amount||0),0);
+        return (
+          <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:12,padding:"13px 15px",marginBottom:18,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:170}}>
+              <div style={{fontSize:11,color:"#1d4ed8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{L("Por saldar con tu socio","To settle with your partner")}</div>
+              <div style={{fontSize:12,color:"#1e40af",marginTop:2}}>{pend.length} {pend.length===1?L("gasto desde el último corte","expense since last settlement"):L("gastos desde el último corte","expenses since last settlement")}</div>
+            </div>
+            <div style={{fontSize:24,fontWeight:800,color:"#1d4ed8"}}>{money(tot)}</div>
+            <button onClick={()=>setShowCut(true)}
+              style={{padding:"8px 14px",background:"#1d4ed8",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {L("Hacer corte","Settle up")}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Por categoría */}
       {calc.cats.length>0 && (
@@ -209,13 +251,113 @@ export default function CompanyPage({ user, vessels }) {
                       {[r.payee, r.description, new Date(r.expense_date+"T00:00:00").toLocaleDateString("en-US")].filter(Boolean).join(" · ")}
                     </div>
                   </div>
-                  <div style={{fontSize:14,fontWeight:800,color:"#0f172a",whiteSpace:"nowrap"}}>{money(r.amount)}</div>
+                  <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
+                    <div style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>{money(r.amount)}</div>
+                    <button onClick={()=>toggleSettled(r)}
+                      title={r.settled ? L("Marcar como pendiente","Mark as pending") : L("Marcar como saldado","Mark as settled")}
+                      style={{marginTop:3,padding:"2px 8px",borderRadius:20,border:"1px solid",cursor:"pointer",fontSize:10,fontWeight:700,
+                        background:r.settled?"#f0fdf4":"#eff6ff",borderColor:r.settled?"#bbf7d0":"#bfdbfe",color:r.settled?"#15803d":"#1d4ed8"}}>
+                      {r.settled ? `✓ ${L("Saldado","Settled")}` : L("Por saldar","To settle")}
+                    </button>
+                  </div>
                   <button onClick={()=>del(r.id)} style={{background:"none",border:"none",color:"#cbd5e1",cursor:"pointer",fontSize:15,padding:2}} title={L("Eliminar","Delete")}>×</button>
                 </div>
               ))}
             </div>}
       </div>
       </>}
+
+      {/* Modal: corte con el socio */}
+      {showCut && (()=>{
+        const pend = rows.filter(r=>!r.settled).sort((a,b)=>String(a.expense_date).localeCompare(String(b.expense_date)));
+        const tot  = pend.reduce((a,r)=>a+Number(r.amount||0),0);
+        const mine = tot*(splitPct/100), theirs = tot-mine;
+        const fdate = (d)=>new Date(d+"T00:00:00").toLocaleDateString("en-US");
+        const fix = (n)=>Number(n).toFixed(2);
+
+        const plain=[
+          `${L("Corte de gastos — The Boating Zone","Expense settlement — The Boating Zone")}`,
+          `${L("Generado","Generated")}: ${new Date().toLocaleDateString("en-US")}`,"",
+          ...pend.map(r=>`${fdate(r.expense_date)}  ${r.category}  ${[r.payee,r.description].filter(Boolean).join(" · ")||"—"}  $${fix(r.amount)}`),
+          "", `${L("TOTAL","TOTAL")}: $${fix(tot)}`,
+          `${L("Tu parte","Your share")} (${splitPct}%): $${fix(mine)}`,
+          `${L("Parte del socio","Partner's share")} (${100-splitPct}%): $${fix(theirs)}`,
+        ].join("\n");
+        const tsv=[["Date","Category","Payee","Description","Amount"].join("\t"),
+          ...pend.map(r=>[fdate(r.expense_date),r.category,r.payee||"",(r.description||"").replace(/\t/g," "),fix(r.amount)].join("\t")),
+          "", ["TOTAL","","","",fix(tot)].join("\t")].join("\n");
+        const copy=(t,w)=>navigator.clipboard?.writeText(t)
+          .then(()=>{setCopied(w);setTimeout(()=>setCopied(""),2000);})
+          .catch(()=>{setCopied("err");setTimeout(()=>setCopied(""),2500);});
+
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:12,overflowY:"auto"}} onClick={()=>setShowCut(false)}>
+            <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:640,width:"100%",maxHeight:"92vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:12}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Corte con tu socio","Settle up with your partner")}</div>
+                  <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{pend.length} {L("gastos","expenses")} · <strong style={{color:"#1d4ed8"}}>{money(tot)}</strong></div>
+                </div>
+                <button onClick={()=>setShowCut(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+              </div>
+
+              <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden",marginBottom:12}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr style={{background:"#f8fafc"}}>
+                    {[L("Fecha","Date"),L("Categoría","Category"),L("Detalle","Detail"),L("Monto","Amount")].map((h,i)=>(
+                      <th key={h} style={{textAlign:i===3?"right":"left",padding:"8px 10px",color:"#64748b",fontWeight:700,borderBottom:"1px solid #e2e8f0"}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {pend.map(r=>(
+                      <tr key={r.id}>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9",whiteSpace:"nowrap"}}>{fdate(r.expense_date)}</td>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9"}}>{r.category}</td>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9",color:"#475569"}}>{[r.payee,r.description].filter(Boolean).join(" · ")||"—"}</td>
+                        <td style={{padding:"7px 10px",borderBottom:"1px solid #f1f5f9",textAlign:"right",fontWeight:700,whiteSpace:"nowrap"}}>${fix(r.amount)}</td>
+                      </tr>
+                    ))}
+                    <tr style={{background:"#eff6ff"}}>
+                      <td colSpan={3} style={{padding:"9px 10px",fontWeight:800,color:"#1e40af"}}>{L("TOTAL","TOTAL")}</td>
+                      <td style={{padding:"9px 10px",textAlign:"right",fontWeight:800,color:"#1d4ed8",whiteSpace:"nowrap"}}>${fix(tot)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{display:"flex",alignItems:"center",gap:10,background:"#f8fafc",borderRadius:10,padding:"10px 12px",marginBottom:12,flexWrap:"wrap"}}>
+                <div style={{fontSize:12,color:"#475569",fontWeight:600}}>{L("División","Split")}</div>
+                <input type="number" min="0" max="100" value={splitPct} onChange={e=>setSplitPct(Math.max(0,Math.min(100,Number(e.target.value)||0)))}
+                  style={{width:60,padding:"5px 8px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:13,textAlign:"center"}}/>
+                <div style={{fontSize:12,color:"#64748b"}}>% {L("tú","you")}</div>
+                <div style={{flex:1,minWidth:160,display:"flex",gap:14,justifyContent:"flex-end",fontSize:13}}>
+                  <div><span style={{color:"#94a3b8"}}>{L("Tú:","You:")}</span> <strong>${fix(mine)}</strong></div>
+                  <div><span style={{color:"#94a3b8"}}>{L("Socio:","Partner:")}</span> <strong>${fix(theirs)}</strong></div>
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>copy(tsv,"tsv")} style={{flex:1,minWidth:170,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {copied==="tsv" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como tabla","Copy as table")}
+                </button>
+                <button onClick={()=>copy(plain,"plain")} style={{flex:1,minWidth:150,padding:"11px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#334155",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {copied==="plain" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como texto","Copy as text")}
+                </button>
+              </div>
+              {copied==="err" && <div style={{fontSize:11,color:"#dc2626",marginTop:8}}>{L("No se pudo copiar. Selecciona la tabla y copia a mano.","Couldn't copy. Select the table and copy manually.")}</div>}
+
+              <button onClick={markAllSettled}
+                style={{width:"100%",marginTop:10,padding:"11px",background:"#f0fdf4",border:"1.5px solid #86efac",borderRadius:9,color:"#15803d",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                ✓ {L(`Ya cuadramos — marcar los ${pend.length} como saldados`,`We settled — mark all ${pend.length} as settled`)}
+              </button>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:8,lineHeight:1.5}}>
+                {L("El corte incluye todo lo no saldado, sin importar el mes. El texto copiado incluye la división entre socios.",
+                   "The settlement includes everything unsettled, regardless of month. The copied text includes the partner split.")}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal: nuevo gasto de empresa (no cierra al clic fuera) */}
       {creating && (
