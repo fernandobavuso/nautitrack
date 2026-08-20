@@ -1725,6 +1725,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const [showAdd, setShowAdd]   = useState(false);
   const [sortBy, setSortBy]       = useState("due_asc");
   const [sysFilter, setSysFilter] = useState("Todos");
+  const [resched, setResched]     = useState(null);   // tarea a reprogramar {task, date}
   const [whoFilter, setWhoFilter] = useState("Todos");
   const FILTERS = ["Todas","Sin completar","Por vencer","Vencidas","Completadas"];
   const filtered = (vessel.tasks||[]).filter(t => {
@@ -1861,10 +1862,8 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                           <button onClick={()=>{
                             updateTask(task.id,{status:"done"});setExpanded(null);
                           }} style={{padding:"7px 16px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff"}}>Completar</button>
-                          <button onClick={()=>{
-                            const nd=prompt("Nueva fecha (AAAA-MM-DD):",task.nextDue);
-                            if(nd){updateTask(task.id,{nextDue:nd,status:"ok"});}
-                          }} style={{padding:"7px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>Reprogramar</button>
+                          <button onClick={()=>setResched({ task, date: task.nextDue || todayISO() })}
+                            style={{padding:"7px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>{lang==="es"?"Reprogramar":"Reschedule"}</button>
                           <button onClick={()=>{
                             if(confirm("¿Eliminar esta tarea?")){deleteTask(task.id);setExpanded(null);}
                           }} style={{padding:"7px 14px",border:"1.5px solid #fecaca",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>Eliminar</button>
@@ -1878,6 +1877,35 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
           </tbody>
         </table>
       </div>
+      {/* Reprogramar con calendario */}
+      {resched && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:14}}>
+          <div style={{background:"#fff",borderRadius:14,padding:18,maxWidth:340,width:"100%"}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",marginBottom:2}}>{lang==="es"?"Reprogramar tarea":"Reschedule task"}</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{resched.task.name}</div>
+            <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{lang==="es"?"Nueva fecha":"New date"}</label>
+            <input type="date" value={resched.date} min={todayISO()}
+              onChange={e=>setResched(r=>({...r,date:e.target.value}))}
+              style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:9,fontSize:15,color:"#0f172a"}}/>
+            {resched.date && (
+              <div style={{fontSize:12,color:"#2563eb",fontWeight:600,marginTop:6}}>
+                {new Date(resched.date+"T00:00:00").toLocaleDateString(lang==="es"?"es":"en-US",{weekday:"long",month:"long",day:"numeric"})}
+              </div>
+            )}
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button onClick={()=>setResched(null)}
+                style={{flex:1,padding:"10px",border:"1.5px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#334155",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                {lang==="es"?"Cancelar":"Cancel"}
+              </button>
+              <button onClick={()=>{ if(!resched.date) return; updateTask(resched.task.id,{nextDue:resched.date,status:"ok"}); setResched(null); setExpanded(null); }}
+                style={{flex:1,padding:"10px",border:"none",borderRadius:9,background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                {lang==="es"?"Reprogramar":"Reschedule"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAdd && <AddTaskModal vessel={vessel} updateVessel={updateVessel} onSave={handleAddTask} onClose={() => setShowAdd(false)} />}
       {editingTask && <AddTaskModal vessel={vessel} updateVessel={updateVessel} initial={editingTask} onSave={handleEditTask} onClose={() => setEditingTask(null)} />}
     </div>
