@@ -21,6 +21,7 @@ export default function CompanyPage({ user, vessels }) {
   const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState(null);   // gasto en edición (solo si no está saldado)
   const [showCut, setShowCut]   = useState(false);
   const [copied, setCopied]     = useState("");
   const [splitPct, setSplitPct] = useState(50);
@@ -79,17 +80,35 @@ export default function CompanyPage({ user, vessels }) {
   const save = async () => {
     if (!form.amount || Number(form.amount)<=0) { setMsg(L("Indica el monto","Enter the amount")); setTimeout(()=>setMsg(""),3000); return; }
     setSaving(true);
-    const { error } = await supabase.from("company_expenses").insert({
-      owner_id: user.id, category: form.category,
+    const payload = {
+      category: form.category,
       description: form.description || null, payee: form.payee.trim() || null,
       amount: Number(form.amount), currency: "USD",
       expense_date: form.date, recurring: form.recurring,
-    });
+    };
+    let error;
+    if (editingId) {
+      const res = await supabase.from("company_expenses").update(payload).eq("id", editingId).select();
+      error = res.error || ((!res.data || !res.data.length) ? { message: L("no se encontró el gasto","expense not found") } : null);
+    } else {
+      const res = await supabase.from("company_expenses").insert({ owner_id: user.id, ...payload });
+      error = res.error;
+    }
     setSaving(false);
     if (error) { setMsg("Error: "+error.message); setTimeout(()=>setMsg(""),4000); return; }
-    setCreating(false);
+    setCreating(false); setEditingId(null);
     setForm({ category:CATEGORIES[0], description:"", payee:"", amount:"", date:new Date().toISOString().slice(0,10), recurring:false });
     load();
+  };
+
+  const startEdit = (r) => {
+    if (r.settled) return;   // lo saldado ya se cuadró con el socio: no se toca
+    setForm({
+      category: r.category || CATEGORIES[0], description: r.description || "",
+      payee: r.payee || "", amount: String(r.amount ?? ""),
+      date: r.expense_date, recurring: !!r.recurring,
+    });
+    setEditingId(r.id); setCreating(true);
   };
 
   const toggleSettled = async (exp) => {
@@ -260,6 +279,9 @@ export default function CompanyPage({ user, vessels }) {
                       {r.settled ? `✓ ${L("Saldado","Settled")}` : L("Por saldar","To settle")}
                     </button>
                   </div>
+                  {!r.settled && (
+                    <button onClick={()=>startEdit(r)} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:13,padding:2}} title={L("Editar","Edit")}>✎</button>
+                  )}
                   <button onClick={()=>del(r.id)} style={{background:"none",border:"none",color:"#cbd5e1",cursor:"pointer",fontSize:15,padding:2}} title={L("Eliminar","Delete")}>×</button>
                 </div>
               ))}
@@ -364,8 +386,8 @@ export default function CompanyPage({ user, vessels }) {
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:14,overflowY:"auto"}}>
           <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:440,width:"100%",maxHeight:"92vh",overflowY:"auto"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Gasto de empresa","Company expense")}</div>
-              <button onClick={()=>setCreating(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+              <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{editingId ? L("Editar gasto","Edit expense") : L("Gasto de empresa","Company expense")}</div>
+              <button onClick={()=>{setCreating(false);setEditingId(null);}} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
             </div>
 
             <div style={{display:"flex",flexDirection:"column",gap:11}}>
@@ -400,7 +422,7 @@ export default function CompanyPage({ user, vessels }) {
               </label>
 
               <button onClick={save} disabled={saving} style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:saving?0.6:1}}>
-                {saving ? L("Guardando...","Saving...") : L("Guardar gasto","Save expense")}
+                {saving ? L("Guardando...","Saving...") : (editingId ? L("Guardar cambios","Save changes") : L("Guardar gasto","Save expense"))}
               </button>
             </div>
           </div>
