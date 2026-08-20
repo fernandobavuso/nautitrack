@@ -10,6 +10,7 @@ import { notifyTaskAssigned } from "./whatsapp.js";
 import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
+import PartnerView from "./PartnerView.jsx";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
@@ -422,6 +423,7 @@ export default function App() {
   }, [anyModalOpen]);
 
   const [captainProfile, setCaptainProfile]       = useState(null);
+  const [partnerMode, setPartnerMode]             = useState(false);
   const [captainVessel, setCaptainVessel]         = useState(null);
   const [crewProfile, setCrewProfile]             = useState(null);
   const [storeProfile, setStoreProfile]           = useState(null);
@@ -858,6 +860,14 @@ export default function App() {
     setVesselsLoading(false);
   }, []);
 
+  const checkIfPartner = useCallback(async (uid) => {
+    const { data } = await supabase.from("vessel_partners")
+      .select("id").eq("partner_id", uid).eq("status","active").limit(1);
+    const isPartner = !!(data && data.length);
+    setPartnerMode(isPartner);
+    return isPartner;
+  }, []);
+
   const checkIfCaptain = useCallback(async (uid, knownRole) => {
     // Siempre leer el role de profiles (fuente de verdad), con fallback al knownRole
     let role = knownRole;
@@ -1016,8 +1026,13 @@ export default function App() {
       setPendingInvite(null);
       window.history.replaceState({}, "", "/"); // limpiar el ?invite= de la URL
     }
-    setUser(u); setCheckingRole(true); const isCrew = await checkIfCaptain(u.id, u.role); setCheckingRole(false); if (!isCrew) fetchVessels(u.id);
+    setUser(u); setCheckingRole(true); const isPartner = await checkIfPartner(u.id); if (!isPartner) { const isCrew = await checkIfCaptain(u.id, u.role); if (!isCrew) fetchVessels(u.id); } setCheckingRole(false);
   }} />;
+
+  // Si el usuario es SOCIO (solo lectura) → vista de socio
+  if (partnerMode) return (
+    <PartnerView user={user} onLogout={async()=>{ await supabase.auth.signOut(); setUser(null); setPartnerMode(false); }}/>
+  );
 
   // Si el usuario es capitán → mostrar vista de capitán
   if (captainProfile && captainVessel) return (
@@ -1138,7 +1153,7 @@ export default function App() {
       {showNotifPanel && <NotifPanel user={user} onClose={()=>setShowNotifPanel(false)} onNavigate={(link)=>{ if(link==="tripulacion")setShowCrewMarket(true); }} />}
       {planMsg && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:"#0f172a",color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:4000,maxWidth:340,textAlign:"center"}}>{planMsg}</div>}
       {showPlans && <PlansModal vessel={vessel} user={user} onClose={()=>setShowPlans(false)} />}
-      {showFleetManagers && <FleetManagers user={user} onClose={()=>setShowFleetManagers(false)} />}
+      {showFleetManagers && <FleetManagers user={user} vessels={vessels} onClose={()=>setShowFleetManagers(false)} />}
       {showFleetCrew && <FleetCrew user={user} onClose={()=>setShowFleetCrew(false)} />}
       {showSchedule && <Schedule user={user} vessels={vessels} onClose={()=>setShowSchedule(false)} />}
       {showExpenseRouter && <ExpenseRouter vessel={vessel} vessels={vessels} user={user} onClose={()=>setShowExpenseRouter(false)} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}

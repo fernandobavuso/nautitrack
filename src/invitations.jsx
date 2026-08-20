@@ -36,6 +36,24 @@ export async function getInvitation(token) {
 export async function acceptInvitation(inv, newUser) {
   if (!inv || inv.status === "accepted") return;
 
+  if (inv.kind === "partner") {
+    // Socio de solo lectura: vincular a los barcos elegidos por el gestor
+    let vesselIds = [];
+    try { vesselIds = JSON.parse(inv.role_detail || "[]"); } catch { vesselIds = []; }
+    if (vesselIds.length) {
+      await supabase.from("vessel_partners").upsert(
+        vesselIds.map(vid => ({
+          owner_id: inv.inviter_id, partner_id: newUser.id,
+          partner_email: (inv.invited_email||newUser.email||"").toLowerCase(),
+          vessel_id: vid, status: "active",
+        })),
+        { onConflict: "partner_id,vessel_id" }
+      );
+    }
+    await supabase.from("invitations").update({ status:"accepted", accepted_by:newUser.id }).eq("token", inv.token);
+    return;
+  }
+
   if (inv.kind === "manager") {
     // Vincular al nuevo usuario como co-gestor de la flota del que invitó
     await supabase.from("fleet_managers").insert({

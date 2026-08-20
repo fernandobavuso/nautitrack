@@ -5,17 +5,28 @@ import { createInvitation } from "./invitations.jsx";
 
 // Panel donde el dueño de la flota (Fernando) invita a co-gestores
 // (ej: su colega de The Boating Zone) con acceso total a todos sus barcos.
-export default function FleetManagers({ user, onClose }) {
+export default function FleetManagers({ user, vessels = [], onClose }) {
   const { lang } = useLang();
   const L = (es, en) => (lang === "en" ? en : es);
   const [managers, setManagers] = useState([]);
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
+  const [partners, setPartners]   = useState([]);
+  const [pEmail, setPEmail]       = useState("");
+  const [pVessels, setPVessels]   = useState([]);
+  const [pAdding, setPAdding]     = useState(false);
+  const [pInviteLink, setPInviteLink] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadPartners(); }, []);
+
+  const loadPartners = async () => {
+    const { data } = await supabase.from("vessel_partners")
+      .select("*").eq("owner_id", user.id).order("partner_email");
+    setPartners(data||[]);
+  };
 
   const load = async () => {
     const { data } = await supabase.from("fleet_managers")
@@ -67,6 +78,35 @@ export default function FleetManagers({ user, onClose }) {
       flash("Error: " + err.message);
     }
     setAdding(false);
+  };
+
+  const addPartner = async () => {
+    const em = pEmail.trim().toLowerCase();
+    if (!em || !em.includes("@")) { flash(L("Escribe un correo válido","Enter a valid email")); return; }
+    if (!pVessels.length) { flash(L("Elige al menos un barco","Pick at least one vessel")); return; }
+    setPAdding(true); setPInviteLink("");
+    try {
+      const { data: prof } = await supabase.from("profiles").select("id, full_name").ilike("email", em).maybeSingle();
+      if (prof) {
+        const rows = pVessels.map(vid => ({ owner_id:user.id, partner_id:prof.id, partner_email:em, vessel_id:vid, status:"active" }));
+        const { error } = await supabase.from("vessel_partners").upsert(rows, { onConflict:"partner_id,vessel_id" });
+        if (error) throw error;
+        flash(L(`${prof.full_name||em} ya puede ver esos barcos (solo lectura).`,`${prof.full_name||em} can now view those vessels (read only).`));
+        setPEmail(""); setPVessels([]); loadPartners();
+      } else {
+        const vnames = vessels.filter(v=>pVessels.includes(v.id)).map(v=>v.name).join(", ");
+        const link = await createInvitation({ kind:"partner", inviter:user, invitedEmail:em, roleDetail: JSON.stringify(pVessels), vessel:{ id:null, name:vnames } });
+        setPInviteLink(link);
+        flash("");
+      }
+    } catch (err) { flash("Error: " + err.message); }
+    setPAdding(false);
+  };
+
+  const removePartnerAccess = async (email) => {
+    if (!confirm(L(`¿Quitar el acceso de ${email}?`,`Remove ${email}'s access?`))) return;
+    await supabase.from("vessel_partners").delete().eq("owner_id", user.id).eq("partner_email", email);
+    loadPartners();
   };
 
   const copyLink = () => {
@@ -132,6 +172,58 @@ export default function FleetManagers({ user, onClose }) {
              </div>
            ))}
          </div>}
+
+        {/* ── Socios (solo lectura) ─────────────────────────────────────────── */}
+        <div style={{borderTop:"1px solid #e2e8f0",marginTop:20,paddingTop:16}}>
+          <div style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>{L("Socios (solo lectura)","Partners (read only)")}</div>
+          <div style={{fontSize:12,color:"#64748b",marginTop:2,marginBottom:10}}>
+            {L("Ven bitácora, tareas, calendario y gastos SOLO de los barcos que elijas. No pueden editar nada.",
+               "They see logbook, tasks, calendar and expenses ONLY for the vessels you pick. They can't edit anything.")}
+          </div>
+
+          <input value={pEmail} onChange={e=>setPEmail(e.target.value)} placeholder={L("correo del socio","partner's email")} style={{...inp,width:"100%",marginBottom:8}}/>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+            {vessels.map(v=>(
+              <button key={v.id} onClick={()=>setPVessels(l=>l.includes(v.id)?l.filter(x=>x!==v.id):[...l,v.id])}
+                style={{padding:"6px 12px",borderRadius:18,border:`1.5px solid ${pVessels.includes(v.id)?"#2563eb":"#e2e8f0"}`,background:pVessels.includes(v.id)?"#eff6ff":"#fff",color:pVessels.includes(v.id)?"#1e40af":"#475569",fontSize:12,fontWeight:pVessels.includes(v.id)?700:400,cursor:"pointer"}}>
+                {pVessels.includes(v.id)?"✓ ":""}{v.name}
+              </button>
+            ))}
+          </div>
+          <button onClick={addPartner} disabled={pAdding} style={{...btnPrimary,width:"100%",opacity:pAdding?0.6:1}}>
+            {pAdding ? L("Agregando...","Adding...") : L("Dar acceso de solo lectura","Grant read-only access")}
+          </button>
+
+          {pInviteLink && (
+            <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:9,padding:"10px 12px",marginTop:10}}>
+              <div style={{fontSize:12,color:"#0369a1",fontWeight:600,marginBottom:6}}>
+                {L("No tiene cuenta todavía. Compártele este link para que se registre y quede vinculado:","No account yet. Share this link so they sign up and get linked:")}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input readOnly value={pInviteLink} style={{...inp,flex:1,fontSize:11}}/>
+                <button onClick={()=>{navigator.clipboard?.writeText(pInviteLink);flash(L("Link copiado","Link copied"));}} style={{...btnPrimary,padding:"8px 12px",fontSize:12}}>{L("Copiar","Copy")}</button>
+              </div>
+            </div>
+          )}
+
+          {partners.length>0 && (
+            <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
+              {[...new Set(partners.map(pt=>pt.partner_email))].map(em=>{
+                const theirs = partners.filter(pt=>pt.partner_email===em);
+                const names = theirs.map(pt=>vessels.find(v=>v.id===pt.vessel_id)?.name).filter(Boolean).join(", ");
+                return (
+                  <div key={em} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#f8fafc",borderRadius:9}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{em}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{names||L("(barcos por confirmar)","(vessels pending)")} · {theirs[0].status==="active"?L("activo","active"):theirs[0].status}</div>
+                    </div>
+                    <button onClick={()=>removePartnerAccess(em)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>{L("Quitar","Remove")}</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
