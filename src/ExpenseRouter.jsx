@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import { accountHasFleet } from "./plans.jsx";
-import PurchaseMeta from "./PaymentFields.jsx";
+import PurchaseMeta, { EXPENSE_CATEGORIES } from "./PaymentFields.jsx";
 
 // Modal "Registrar gasto": hace UNA pregunta simple (¿compra del día o gasto fijo?)
 // y enruta al lugar correcto. El usuario no tiene que saber la teoría de
@@ -17,7 +17,7 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
   const [saving, setSaving] = useState(false);
 
   // Formulario compra operacional (va a bitácora)
-  const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false, isPart:false, brand:"", model2:"", partNum:"" });
+  const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false, isPart:false, brand:"", model2:"", partNum:"", cat:"Repuestos" });
   const [opMeta, setOpMeta]       = useState({});
   const [admMeta, setAdmMeta]     = useState({});
   const [opPhotos, setOpPhotos]   = useState([]);
@@ -70,6 +70,7 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
       costUSD: op.currency==="USD"?Number(op.amount):null,
       costBs: op.currency==="VES"?Number(op.amount):null,
       payment: op.payment, date: op.date, performedBy: op.by || null, photos: opPhotos,
+      expCategory: op.cat,
       vendor: opMeta.vendor||null, invoiceNumber: opMeta.invoice||null,
       cardBrand: op.payment==="Tarjeta" ? (opMeta.cardBrand||null) : null,
       cardLast4: op.payment==="Tarjeta" ? (opMeta.cardLast4||null) : null,
@@ -134,6 +135,11 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
             <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14,lineHeight:1.4}}>{L("Esta compra se registra en la Bitácora y su monto aparecerá solo en Finanzas. No la anotas dos veces.","This purchase is recorded in the Logbook and its amount appears only in Finance. You don't enter it twice.")}</div>
             <label style={lbl}>{L("¿Qué se compró?","What was purchased?")}</label>
             <input value={op.item} onChange={e=>setOp({...op,item:e.target.value})} placeholder={L("Ej: Filtro de aceite, combustible...","e.g. Oil filter, fuel...")} style={inp}/>
+            <div style={{marginBottom:10}}><label style={lbl}>{L("Categoría del gasto","Expense category")}</label>
+              <select value={op.cat} onChange={e=>setOp({...op,cat:e.target.value})} style={{...inp,width:"100%"}}>
+                {EXPENSE_CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
             <div style={{display:"flex",gap:8}}>
               <div style={{flex:1}}><label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label><input type="number" value={op.amount} onChange={e=>setOp({...op,amount:e.target.value})} placeholder="0" style={inp}/></div>
               <div style={{flex:1}}><label style={lbl}>{L("Pago","Payment")}</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>

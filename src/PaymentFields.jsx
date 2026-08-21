@@ -11,6 +11,7 @@ export const CARD_OWNERS = [
   { v: "other",    es: "Otra",             en: "Other" },
 ];
 export const CARD_BRANDS = ["Visa", "Mastercard", "Amex", "Discover", "Otra"];
+export const EXPENSE_CATEGORIES = ["Combustible","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
 
 export const cardOwnerLabel = (v, lang) => {
   const o = CARD_OWNERS.find(x => x.v === v);

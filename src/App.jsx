@@ -11,7 +11,7 @@ import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 import PartnerView from "./PartnerView.jsx";
-import PurchaseMeta from "./PaymentFields.jsx";
+import PurchaseMeta, { EXPENSE_CATEGORIES } from "./PaymentFields.jsx";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
@@ -451,6 +451,7 @@ export default function App() {
       equipHours: e.equip_hours, photos: e.photos || [],
       brand: e.brand, model2: e.model2, partNum: e.part_num,
       reimbursable: !!e.reimbursable,
+      expCategory: e.exp_category,
       vendor: e.vendor, invoiceNumber: e.invoice_number,
       cardBrand: e.card_brand, cardLast4: e.card_last4, cardOwner: e.card_owner,
       costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
@@ -522,6 +523,7 @@ export default function App() {
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
+      exp_category: entry.expCategory||null,
       vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
       card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), cost_bs: num(entry.costBs), payment: entry.payment,
@@ -544,10 +546,12 @@ export default function App() {
       const costUSD = parseFloat(entry.costUSD);
       const costBs = parseFloat(entry.costBs);
       if ((costUSD>0) || (costBs>0)) {
-        const cat = entry.type==="Compra" ? "Repuestos"
+        // La categoría elegida por la persona manda; si no eligió, se deduce del tipo
+        const cat = entry.expCategory
+          || (entry.type==="Compra" ? "Repuestos"
           : entry.type==="Combustible" ? "Combustible"
           : entry.type==="Servicio" ? "Mantenimiento"
-          : entry.type==="Reparación" ? "Reparación" : "Otro";
+          : entry.type==="Reparación" ? "Reparación" : "Otro");
         const baseDesc = entry.item || entry.equipment || entry.desc || entry.type;
         // El comprador va en su propio campo (purchased_by); ya no se pega a la
         // descripción para no verse doble ("por Fernando · compró: Fernando").
@@ -721,6 +725,7 @@ export default function App() {
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
+      exp_category: entry.expCategory||null,
       vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
       card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), payment: entry.payment,
@@ -2386,6 +2391,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
   const [errors,setErrors]           = useState({});
   const [showErrBanner,setShowErrBanner] = useState(false);
   const [reimbursable,setReimbursable]   = useState(initial?.reimbursable||false);
+  const [expCategory,setExpCategory]     = useState(initial?.expCategory||"Repuestos");
   const [purchMeta,setPurchMeta]         = useState({
     vendor: initial?.vendor||"", invoice: initial?.invoiceNumber||"",
     cardBrand: initial?.cardBrand||"", cardLast4: initial?.cardLast4||"", cardOwner: initial?.cardOwner||"",
@@ -2492,7 +2498,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
     if (type==="Salida")      entry={...entry,ownerAboard,ownerName:ownerAboard?ownerName.trim():"",crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
-    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment,reimbursable,vendor:purchMeta.vendor||null,invoiceNumber:purchMeta.invoice||null,cardBrand:payment==="Tarjeta"?(purchMeta.cardBrand||null):null,cardLast4:payment==="Tarjeta"?(purchMeta.cardLast4||null):null,cardOwner:payment==="Tarjeta"?(purchMeta.cardOwner||null):null};
+    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment,reimbursable,expCategory,vendor:purchMeta.vendor||null,invoiceNumber:purchMeta.invoice||null,cardBrand:payment==="Tarjeta"?(purchMeta.cardBrand||null):null,cardLast4:payment==="Tarjeta"?(purchMeta.cardLast4||null):null,cardOwner:payment==="Tarjeta"?(purchMeta.cardOwner||null):null};
     // Visita: guardar el subtipo (qué clase de visita fue)
     if (type==="Visita") {
       const sup = supervised === "Otro" ? (otherSupervised.trim() || "Otro") : supervised;
@@ -2852,7 +2858,10 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
             </div>
             <div><label style={s.label}>Número de Parte</label><input value={partNum} onChange={e=>setPartNum(e.target.value)} placeholder="Ej: FF5052-A" style={s.input}/></div>
             <div><label style={s.label}>Costo (USD)</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
-            <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1}}><label style={s.label}>{lang==="es"?"Categoría del gasto":"Expense category"}</label><select value={expCategory} onChange={e=>setExpCategory(e.target.value)} style={s.input}>{EXPENSE_CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+              <div style={{flex:1}}><label style={s.label}>{lang==="es"?"Método de Pago":"Payment method"}</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">{lang==="es"?"Seleccionar...":"Select..."}</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+            </div>
             <PurchaseMeta value={purchMeta} onChange={patch=>setPurchMeta(m=>({...m,...patch}))}
               payment={payment} providers={(vessels?.[0]?.providers)||vessel.providers||[]}
               onOwnerCard={()=>setReimbursable(false)} compact/>
