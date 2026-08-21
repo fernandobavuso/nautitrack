@@ -27,15 +27,17 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
     return VESSEL_COLORS[(idx < 0 ? 0 : idx) % VESSEL_COLORS.length];
   };
   const [trips, setTrips] = useState([]);
+  const [logRows, setLogRows] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [selected, setSelected] = useState(null); // evento seleccionado
 
   useEffect(() => {
-    if (!vessel?.id || vessel.id === "__empty__") { setTrips([]); setShifts([]); return; }
+    if (!vessel?.id || vessel.id === "__empty__") { setTrips([]); setShifts([]); setLogRows([]); return; }
     if (fleetMode) {
       // Toda la flota: viajes y turnos de todas las embarcaciones de la cuenta
       const ids = (vessels || []).map(v => v.id);
       supabase.from("day_trips").select("*").in("vessel_id", ids).then(({ data }) => setTrips(data || []));
+      supabase.from("log_entries").select("id,vessel_id,date,type,dest,item,description,performed_by,arr_time").in("vessel_id", ids).then(({ data }) => setLogRows(data || []));
       const owners = [...new Set((vessels || []).map(v => v.owner_id).filter(Boolean))];
       if (owners.length) {
         Promise.all([
@@ -48,6 +50,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       }
     } else {
       supabase.from("day_trips").select("*").eq("vessel_id", vessel.id).then(({ data }) => setTrips(data || []));
+      supabase.from("log_entries").select("id,vessel_id,date,type,dest,item,description,performed_by,arr_time").eq("vessel_id", vessel.id).then(({ data }) => setLogRows(data || []));
       if (vessel.owner_id) {
         Promise.all([
           supabase.from("work_shifts").select("*").eq("manager_id", vessel.owner_id).eq("vessel_name", vessel.name),
@@ -90,6 +93,22 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
         vesselName: sh.vessel_name,
         color: fleetMode ? vesselColor(sh.vessel_name) : (SHIFT_COLOR[sh.work_status] || "#d97706"),
         dot: SHIFT_COLOR[sh.work_status] || "#d97706", raw: sh,
+      });
+    });
+  }
+  if (filter === "todo" || filter === "bitacora") {
+    const LOG_COLOR = { Salida:"#0891b2", Compra:"#7c3aed", Combustible:"#0ea5e9", Servicio:"#2563eb", Reparación:"#dc2626", Visita:"#16a34a", Incidente:"#f59e0b" };
+    logRows.forEach(le => {
+      if (!le.date) return;
+      const vName = fleetMode ? ((vessels||[]).find(v=>v.id===le.vessel_id)?.name) : vessel.name;
+      const pending = le.type==="Salida" && !le.arr_time;
+      events.push({
+        kind: "log", date: String(le.date).slice(0, 10),
+        title: `${le.type}${pending ? " ⏳" : ""}`,
+        sub: [fleetMode ? vName : null, le.type==="Salida" ? le.dest : (le.item || (le.description||"").slice(0,40)), le.performed_by].filter(Boolean).join(" · "),
+        vesselName: vName,
+        color: fleetMode ? vesselColor(vName) : (LOG_COLOR[le.type] || "#64748b"),
+        dot: LOG_COLOR[le.type] || "#64748b", raw: le,
       });
     });
   }
@@ -165,7 +184,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
 
       {/* Filtro */}
       <div style={{display:"flex",gap:8,marginBottom:14}}>
-        {[{k:"todo",l:L("Todo","All")},{k:"tareas",l:L("Tareas","Tasks")},{k:"turnos",l:L("Turnos","Shifts")},{k:"viajes",l:"Day trips"}].map(f=>(
+        {[{k:"todo",l:L("Todo","All")},{k:"tareas",l:L("Tareas","Tasks")},{k:"bitacora",l:L("Bitácora","Logbook")},{k:"turnos",l:L("Turnos","Shifts")},{k:"viajes",l:"Day trips"}].map(f=>(
           <button key={f.k} onClick={()=>setFilter(f.k)} style={{padding:"7px 16px",borderRadius:20,border:"none",cursor:"pointer",fontSize:13,fontWeight:filter===f.k?700:500,background:filter===f.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#f1f5f9",color:filter===f.k?"#fff":"#64748b"}}>{f.l}</button>
         ))}
       </div>
