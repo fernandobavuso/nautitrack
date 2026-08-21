@@ -544,7 +544,9 @@ export default function App() {
           : entry.type==="Servicio" ? "Mantenimiento"
           : entry.type==="Reparación" ? "Reparación" : "Otro";
         const baseDesc = entry.item || entry.equipment || entry.desc || entry.type;
-        const desc = entry.performedBy ? `${baseDesc} · por ${entry.performedBy}` : baseDesc;
+        // El comprador va en su propio campo (purchased_by); ya no se pega a la
+        // descripción para no verse doble ("por Fernando · compró: Fernando").
+        const desc = baseDesc;
         if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log", reimbursable: !!entry.reimbursable, reimbursed:false, purchased_by: entry.performedBy||null, receipt_urls: entry.photos||[] }).then(()=>{});
       }
       setVessels(vs => vs.map(v => {
