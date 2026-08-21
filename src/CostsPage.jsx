@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { jsPDF } from "jspdf";
 import { hasFeature, PremiumLock, accountHasFleet } from "./plans.jsx";
 
 const CATEGORIES = ["Combustible","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
@@ -28,6 +29,9 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
   const isFleetManager = accountHasFleet(vessels);
   const [showReimb, setShowReimb] = useState(false);
   const [copied, setCopied]       = useState("");
+  const [editExp, setEditExp]     = useState(null);   // gasto en edición
+  const [uploading, setUploading] = useState(false);
+  const [pdfBusy, setPdfBusy]     = useState(false);
 
   useEffect(() => { if (allowed) loadExpenses(); }, []);
 
@@ -63,6 +67,71 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
   };
 
   // Marcar un gasto adelantado como cobrado (o volver a pendiente)
+  const uploadReceipts = async (files) => {
+    setUploading(true);
+    const urls = [...(editExp.receipt_urls||[])];
+    for (const file of files) {
+      const path = `facturas/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}_${file.name}`;
+      const { error } = await supabase.storage.from("bitacora-fotos").upload(path, file);
+      if (!error) {
+        const { data: u } = supabase.storage.from("bitacora-fotos").getPublicUrl(path);
+        if (u?.publicUrl) urls.push(u.publicUrl);
+      } else { setMsg(L("No se pudo subir: ","Upload failed: ")+error.message); setTimeout(()=>setMsg(""),3500); }
+    }
+    setEditExp(x=>({ ...x, receipt_urls: urls }));
+    setUploading(false);
+  };
+
+  const saveEdit = async () => {
+    const e = editExp;
+    if (!e.amount || Number(e.amount)<=0) { setMsg(L("Indica el monto","Enter the amount")); setTimeout(()=>setMsg(""),3000); return; }
+    const { data, error } = await supabase.from("expenses").update({
+      category: e.category, description: e.description||null, amount: Number(e.amount),
+      expense_date: e.expense_date, purchased_by: e.purchased_by||null,
+      receipt_urls: e.receipt_urls||[],
+    }).eq("id", e.id).select();
+    if (error || !data?.length) { setMsg("Error: "+(error?.message||L("no se guardó","not saved"))); setTimeout(()=>setMsg(""),4000); return; }
+    setExpenses(list=>list.map(x=>x.id===e.id?{...x,...data[0]}:x));
+    setEditExp(null);
+  };
+
+  // PDF con todas las fotos de factura de los gastos pendientes de reembolso,
+  // una por página con fecha/categoría/monto, para adjuntar al correo del dueño.
+  const exportReceiptsPDF = async (pendList) => {
+    const withPhotos = pendList.filter(e=>Array.isArray(e.receipt_urls)&&e.receipt_urls.length);
+    if (!withPhotos.length) { setMsg(L("Ninguno de estos gastos tiene fotos.","None of these expenses has photos.")); setTimeout(()=>setMsg(""),3500); return; }
+    setPdfBusy(true);
+    try {
+      const pdf = new jsPDF({ unit:"pt", format:"letter" });
+      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+      let first = true;
+      for (const e of withPhotos) {
+        for (const url of e.receipt_urls) {
+          const dataUrl = await fetch(url).then(r=>r.blob()).then(b=>new Promise(res=>{
+            const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);
+          })).catch(()=>null);
+          if (!dataUrl) continue;
+          const img = await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=dataUrl; });
+          if (!img) continue;
+          if (!first) pdf.addPage(); first=false;
+          pdf.setFontSize(11); pdf.setTextColor(60);
+          pdf.text(`${new Date(e.expense_date+"T00:00:00").toLocaleDateString("en-US")}  ·  ${e.category}  ·  $${Number(e.amount).toFixed(2)}${e.purchased_by?`  ·  ${e.purchased_by}`:""}`, 40, 36);
+          if (e.description) { pdf.setFontSize(9); pdf.setTextColor(120); pdf.text(String(e.description).slice(0,110), 40, 52); }
+          const maxW=W-80, maxH=H-110;
+          const r=Math.min(maxW/img.width, maxH/img.height, 1);
+          const w=img.width*r, h=img.height*r;
+          const fmt = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+          pdf.addImage(dataUrl, fmt, (W-w)/2, 66, w, h);
+        }
+      }
+      if (first) { setMsg(L("No se pudieron cargar las fotos.","Couldn't load the photos.")); setTimeout(()=>setMsg(""),3500); }
+      else pdf.save(`facturas_reembolso_${vessel.name.replace(/\s+/g,"_")}.pdf`);
+    } catch (err) {
+      setMsg("Error PDF: "+err.message); setTimeout(()=>setMsg(""),4000);
+    }
+    setPdfBusy(false);
+  };
+
   const toggleReimbursed = async (exp) => {
     const next = !exp.reimbursed;
     const { data, error } = await supabase.from("expenses")
@@ -243,10 +312,75 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
                 </button>
               )}
             </div>
+            <button onClick={()=>setEditExp({...e, receipt_urls: e.receipt_urls||[]})} title={L("Editar","Edit")} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:13}}>✎</button>
             <button onClick={()=>del(e.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#cbd5e1",fontSize:16}}>×</button>
           </div>
         ))}
       </div>
+
+      {/* Editar gasto */}
+      {editExp && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14,overflowY:"auto"}}>
+          <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:440,width:"100%",maxHeight:"92vh",overflowY:"auto"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Editar gasto","Edit expense")}</div>
+              <button onClick={()=>setEditExp(null)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+            {editExp.source==="log" && (
+              <div style={{fontSize:11,color:"#0369a1",background:"#f0f9ff",borderRadius:8,padding:"7px 10px",marginBottom:10}}>
+                {L("Este gasto viene de la bitácora. Editarlo aquí no cambia la entrada de bitácora.","This expense comes from the logbook. Editing here doesn't change the log entry.")}
+              </div>
+            )}
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Categoría","Category")}</label>
+                <select value={editExp.category} onChange={ev=>setEditExp(x=>({...x,category:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}>
+                  {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Descripción","Description")}</label>
+                <input value={editExp.description||""} onChange={ev=>setEditExp(x=>({...x,description:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <div style={{flex:1}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Monto (USD)","Amount (USD)")}</label>
+                  <input type="number" min="0" step="0.01" value={editExp.amount} onChange={ev=>setEditExp(x=>({...x,amount:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
+                </div>
+                <div style={{flex:1}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Fecha","Date")}</label>
+                  <input type="date" value={editExp.expense_date} onChange={ev=>setEditExp(x=>({...x,expense_date:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("¿Quién lo compró?","Who bought it?")}</label>
+                <input value={editExp.purchased_by||""} onChange={ev=>setEditExp(x=>({...x,purchased_by:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Fotos de la factura / repuesto","Invoice / part photos")}</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  {(editExp.receipt_urls||[]).map((ph,i)=>(
+                    <div key={i} style={{position:"relative"}}>
+                      <img src={ph} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+                      <button onClick={()=>setEditExp(x=>({...x,receipt_urls:x.receipt_urls.filter((_,ix)=>ix!==i)}))}
+                        style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",border:"none",background:"#dc2626",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",padding:0}}>×</button>
+                    </div>
+                  ))}
+                  <label style={{width:56,height:56,border:"1.5px dashed #cbd5e1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#94a3b8",fontSize:22}}>
+                    {uploading ? "…" : "+"}
+                    <input type="file" accept="image/*" multiple style={{display:"none"}}
+                      onChange={ev=>{ if(ev.target.files?.length) uploadReceipts([...ev.target.files]); ev.target.value=""; }}/>
+                  </label>
+                </div>
+              </div>
+              <button onClick={saveEdit} disabled={uploading}
+                style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",opacity:uploading?0.6:1}}>
+                {L("Guardar cambios","Save changes")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Resumen de reembolsos para copiar a QuickBooks */}
       {showReimb && (() => {
@@ -319,6 +453,10 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
                 </button>
                 <button onClick={()=>copy(plain,"plain")} style={{flex:1,minWidth:150,padding:"11px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#334155",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                   {copied==="plain" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como texto","Copy as text")}
+                </button>
+                <button onClick={()=>exportReceiptsPDF(pend)} disabled={pdfBusy}
+                  style={{flex:1,minWidth:170,padding:"11px",background:"#fff",border:"1.5px solid #fca5a5",borderRadius:9,color:"#b91c1c",fontSize:13,fontWeight:700,cursor:"pointer",opacity:pdfBusy?0.6:1}}>
+                  {pdfBusy ? L("Generando...","Generating...") : `📄 ${L("Fotos en PDF","Photos as PDF")}`}
                 </button>
               </div>
               {copied==="err" && <div style={{fontSize:11,color:"#dc2626",marginTop:8}}>{L("No se pudo copiar. Selecciona la tabla y copia a mano.","Couldn't copy. Select the table and copy manually.")}</div>}
