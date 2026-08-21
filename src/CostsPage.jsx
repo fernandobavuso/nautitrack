@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import { jsPDF } from "jspdf";
+import PurchaseMeta, { paymentSummary } from "./PaymentFields.jsx";
 import { hasFeature, PremiumLock, accountHasFleet } from "./plans.jsx";
 
 const CATEGORIES = ["Combustible","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
@@ -89,6 +90,11 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       category: e.category, description: e.description||null, amount: Number(e.amount),
       expense_date: e.expense_date, purchased_by: e.purchased_by||null,
       receipt_urls: e.receipt_urls||[],
+      payment_method: e.payment_method||null,
+      vendor: e.vendor||null, invoice_number: e.invoice_number||null,
+      card_brand: e.payment_method==="Tarjeta"?(e.card_brand||null):null,
+      card_last4: e.payment_method==="Tarjeta"?(e.card_last4||null):null,
+      card_owner: e.payment_method==="Tarjeta"?(e.card_owner||null):null,
     }).eq("id", e.id).select();
     if (error || !data?.length) { setMsg("Error: "+(error?.message||L("no se guardó","not saved"))); setTimeout(()=>setMsg(""),4000); return; }
     setExpenses(list=>list.map(x=>x.id===e.id?{...x,...data[0]}:x));
@@ -287,7 +293,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span title="Este gasto viene de una compra registrada en la Bitácora. No se anota dos veces." style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle",cursor:"help"}}>desde bitácora</span>:""}</div>
               <div style={{fontSize:11,color:"#64748b"}}>
-                {[e.description||L("Sin descripción","No description"), e.purchased_by ? `${L("compró","bought by")}: ${e.purchased_by}` : null, new Date(e.expense_date).toLocaleDateString("en-US")].filter(Boolean).join(" · ")}
+                {[e.description||L("Sin descripción","No description"), e.vendor||null, e.purchased_by ? `${L("compró","bought by")}: ${e.purchased_by}` : null, paymentSummary(e, lang)||null, e.invoice_number?`#${e.invoice_number}`:null, new Date(e.expense_date).toLocaleDateString("en-US")].filter(Boolean).join(" · ")}
               </div>
               {Array.isArray(e.receipt_urls)&&e.receipt_urls.length>0 && (
                 <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
@@ -353,6 +359,23 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
                 </div>
               </div>
               <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Método de pago","Payment method")}</label>
+                <select value={editExp.payment_method||""} onChange={ev=>setEditExp(x=>({...x,payment_method:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}>
+                  <option value="">{L("Seleccionar...","Select...")}</option>
+                  {["Efectivo","Tarjeta","Transferencia","Zelle","PayPal","Cheque","Otro"].map(pm=><option key={pm} value={pm}>{pm}</option>)}
+                </select>
+              </div>
+              <PurchaseMeta
+                value={{ vendor:editExp.vendor||"", invoice:editExp.invoice_number||"", cardBrand:editExp.card_brand||"", cardLast4:editExp.card_last4||"", cardOwner:editExp.card_owner||"" }}
+                onChange={patch=>setEditExp(x=>({ ...x,
+                  ...(patch.vendor!==undefined?{vendor:patch.vendor}:{}),
+                  ...(patch.invoice!==undefined?{invoice_number:patch.invoice}:{}),
+                  ...(patch.cardBrand!==undefined?{card_brand:patch.cardBrand}:{}),
+                  ...(patch.cardLast4!==undefined?{card_last4:patch.cardLast4}:{}),
+                  ...(patch.cardOwner!==undefined?{card_owner:patch.cardOwner}:{}),
+                }))}
+                payment={editExp.payment_method} providers={(vessels?.[0]?.providers)||[]} compact/>
+              <div>
                 <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("¿Quién lo compró?","Who bought it?")}</label>
                 <input value={editExp.purchased_by||""} onChange={ev=>setEditExp(x=>({...x,purchased_by:ev.target.value}))} style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,boxSizing:"border-box"}}/>
               </div>
@@ -395,15 +418,19 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
           `${L("Reembolso","Reimbursement")} — ${vessel.name}`,
           `${L("Generado","Generated")}: ${new Date().toLocaleDateString("en-US")}`,
           "",
-          ...pend.map(e=>`${fdate(e.expense_date)}  ${e.category}  ${e.description||L("Sin descripción","No description")}  $${money(e.amount)}`),
+          ...pend.map(e=>`${fdate(e.expense_date)}  ${e.category}  ${[e.description||L("Sin descripción","No description"), e.vendor, paymentSummary(e, lang), e.invoice_number?`#${e.invoice_number}`:null].filter(Boolean).join(" · ")}  $${money(e.amount)}`),
           "",
           `${L("TOTAL","TOTAL")}: $${money(total)}`,
         ].join("\n");
 
         // Formato tabla (pegar en Excel/QuickBooks: columnas separadas por tabulador)
         const tsv = [
-          ["Date","Category","Description","Amount"].join("\t"),
-          ...pend.map(e=>[fdate(e.expense_date), e.category, (e.description||"").replace(/\t/g," "), money(e.amount)].join("\t")),
+          ["Date","Category","Description","Vendor","Payment","Invoice #","Bought by","Amount"].join("\t"),
+          ...pend.map(e=>[
+            fdate(e.expense_date), e.category, (e.description||"").replace(/\t/g," "),
+            e.vendor||"", paymentSummary(e, lang), e.invoice_number||"", e.purchased_by||"",
+            money(e.amount),
+          ].join("\t")),
         ].join("\n");
 
         const copy = (text, which) => {

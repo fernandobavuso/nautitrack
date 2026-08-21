@@ -11,6 +11,7 @@ import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 import PartnerView from "./PartnerView.jsx";
+import PurchaseMeta from "./PaymentFields.jsx";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
@@ -450,6 +451,8 @@ export default function App() {
       equipHours: e.equip_hours, photos: e.photos || [],
       brand: e.brand, model2: e.model2, partNum: e.part_num,
       reimbursable: !!e.reimbursable,
+      vendor: e.vendor, invoiceNumber: e.invoice_number,
+      cardBrand: e.card_brand, cardLast4: e.card_last4, cardOwner: e.card_owner,
       costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
       item: e.item, dest: e.dest, persons: e.persons,
       ownerAboard: e.owner_aboard, ownerName: e.owner_name || "", crewSel: e.crew_sel || [],
@@ -519,6 +522,8 @@ export default function App() {
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
+      vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
+      card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), cost_bs: num(entry.costBs), payment: entry.payment,
       item: entry.item, dest: entry.dest, persons: num(entry.persons),
       owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
@@ -547,7 +552,9 @@ export default function App() {
         // El comprador va en su propio campo (purchased_by); ya no se pega a la
         // descripción para no verse doble ("por Fernando · compró: Fernando").
         const desc = baseDesc;
-        if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log", reimbursable: !!entry.reimbursable, reimbursed:false, purchased_by: entry.performedBy||null, receipt_urls: entry.photos||[] }).then(()=>{});
+        if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log", reimbursable: !!entry.reimbursable, reimbursed:false, purchased_by: entry.performedBy||null, receipt_urls: entry.photos||[],
+          payment_method: entry.payment||null, vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
+          card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null }).then(()=>{});
       }
       setVessels(vs => vs.map(v => {
         if (v.id !== vesselId) return v;
@@ -714,6 +721,8 @@ export default function App() {
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
+      vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
+      card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), payment: entry.payment,
       item: entry.item, dest: entry.dest, persons: num(entry.persons),
       owner_aboard: entry.ownerAboard, owner_name: entry.ownerName || null, crew_sel: entry.crewSel || [],
@@ -2377,6 +2386,10 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
   const [errors,setErrors]           = useState({});
   const [showErrBanner,setShowErrBanner] = useState(false);
   const [reimbursable,setReimbursable]   = useState(initial?.reimbursable||false);
+  const [purchMeta,setPurchMeta]         = useState({
+    vendor: initial?.vendor||"", invoice: initial?.invoiceNumber||"",
+    cardBrand: initial?.cardBrand||"", cardLast4: initial?.cardLast4||"", cardOwner: initial?.cardOwner||"",
+  });
   const [showInfo,setShowInfo]       = useState(false);
   const [serviceType,setServiceType] = useState(initial?.serviceType||"");
   const [systemId,setSystemId]       = useState(initial?.systemId||"");
@@ -2479,7 +2492,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
     if (type==="Servicio")    entry={...entry,serviceType,systemId,equipment:finalEquip,equipHours:needsHours?equipHours:null};
     if (type==="Combustible") entry={...entry,fuelQty:parseFloat(fuelQty),fuelUnit};
     if (type==="Salida")      entry={...entry,ownerAboard,ownerName:ownerAboard?ownerName.trim():"",crewSel,persons,dest,deptTime,arrTime,fuelOut,fuelIn,engineHrsOut:engOut,engineHrsIn:engIn,genHrsOut:genOut,genHrsIn:genIn,salidaClima:clima};
-    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment,reimbursable};
+    if (type==="Compra")      entry={...entry,item,brand,model2,partNum,costUSD:parseFloat(costUSD)||0,costBs:parseFloat(costBs)||0,payment:payment,reimbursable,vendor:purchMeta.vendor||null,invoiceNumber:purchMeta.invoice||null,cardBrand:payment==="Tarjeta"?(purchMeta.cardBrand||null):null,cardLast4:payment==="Tarjeta"?(purchMeta.cardLast4||null):null,cardOwner:payment==="Tarjeta"?(purchMeta.cardOwner||null):null};
     // Visita: guardar el subtipo (qué clase de visita fue)
     if (type==="Visita") {
       const sup = supervised === "Otro" ? (otherSupervised.trim() || "Otro") : supervised;
@@ -2840,6 +2853,9 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
             <div><label style={s.label}>Número de Parte</label><input value={partNum} onChange={e=>setPartNum(e.target.value)} placeholder="Ej: FF5052-A" style={s.input}/></div>
             <div><label style={s.label}>Costo (USD)</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
             <div><label style={s.label}>Método de Pago</label><select value={payment} onChange={e=>setPayment(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{PAYMENT_METHODS.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+            <PurchaseMeta value={purchMeta} onChange={patch=>setPurchMeta(m=>({...m,...patch}))}
+              payment={payment} providers={(vessels?.[0]?.providers)||vessel.providers||[]}
+              onOwnerCard={()=>setReimbursable(false)} compact/>
             {isFleetAccount && (
               <label style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"9px 11px",cursor:"pointer"}}>
                 <input type="checkbox" checked={reimbursable} onChange={e=>setReimbursable(e.target.checked)} style={{width:15,height:15}}/>

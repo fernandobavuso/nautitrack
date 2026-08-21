@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import { accountHasFleet } from "./plans.jsx";
+import PurchaseMeta from "./PaymentFields.jsx";
 
 // Modal "Registrar gasto": hace UNA pregunta simple (¿compra del día o gasto fijo?)
 // y enruta al lugar correcto. El usuario no tiene que saber la teoría de
@@ -17,11 +18,13 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
 
   // Formulario compra operacional (va a bitácora)
   const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false, isPart:false, brand:"", model2:"", partNum:"" });
+  const [opMeta, setOpMeta]       = useState({});
+  const [admMeta, setAdmMeta]     = useState({});
   const [opPhotos, setOpPhotos]   = useState([]);
   const [admPhotos, setAdmPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   // Formulario gasto administrativo (va directo a costos)
-  const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false, reimbursable:false, by:"" });
+  const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false, reimbursable:false, by:"", payment:"" });
 
   // Fotos de factura: mismo balde que la bitácora
   const uploadPhotos = async (files, setter, current) => {
@@ -67,6 +70,10 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
       costUSD: op.currency==="USD"?Number(op.amount):null,
       costBs: op.currency==="VES"?Number(op.amount):null,
       payment: op.payment, date: op.date, performedBy: op.by || null, photos: opPhotos,
+      vendor: opMeta.vendor||null, invoiceNumber: opMeta.invoice||null,
+      cardBrand: op.payment==="Tarjeta" ? (opMeta.cardBrand||null) : null,
+      cardLast4: op.payment==="Tarjeta" ? (opMeta.cardLast4||null) : null,
+      cardOwner: op.payment==="Tarjeta" ? (opMeta.cardOwner||null) : null,
       ...(op.isPart ? { brand: op.brand||null, model2: op.model2||null, partNum: op.partNum||null } : {}),
       reimbursable: isFleetManager ? op.reimbursable : false,
     };
@@ -84,6 +91,11 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
       expense_date: adm.date, recurring: adm.recurring, source:"direct",
       reimbursable: isFleetManager ? adm.reimbursable : false, reimbursed: false,
       purchased_by: adm.by || null, receipt_urls: admPhotos,
+      payment_method: adm.payment || null,
+      vendor: admMeta.vendor||null, invoice_number: admMeta.invoice||null,
+      card_brand: adm.payment==="Tarjeta" ? (admMeta.cardBrand||null) : null,
+      card_last4: adm.payment==="Tarjeta" ? (admMeta.cardLast4||null) : null,
+      card_owner: adm.payment==="Tarjeta" ? (admMeta.cardOwner||null) : null,
     });
     if (error) { setMsg("Error: "+error.message); setSaving(false); return; }
     onDirectExpense && onDirectExpense();
@@ -142,6 +154,10 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
                 <div><label style={lbl}>{L("Número de parte","Part number")}</label><input value={op.partNum} onChange={e=>setOp({...op,partNum:e.target.value})} placeholder="FF5052..." style={{...inp,width:"100%"}}/></div>
               </div>
             )}
+            <PurchaseMeta value={opMeta} onChange={patch=>setOpMeta(m=>({...m,...patch}))}
+              payment={op.payment} providers={(vessels?.[0]?.providers)||[]}
+              onOwnerCard={()=>setOp(o=>({...o,reimbursable:false}))}/>
+            <div style={{height:10}}/>
             <PhotoRow photos={opPhotos} setter={setOpPhotos}/>
             {isFleetManager && (
               <label style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 10px",margin:"8px 0",cursor:"pointer"}}>
@@ -165,6 +181,17 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
             <label style={lbl}>Descripción (opcional)</label>
             <input value={adm.description} onChange={e=>setAdm({...adm,description:e.target.value})} placeholder="Ej: Seguro anual, mensualidad marina..." style={inp}/>
             <div><label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
+            <div style={{marginBottom:10}}><label style={lbl}>{L("Método de pago","Payment method")}</label>
+              <select value={adm.payment} onChange={e=>setAdm({...adm,payment:e.target.value})} style={{...inp,width:"100%"}}>
+                <option value="">{L("Seleccionar...","Select...")}</option>
+                {["Efectivo","Tarjeta","Transferencia","Zelle","PayPal","Cheque","Otro"].map(pm=><option key={pm} value={pm}>{pm}</option>)}
+              </select>
+            </div>
+            <div style={{marginBottom:10}}>
+              <PurchaseMeta value={admMeta} onChange={patch=>setAdmMeta(m=>({...m,...patch}))}
+                payment={adm.payment} providers={(vessels?.[0]?.providers)||[]}
+                onOwnerCard={()=>setAdm(a=>({...a,reimbursable:false}))}/>
+            </div>
             <div style={{marginBottom:10}}><label style={lbl}>{L("¿Quién lo compró / pagó?","Who bought / paid it?")}</label><input value={adm.by} onChange={e=>setAdm({...adm,by:e.target.value})} placeholder={L("Nombre de la persona","Person's name")} style={{...inp,width:"100%"}}/></div>
             <PhotoRow photos={admPhotos} setter={setAdmPhotos}/>
             <label style={{...lbl,display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginTop:8}}>
