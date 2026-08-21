@@ -40,7 +40,7 @@ const inp = { padding: "9px 11px", border: "1px solid #e2e8f0", borderRadius: 8,
 // value: { vendor, invoice, cardBrand, cardLast4, cardOwner }
 // onChange(patch), payment: método elegido, providers: lista de la flota,
 // onOwnerCard(): aviso cuando la tarjeta es del dueño (para apagar reembolsable)
-export default function PurchaseMeta({ value, onChange, payment, providers = [], onOwnerCard, compact = false }) {
+export default function PurchaseMeta({ value, onChange, payment, providers = [], onOwnerCard, compact = false, hideVendor = false }) {
   const { lang } = useLang();
   const L = (es, en) => (lang === "en" ? en : es);
   const v = value || {};
@@ -53,12 +53,12 @@ export default function PurchaseMeta({ value, onChange, payment, providers = [],
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ flex: 2, minWidth: 150 }}>
+        {!hideVendor && <div style={{ flex: 2, minWidth: 150 }}>
           <label style={lbl}>{L("Proveedor / Tienda", "Vendor / Store")}</label>
           <input list={listId} value={v.vendor || ""} onChange={e => onChange({ vendor: e.target.value })}
             placeholder={L("Amazon, West Marine, taller...", "Amazon, West Marine, shop...")} style={{ ...inp, width: "100%" }} />
           <datalist id={listId}>{suggestions.map(x => <option key={x} value={x} />)}</datalist>
-        </div>
+        </div>}
         <div style={{ flex: 1, minWidth: 110 }}>
           <label style={lbl}>{L("N° factura / recibo", "Invoice / receipt #")}</label>
           <input value={v.invoice || ""} onChange={e => onChange({ invoice: e.target.value })}

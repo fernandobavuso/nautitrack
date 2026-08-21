@@ -109,8 +109,13 @@ export default function Schedule({ user, vessels = [], onClose }) {
       }
       const works = (sh.works||[]).length ? sh.works.join(", ") : L("Servicio","Service");
       const isClean = (sh.works||[]).some(w => CLEAN_WORKS.includes(w));
+      // Bajo la empresa compartida: si quien paga es co-gestor, el gasto vive con el
+      // dueño de la flota, igual que en Mi Empresa.
+      const { data: fm } = await supabase.from("fleet_managers")
+        .select("fleet_owner_id").eq("manager_id", user.id).eq("status","active").limit(1);
+      const companyOwner = fm?.[0]?.fleet_owner_id || user.id;
       const { error: expErr } = await supabase.from("company_expenses").insert({
-        owner_id: user.id, shift_id: id,
+        owner_id: companyOwner, shift_id: id,
         category: isClean ? "Limpiezas" : "Sueldos",
         description: `${works}${sh.vessel_name ? ` — ${sh.vessel_name}` : ""}`,
         payee: sh.person_name || null,

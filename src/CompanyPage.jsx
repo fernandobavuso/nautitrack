@@ -5,12 +5,13 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "./supabase.js";
 import { useLang } from "./i18n.jsx";
 import { accountHasFleet } from "./plans.jsx";
+import PurchaseMeta, { paymentSummary } from "./PaymentFields.jsx";
 
 const CATEGORIES = [
   "Materiales y suministros", "Limpiezas", "Transporte y gasolina",
-  "Oficina", "Sueldos", "Marketing", "Seguros", "Impuestos", "Otro",
+  "Comidas y representación", "Oficina", "Sueldos", "Marketing", "Seguros", "Impuestos", "Otro",
 ];
-const CAT_COLORS = ["#534AB7","#1D9E75","#D85A30","#378ADD","#D4537E","#BA7517","#639922","#5F5E5A","#94a3b8"];
+const CAT_COLORS = ["#534AB7","#1D9E75","#D85A30","#C2417A","#378ADD","#D4537E","#BA7517","#639922","#5F5E5A","#94a3b8"];
 
 const money = (n) => "$" + Number(n||0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
 const monthKey = (d) => String(d||"").slice(0,7);
@@ -31,19 +32,33 @@ export default function CompanyPage({ user, vessels }) {
   const [form, setForm] = useState({
     category: CATEGORIES[0], description:"", payee:"", amount:"",
     date: new Date().toISOString().slice(0,10), recurring:false,
+    purchased_by:"", payment_method:"", invoice_number:"",
+    card_brand:"", card_last4:"", card_owner:"", receipt_urls:[],
   });
+  const [uploading, setUploading] = useState(false);
+  // Joana y Fernando comparten la MISMA empresa: si el usuario es co-gestor de una
+  // flota ajena, los gastos de empresa viven bajo el dueño de esa flota.
+  const [effOwner, setEffOwner] = useState(null);
 
   const isFleet = accountHasFleet(vessels);
 
-  const load = async () => {
+  const resolveOwner = async () => {
+    const { data } = await supabase.from("fleet_managers")
+      .select("fleet_owner_id").eq("manager_id", user.id).eq("status","active").limit(1);
+    const oid = data?.[0]?.fleet_owner_id || user.id;
+    setEffOwner(oid); return oid;
+  };
+
+  const load = async (ownerId) => {
+    const oid = ownerId || effOwner || await resolveOwner();
     setLoading(true);
     const { data, error } = await supabase.from("company_expenses")
-      .select("*").eq("owner_id", user.id).order("expense_date",{ascending:false});
+      .select("*").eq("owner_id", oid).order("expense_date",{ascending:false});
     if (error) { setMsg(L("No se pudieron cargar los gastos: ","Couldn't load expenses: ")+error.message); }
     setRows(data||[]);
     setLoading(false);
   };
-  useEffect(()=>{ load(); /* eslint-disable-next-line */ },[user?.id]);
+  useEffect(()=>{ resolveOwner().then(oid=>load(oid)); /* eslint-disable-next-line */ },[user?.id]);
 
   // ── Cálculos del mes seleccionado ──────────────────────────────────────────
   const calc = useMemo(()=>{
@@ -85,20 +100,42 @@ export default function CompanyPage({ user, vessels }) {
       description: form.description || null, payee: form.payee.trim() || null,
       amount: Number(form.amount), currency: "USD",
       expense_date: form.date, recurring: form.recurring,
+      purchased_by: form.purchased_by || null,
+      payment_method: form.payment_method || null,
+      invoice_number: form.invoice_number || null,
+      card_brand: form.payment_method==="Tarjeta" ? (form.card_brand||null) : null,
+      card_last4: form.payment_method==="Tarjeta" ? (form.card_last4||null) : null,
+      card_owner: form.payment_method==="Tarjeta" ? (form.card_owner||null) : null,
+      receipt_urls: form.receipt_urls || [],
     };
     let error;
     if (editingId) {
       const res = await supabase.from("company_expenses").update(payload).eq("id", editingId).select();
       error = res.error || ((!res.data || !res.data.length) ? { message: L("no se encontró el gasto","expense not found") } : null);
     } else {
-      const res = await supabase.from("company_expenses").insert({ owner_id: user.id, ...payload });
+      const res = await supabase.from("company_expenses").insert({ owner_id: effOwner || user.id, ...payload });
       error = res.error;
     }
     setSaving(false);
     if (error) { setMsg("Error: "+error.message); setTimeout(()=>setMsg(""),4000); return; }
     setCreating(false); setEditingId(null);
-    setForm({ category:CATEGORIES[0], description:"", payee:"", amount:"", date:new Date().toISOString().slice(0,10), recurring:false });
+    setForm({ category:CATEGORIES[0], description:"", payee:"", amount:"", date:new Date().toISOString().slice(0,10), recurring:false, purchased_by:"", payment_method:"", invoice_number:"", card_brand:"", card_last4:"", card_owner:"", receipt_urls:[] });
     load();
+  };
+
+  const uploadReceipts = async (files) => {
+    setUploading(true);
+    const urls = [...(form.receipt_urls||[])];
+    for (const file of files) {
+      const path = `facturas/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}_${file.name}`;
+      const { error } = await supabase.storage.from("bitacora-fotos").upload(path, file);
+      if (!error) {
+        const { data: u } = supabase.storage.from("bitacora-fotos").getPublicUrl(path);
+        if (u?.publicUrl) urls.push(u.publicUrl);
+      } else { setMsg(L("No se pudo subir: ","Upload failed: ")+error.message); setTimeout(()=>setMsg(""),3500); }
+    }
+    setForm(f=>({ ...f, receipt_urls: urls }));
+    setUploading(false);
   };
 
   const startEdit = (r) => {
@@ -107,6 +144,10 @@ export default function CompanyPage({ user, vessels }) {
       category: r.category || CATEGORIES[0], description: r.description || "",
       payee: r.payee || "", amount: String(r.amount ?? ""),
       date: r.expense_date, recurring: !!r.recurring,
+      purchased_by: r.purchased_by || "", payment_method: r.payment_method || "",
+      invoice_number: r.invoice_number || "", card_brand: r.card_brand || "",
+      card_last4: r.card_last4 || "", card_owner: r.card_owner || "",
+      receipt_urls: r.receipt_urls || [],
     });
     setEditingId(r.id); setCreating(true);
   };
@@ -267,8 +308,15 @@ export default function CompanyPage({ user, vessels }) {
                       {r.shift_id && <span style={{marginLeft:6,fontSize:10,background:"#eff6ff",color:"#1e40af",borderRadius:20,padding:"2px 7px"}}>{L("agenda","schedule")}</span>}
                     </div>
                     <div style={{fontSize:11,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {[r.payee, r.description, new Date(r.expense_date+"T00:00:00").toLocaleDateString("en-US")].filter(Boolean).join(" · ")}
+                      {[r.payee, r.description, r.purchased_by?`${L("compró","by")}: ${r.purchased_by}`:null, paymentSummary(r, lang)||null, r.invoice_number?`#${r.invoice_number}`:null, new Date(r.expense_date+"T00:00:00").toLocaleDateString("en-US")].filter(Boolean).join(" · ")}
                     </div>
+                    {Array.isArray(r.receipt_urls)&&r.receipt_urls.length>0 && (
+                      <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
+                        {r.receipt_urls.map((ph,i)=>(
+                          <a key={i} href={ph} target="_blank" rel="noreferrer"><img src={ph} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:6,border:"1px solid #e2e8f0"}}/></a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
                     <div style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>{money(r.amount)}</div>
@@ -305,8 +353,8 @@ export default function CompanyPage({ user, vessels }) {
           `${L("Tu parte","Your share")} (${splitPct}%): $${fix(mine)}`,
           `${L("Parte del socio","Partner's share")} (${100-splitPct}%): $${fix(theirs)}`,
         ].join("\n");
-        const tsv=[["Date","Category","Payee","Description","Amount"].join("\t"),
-          ...pend.map(r=>[fdate(r.expense_date),r.category,r.payee||"",(r.description||"").replace(/\t/g," "),fix(r.amount)].join("\t")),
+        const tsv=[["Date","Category","Payee","Description","Payment","Invoice #","Bought by","Amount"].join("\t"),
+          ...pend.map(r=>[fdate(r.expense_date),r.category,r.payee||"",(r.description||"").replace(/\t/g," "),paymentSummary(r,lang),r.invoice_number||"",r.purchased_by||"",fix(r.amount)].join("\t")),
           "", ["TOTAL","","","",fix(tot)].join("\t")].join("\n");
         const copy=(t,w)=>navigator.clipboard?.writeText(t)
           .then(()=>{setCopied(w);setTimeout(()=>setCopied(""),2000);})
@@ -416,6 +464,44 @@ export default function CompanyPage({ user, vessels }) {
                   <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={{...sel,width:"100%",boxSizing:"border-box"}}/>
                 </div>
               </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Método de pago","Payment method")}</label>
+                <select value={form.payment_method} onChange={e=>setForm({...form,payment_method:e.target.value})} style={{...sel,width:"100%"}}>
+                  <option value="">{L("Seleccionar...","Select...")}</option>
+                  {["Efectivo","Tarjeta","Transferencia","Zelle","PayPal","Cheque","Otro"].map(pm=><option key={pm} value={pm}>{pm}</option>)}
+                </select>
+              </div>
+              <PurchaseMeta hideVendor
+                value={{ invoice:form.invoice_number, cardBrand:form.card_brand, cardLast4:form.card_last4, cardOwner:form.card_owner }}
+                onChange={patch=>setForm(f=>({ ...f,
+                  ...(patch.invoice!==undefined?{invoice_number:patch.invoice}:{}),
+                  ...(patch.cardBrand!==undefined?{card_brand:patch.cardBrand}:{}),
+                  ...(patch.cardLast4!==undefined?{card_last4:patch.cardLast4}:{}),
+                  ...(patch.cardOwner!==undefined?{card_owner:patch.cardOwner}:{}),
+                }))}
+                payment={form.payment_method} providers={(vessels?.[0]?.providers)||[]}/>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("¿Quién lo compró / gastó?","Who bought / spent it?")}</label>
+                <input value={form.purchased_by} onChange={e=>setForm({...form,purchased_by:e.target.value})} placeholder={L("Nombre de la persona","Person's name")} style={{...sel,width:"100%",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Fotos de la factura","Invoice photos")}</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  {(form.receipt_urls||[]).map((ph,i)=>(
+                    <div key={i} style={{position:"relative"}}>
+                      <img src={ph} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+                      <button onClick={()=>setForm(f=>({...f,receipt_urls:f.receipt_urls.filter((_,ix)=>ix!==i)}))}
+                        style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",border:"none",background:"#dc2626",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",padding:0}}>×</button>
+                    </div>
+                  ))}
+                  <label style={{width:52,height:52,border:"1.5px dashed #cbd5e1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#94a3b8",fontSize:20}}>
+                    {uploading ? "…" : "+"}
+                    <input type="file" accept="image/*" multiple style={{display:"none"}}
+                      onChange={e=>{ if(e.target.files?.length) uploadReceipts([...e.target.files]); e.target.value=""; }}/>
+                  </label>
+                </div>
+              </div>
+
               <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
                 <input type="checkbox" checked={form.recurring} onChange={e=>setForm({...form,recurring:e.target.checked})}/>
                 <span style={{fontSize:12,color:"#475569"}}>{L("Es un gasto fijo mensual","It's a fixed monthly expense")}</span>
