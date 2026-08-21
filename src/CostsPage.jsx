@@ -217,7 +217,18 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
             <div style={{width:4,height:36,borderRadius:2,background:CAT_COLORS[e.category]||"#64748b",flexShrink:0}}/>
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.category}{e.recurring?" · fijo mensual":""}{e.source==="log"?<span title="Este gasto viene de una compra registrada en la Bitácora. No se anota dos veces." style={{marginLeft:6,fontSize:9,background:"#eff6ff",color:"#2563eb",padding:"2px 7px",borderRadius:10,fontWeight:700,verticalAlign:"middle",cursor:"help"}}>desde bitácora</span>:""}</div>
-              <div style={{fontSize:11,color:"#64748b"}}>{e.description||"Sin descripción"} · {new Date(e.expense_date).toLocaleDateString("en-US")}</div>
+              <div style={{fontSize:11,color:"#64748b"}}>
+                {[e.description||L("Sin descripción","No description"), e.purchased_by ? `${L("compró","bought by")}: ${e.purchased_by}` : null, new Date(e.expense_date).toLocaleDateString("en-US")].filter(Boolean).join(" · ")}
+              </div>
+              {Array.isArray(e.receipt_urls)&&e.receipt_urls.length>0 && (
+                <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
+                  {e.receipt_urls.map((ph,i)=>(
+                    <a key={i} href={ph} target="_blank" rel="noreferrer" title={L("Ver factura","View invoice")}>
+                      <img src={ph} alt="" style={{width:34,height:34,objectFit:"cover",borderRadius:6,border:"1px solid #e2e8f0"}}/>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{textAlign:"right",whiteSpace:"nowrap"}}>
               <div style={{fontSize:14,fontWeight:800,color:"#0f172a"}}>

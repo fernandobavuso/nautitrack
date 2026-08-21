@@ -545,7 +545,7 @@ export default function App() {
           : entry.type==="Reparación" ? "Reparación" : "Otro";
         const baseDesc = entry.item || entry.equipment || entry.desc || entry.type;
         const desc = entry.performedBy ? `${baseDesc} · por ${entry.performedBy}` : baseDesc;
-        if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log", reimbursable: !!entry.reimbursable, reimbursed:false }).then(()=>{});
+        if (costUSD>0) supabase.from("expenses").insert({ vessel_id:vesselId, owner_id:ownerId, category:cat, description:desc, amount:costUSD, currency:"USD", expense_date:entry.date, source:"log", reimbursable: !!entry.reimbursable, reimbursed:false, purchased_by: entry.performedBy||null, receipt_urls: entry.photos||[] }).then(()=>{});
       }
       setVessels(vs => vs.map(v => {
         if (v.id !== vesselId) return v;

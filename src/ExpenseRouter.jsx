@@ -16,9 +16,47 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
   const [saving, setSaving] = useState(false);
 
   // Formulario compra operacional (va a bitácora)
-  const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false });
+  const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false, isPart:false, brand:"", model2:"", partNum:"" });
+  const [opPhotos, setOpPhotos]   = useState([]);
+  const [admPhotos, setAdmPhotos] = useState([]);
+  const [uploading, setUploading] = useState(false);
   // Formulario gasto administrativo (va directo a costos)
-  const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false, reimbursable:false });
+  const [adm, setAdm] = useState({ category:"Seguro", description:"", amount:"", currency:"USD", date:new Date().toISOString().slice(0,10), recurring:false, reimbursable:false, by:"" });
+
+  // Fotos de factura: mismo balde que la bitácora
+  const uploadPhotos = async (files, setter, current) => {
+    setUploading(true);
+    const uploaded = [...current];
+    for (const file of files) {
+      const path = `facturas/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}_${file.name}`;
+      const { error } = await supabase.storage.from("bitacora-fotos").upload(path, file);
+      if (!error) {
+        const { data: urlData } = supabase.storage.from("bitacora-fotos").getPublicUrl(path);
+        if (urlData?.publicUrl) uploaded.push(urlData.publicUrl);
+      } else { setMsg(L("No se pudo subir una foto: ","Couldn't upload a photo: ")+error.message); }
+    }
+    setter(uploaded); setUploading(false);
+  };
+
+  const PhotoRow = ({ photos, setter }) => (
+    <div style={{marginBottom:10}}>
+      <label style={lbl}>{L("Fotos de la factura","Invoice photos")}</label>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+        {photos.map((ph,i)=>(
+          <div key={i} style={{position:"relative"}}>
+            <img src={ph} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+            <button onClick={()=>setter(photos.filter((_,x)=>x!==i))}
+              style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",border:"none",background:"#dc2626",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",padding:0}}>×</button>
+          </div>
+        ))}
+        <label style={{width:52,height:52,border:"1.5px dashed #cbd5e1",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"#94a3b8",fontSize:20}}>
+          {uploading ? "…" : "+"}
+          <input type="file" accept="image/*" multiple style={{display:"none"}}
+            onChange={e=>{ if(e.target.files?.length) uploadPhotos([...e.target.files], setter, photos); e.target.value=""; }}/>
+        </label>
+      </div>
+    </div>
+  );
 
   const saveOperational = async () => {
     if (!op.item.trim() || !op.amount) { setMsg("Completa qué compraste y el monto"); return; }
@@ -28,7 +66,8 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
       type:"Compra", item:op.item.trim(), desc:"",
       costUSD: op.currency==="USD"?Number(op.amount):null,
       costBs: op.currency==="VES"?Number(op.amount):null,
-      payment: op.payment, date: op.date, performedBy: op.by || null, photos:[],
+      payment: op.payment, date: op.date, performedBy: op.by || null, photos: opPhotos,
+      ...(op.isPart ? { brand: op.brand||null, model2: op.model2||null, partNum: op.partNum||null } : {}),
       reimbursable: isFleetManager ? op.reimbursable : false,
     };
     try { await onLogPurchase(entry); onClose(); }
@@ -44,6 +83,7 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
       amount: Number(adm.amount), currency: adm.currency,
       expense_date: adm.date, recurring: adm.recurring, source:"direct",
       reimbursable: isFleetManager ? adm.reimbursable : false, reimbursed: false,
+      purchased_by: adm.by || null, receipt_urls: admPhotos,
     });
     if (error) { setMsg("Error: "+error.message); setSaving(false); return; }
     onDirectExpense && onDirectExpense();
@@ -87,6 +127,22 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
               <div style={{flex:1}}><label style={lbl}>{L("Pago","Payment")}</label><select value={op.payment} onChange={e=>setOp({...op,payment:e.target.value})} style={inp}><option>Zelle</option><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
             </div>
             <div><label style={lbl}>{L("Fecha","Date")}</label><input type="date" value={op.date} onChange={e=>setOp({...op,date:e.target.value})} style={inp}/></div>
+            <div style={{marginBottom:10}}><label style={lbl}>{L("¿Quién lo compró?","Who bought it?")}</label><input value={op.by} onChange={e=>setOp({...op,by:e.target.value})} placeholder={L("Nombre de la persona","Person's name")} style={{...inp,width:"100%"}}/></div>
+
+            <label style={{display:"flex",alignItems:"center",gap:8,background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"8px 10px",marginBottom:10,cursor:"pointer"}}>
+              <input type="checkbox" checked={op.isPart} onChange={e=>setOp({...op,isPart:e.target.checked})}/>
+              <span style={{fontSize:12,color:"#0369a1",fontWeight:600}}>{L("Es un repuesto — agregar detalle","It's a part — add details")}</span>
+            </label>
+            {op.isPart && (
+              <div style={{background:"#f8fafc",borderRadius:9,padding:"10px 11px",marginBottom:10,display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1}}><label style={lbl}>{L("Marca","Brand")}</label><input value={op.brand} onChange={e=>setOp({...op,brand:e.target.value})} placeholder="Racor, Fleetguard..." style={{...inp,width:"100%"}}/></div>
+                  <div style={{flex:1}}><label style={lbl}>{L("Modelo","Model")}</label><input value={op.model2} onChange={e=>setOp({...op,model2:e.target.value})} style={{...inp,width:"100%"}}/></div>
+                </div>
+                <div><label style={lbl}>{L("Número de parte","Part number")}</label><input value={op.partNum} onChange={e=>setOp({...op,partNum:e.target.value})} placeholder="FF5052..." style={{...inp,width:"100%"}}/></div>
+              </div>
+            )}
+            <PhotoRow photos={opPhotos} setter={setOpPhotos}/>
             {isFleetManager && (
               <label style={{display:"flex",alignItems:"center",gap:8,background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 10px",margin:"8px 0",cursor:"pointer"}}>
                 <input type="checkbox" checked={op.reimbursable} onChange={e=>setOp({...op,reimbursable:e.target.checked})}/>
@@ -109,6 +165,8 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
             <label style={lbl}>Descripción (opcional)</label>
             <input value={adm.description} onChange={e=>setAdm({...adm,description:e.target.value})} placeholder="Ej: Seguro anual, mensualidad marina..." style={inp}/>
             <div><label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
+            <div style={{marginBottom:10}}><label style={lbl}>{L("¿Quién lo compró / pagó?","Who bought / paid it?")}</label><input value={adm.by} onChange={e=>setAdm({...adm,by:e.target.value})} placeholder={L("Nombre de la persona","Person's name")} style={{...inp,width:"100%"}}/></div>
+            <PhotoRow photos={admPhotos} setter={setAdmPhotos}/>
             <label style={{...lbl,display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginTop:8}}>
               <input type="checkbox" checked={adm.recurring} onChange={e=>setAdm({...adm,recurring:e.target.checked})}/>
               Es un gasto fijo mensual (se repite)
