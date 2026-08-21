@@ -350,7 +350,13 @@ export default function App() {
   const [vesselsLoading, setVesselsLoading] = useState(true);
   const [checkingRole, setCheckingRole] = useState(true);
   const [vesselId, setVesselId]       = useState(null);
-  const [page, setPage]               = useState("home");
+  // Al refrescar, la app vuelve a la página donde estaba (como cualquier sitio web).
+  // "admin" no se restaura porque depende de permisos que aún no se han verificado.
+  const [page, setPage]               = useState(() => {
+    const saved = localStorage.getItem("nt_page");
+    const valid = ["home","tasks","calendar","log","records","docs","costs","fleet","company","inventory","providers"];
+    return valid.includes(saved) ? saved : "home";
+  });
   const [showVesselMenu, setShowVesselMenu]       = useState(false);
   const [showUserMenu, setShowUserMenu]           = useState(false);
   const [showVesselDetails, setShowVesselDetails] = useState(false);
@@ -371,6 +377,7 @@ export default function App() {
   const [hideChecklist, setHideChecklist] = useState(() => !!localStorage.getItem("nt_hide_checklist"));
   // Recordar el barco seleccionado entre refrescos
   useEffect(() => { if (vesselId != null) localStorage.setItem("nt_vessel_id", String(vesselId)); }, [vesselId]);
+  useEffect(() => { localStorage.setItem("nt_page", page); }, [page]);
 
   const [planMsg, setPlanMsg] = useState("");
   const [showQRPanel, setShowQRPanel]             = useState(false);
