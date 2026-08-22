@@ -72,6 +72,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       : [{ vName: vessel.name, tasks: vessel.tasks || [] }];
     taskSources.forEach(({ vName, tasks }) => tasks.forEach(t => {
       if (!t.nextDue) return;
+      if (t.status === "done") return;   // las completadas ya no ocupan el calendario
       if (shiftTaskIds.has(String(t.id))) return; // ya se muestra como turno
       events.push({
         kind: "task", date: t.nextDue.slice(0, 10),
