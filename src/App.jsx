@@ -162,6 +162,12 @@ const NO_CREW = "Sin tripulación";
 const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
 
 // Subtipos de "Visita"
+// Una inspección puede ser el tipo antiguo "Inspección" o una Visita moderna que
+// incluyó el trabajo de Inspección (formato multi-trabajo actual de la bitácora).
+const isInspection = (e) =>
+  e.type === "Inspección" ||
+  (e.type === "Visita" && ((e.visitTypes||[]).includes("Inspección") || e.visitType === "Inspección"));
+
 const VISIT_TYPES = [
   "Buceo / Casco",           // buzo, ánodos, limpieza de casco
   "Combustible",             // cargar combustible durante la visita
@@ -3109,7 +3115,7 @@ function RecordsPage({ vessel }) {
   const [subFilter,setSubFilter]   = useState("Todos");
   const [showReport,setShowReport] = useState(false);
   const serviceLog  = (vessel.log||[]).filter(e=>e.type==="Servicio");
-  const inspLog     = (vessel.log||[]).filter(e=>e.type==="Inspección");
+  const inspLog     = (vessel.log||[]).filter(isInspection);
   const fuelLog     = (vessel.log||[]).filter(e=>e.type==="Combustible");
   const purchaseLog = (vessel.log||[]).filter(e=>e.type==="Compra");
   const totalCost   = (vessel.records||[]).reduce((a,r)=>a+r.cost,0);
@@ -3236,7 +3242,7 @@ function ReportModal({ vessel, onClose }) {
     const filteredLog   = filterByDate(vessel.log||[], "date");
     const filteredTasks = vessel.tasks || [];
     const services      = filteredLog.filter(e=>e.type==="Servicio");
-    const inspections   = filteredLog.filter(e=>e.type==="Inspección");
+    const inspections   = filteredLog.filter(isInspection);
     const fuelLog       = filteredLog.filter(e=>e.type==="Combustible");
     const salidas       = filteredLog.filter(e=>e.type==="Salida");
     const compras       = filteredLog.filter(e=>e.type==="Compra");
