@@ -3605,15 +3605,17 @@ function ReportModal({ vessel, onClose }) {
             ))}
           </div>
 
-          {/* Periodo — campos de texto MM/DD/AAAA en vez de selector de fecha */}
+          {/* Periodo — selector de fecha nativo (calendario) */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={s.label}>{lang==="es"?"Desde":"From"} <span style={{color:"#94a3b8",fontWeight:400}}>(MM/DD/AAAA)</span></label>
-              <input value={from} onChange={e=>setFrom(e.target.value)} placeholder="06/01/2026" style={s.input}/>
+              <label style={s.label}>{lang==="es"?"Desde":"From"}</label>
+              <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={s.input}/>
+              {from && !from.includes("/") && <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:3}}>{new Date(from+"T00:00:00").toLocaleDateString(lang==="es"?"es":"en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"})}</div>}
             </div>
             <div>
-              <label style={s.label}>{lang==="es"?"Hasta":"To"} <span style={{color:"#94a3b8",fontWeight:400}}>(MM/DD/AAAA)</span></label>
-              <input value={to} onChange={e=>setTo(e.target.value)} placeholder="06/30/2026" style={s.input}/>
+              <label style={s.label}>{lang==="es"?"Hasta":"To"}</label>
+              <input type="date" value={to} min={(from&&!from.includes("/"))?from:undefined} onChange={e=>setTo(e.target.value)} style={s.input}/>
+              {to && !to.includes("/") && <div style={{fontSize:11,color:"#2563eb",fontWeight:600,marginTop:3}}>{new Date(to+"T00:00:00").toLocaleDateString(lang==="es"?"es":"en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"})}</div>}
             </div>
           </div>
 
