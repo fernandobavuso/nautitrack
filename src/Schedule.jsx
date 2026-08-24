@@ -37,7 +37,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const [filterPerson, setFilterPerson] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo]     = useState("");
-  const [form, setForm] = useState({ date: today, personName:"", vesselName:"", works:[], notes:"", hours:"", rate:"" });
+  const [form, setForm] = useState({ date: today, personName:"", vesselName:"", works:[], notes:"", hours:"", rate:"", payMode:"hora" });
   const [repeatOpen, setRepeatOpen] = useState(false);
   const [repeatWeeks, setRepeatWeeks] = useState(1);
 
@@ -73,7 +73,9 @@ export default function Schedule({ user, vessels = [], onClose }) {
       shift_date:  form.date,
       description: form.works.length ? form.works.join(" + ") : null,
       notes:       form.notes.trim() || null,
-      hours:       form.hours !== "" ? Number(form.hours) : null,
+      // "hora": horas × tarifa. "flat": el precio va en rate y hours queda vacío
+      // (el pago y el gasto de empresa ya calculan: horas×tarifa, o la tarifa sola).
+      hours:       form.payMode==="flat" ? null : (form.hours !== "" ? Number(form.hours) : null),
       rate:        form.rate  !== "" ? Number(form.rate)  : null,
       work_status:    "Agendado",
       payment_status: "Pendiente",
@@ -81,7 +83,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
     const { data, error } = await supabase.from("work_shifts").insert(row).select().single();
     if (error) { flash("Error: " + error.message); return; }
     setShifts(s => [...s, data].sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1)));
-    setForm({ date: today, personName:"", vesselName:"", works:[], notes:"", hours:"", rate:"" });
+    setForm({ date: today, personName:"", vesselName:"", works:[], notes:"", hours:"", rate:"", payMode:"hora" });
     setAdding(false);
     flash(L("Turno agendado", "Shift scheduled"));
   };
@@ -243,7 +245,10 @@ export default function Schedule({ user, vessels = [], onClose }) {
     flash(L("CSV descargado", "CSV downloaded"));
   };
 
-  const total  = (s) => (Number(s.hours) || 0) * (Number(s.rate) || 0);
+  // horas × tarifa; si no hay horas (precio fijo), el total es la tarifa sola
+  const total  = (s) => (Number(s.hours) > 0 && Number(s.rate) > 0)
+    ? Number(s.hours) * Number(s.rate)
+    : (Number(s.rate) || 0);
   const filtered = shifts.filter(s => {
     if (filterPerson && s.person_name !== filterPerson) return false;
     if (from && s.shift_date < from) return false;
@@ -334,15 +339,33 @@ export default function Schedule({ user, vessels = [], onClose }) {
                 </div>
               </div>
 
-              <div style={{display:"flex",gap:10}}>
-                <div style={{flex:1}}>
-                  <label style={lbl}>{L("Horas", "Hours")}</label>
-                  <input type="number" value={form.hours} onChange={e => setForm({...form, hours:e.target.value})} placeholder="Ej: 5" style={inp}/>
+              <div>
+                <label style={lbl}>{L("Pago", "Pay")}</label>
+                <div style={{display:"flex",gap:6,marginBottom:8}}>
+                  {[{k:"hora",l:L("Por hora","Hourly")},{k:"flat",l:L("Precio fijo","Flat rate")}].map(m=>(
+                    <button key={m.k} type="button" onClick={()=>setForm(f=>({...f,payMode:m.k}))}
+                      style={{flex:1,padding:"8px",borderRadius:8,border:`1.5px solid ${form.payMode===m.k?"#2563eb":"#e2e8f0"}`,background:form.payMode===m.k?"#eff6ff":"#fff",color:form.payMode===m.k?"#1e40af":"#64748b",fontSize:12,fontWeight:form.payMode===m.k?700:500,cursor:"pointer"}}>
+                      {m.l}
+                    </button>
+                  ))}
                 </div>
-                <div style={{flex:1}}>
-                  <label style={lbl}>{L("Tarifa/hora ($)", "Rate/hr ($)")}</label>
-                  <input type="number" value={form.rate} onChange={e => setForm({...form, rate:e.target.value})} placeholder="Ej: 25" style={inp}/>
-                </div>
+                {form.payMode==="hora" ? (
+                  <div style={{display:"flex",gap:10}}>
+                    <div style={{flex:1}}>
+                      <label style={lbl}>{L("Horas", "Hours")}</label>
+                      <input type="number" value={form.hours} onChange={e => setForm({...form, hours:e.target.value})} placeholder="Ej: 5" style={inp}/>
+                    </div>
+                    <div style={{flex:1}}>
+                      <label style={lbl}>{L("Tarifa/hora ($)", "Rate/hr ($)")}</label>
+                      <input type="number" value={form.rate} onChange={e => setForm({...form, rate:e.target.value})} placeholder="Ej: 25" style={inp}/>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={lbl}>{L("Precio por el trabajo ($)", "Price for the job ($)")}</label>
+                    <input type="number" value={form.rate} onChange={e => setForm({...form, rate:e.target.value})} placeholder="Ej: 150" style={inp}/>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -352,7 +375,12 @@ export default function Schedule({ user, vessels = [], onClose }) {
                   style={{...inp, resize:"vertical", fontFamily:"inherit"}}/>
               </div>
 
-              {(form.hours && form.rate) ? (
+              {(form.payMode==="flat" && form.rate) ? (
+                <div style={{marginTop:10,padding:"8px 12px",background:"#eff6ff",borderRadius:8,fontSize:13,color:"#1e40af",fontWeight:700}}>
+                  {L("Total", "Total")}: ${Number(form.rate).toLocaleString("en-US",{maximumFractionDigits:2})}
+                  <span style={{fontWeight:400,color:"#64748b"}}> ({L("precio fijo","flat rate")})</span>
+                </div>
+              ) : (form.hours && form.rate) ? (
                 <div style={{marginTop:10,padding:"8px 12px",background:"#eff6ff",borderRadius:8,fontSize:13,color:"#1e40af",fontWeight:700}}>
                   {L("Total", "Total")}: ${((Number(form.hours)||0)*(Number(form.rate)||0)).toLocaleString("en-US",{maximumFractionDigits:2})}
                   <span style={{fontWeight:400,color:"#64748b"}}> ({form.hours}h × ${form.rate})</span>
@@ -466,7 +494,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
                     </div>
                     <div style={{textAlign:"right",flexShrink:0}}>
                       <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>${total(s).toLocaleString("en-US",{maximumFractionDigits:2})}</div>
-                      <div style={{fontSize:11,color:"#94a3b8"}}>{Number(s.hours)||0}h × ${Number(s.rate)||0}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{(Number(s.hours)>0) ? `${Number(s.hours)}h × $${Number(s.rate)||0}` : (Number(s.rate)>0 ? `$${Number(s.rate)} ${L("fijo","flat")}` : "—")}</div>
                     </div>
                   </div>
                   {/* Estados editables */}
