@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import AddVessel from "./AddVessel";
 import Onboarding, { OnboardingChecklist } from "./Onboarding";
-import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle, SystemIcon, IconUser, IconCard, IconLogout } from "./icons.jsx";
+import { IconBell, IconFuel, IconEngine, IconBolt, IconCalendar, IconGyro, IconAlert, IconChart, IconBoat, IconBook, IconWrench, IconSearch, IconMoney, IconShield, IconClipboard, IconCheck, IconAnchor, IconCheckCircle, SystemIcon, IconUser, IconCard, IconLogout } from "./icons.jsx";
 import QRPanel from "./QRPanel";
 import { notifyTaskAssigned } from "./whatsapp.js";
 import CheckinPage from "./CheckinPage";
@@ -1567,16 +1567,31 @@ function IndicatorsCard({ vessel }) {
   })();
 
   // "Faltan 40h p/ servicio" o "Vencido +12h" a partir de horas actuales y objetivo
-  const svcNote = (currentH, target) => {
-    if (target==null || target==="" || currentH==null) return null;
-    let remaining = Number(target) - Number(currentH);
-    if (isNaN(remaining)) return null;
-    // Redondear a 1 decimal (los binarios producen colas tipo 1.6999999999998)
-    remaining = Math.round(remaining*10)/10;
+  // Objetivo de servicio por HORAS y/o FECHA (como los fabricantes: "200h o 12
+  // meses, lo que ocurra primero"). Se muestra la condición más urgente.
+  const normTarget = (t) => (typeof t === "number" ? { hours: t } : (t || {}));
+  const svcNote = (currentH, targetRaw) => {
+    const target = normTarget(targetRaw);
+    const notes = [];
     const fmt = (n)=>{ const a=Math.abs(n); return Number.isInteger(a)?String(a):a.toFixed(1); };
-    if (remaining < 0) return { text: lang==="es" ? `Servicio vencido +${fmt(remaining)}h` : `Service overdue +${fmt(remaining)}h`, color:"#dc2626" };
-    if (remaining <= 50) return { text: lang==="es" ? `Faltan ${fmt(remaining)}h p/ servicio` : `${fmt(remaining)}h to service`, color:"#d97706" };
-    return { text: lang==="es" ? `Servicio a las ${target}h (${fmt(remaining)}h)` : `Service at ${target}h (${fmt(remaining)}h)`, color:"#94a3b8" };
+    if (target.hours!=null && target.hours!=="" && currentH!=null) {
+      let rem = Math.round((Number(target.hours) - Number(currentH))*10)/10;
+      if (!isNaN(rem)) {
+        if (rem < 0)       notes.push({ rank:0, text: lang==="es" ? `Servicio vencido +${fmt(rem)}h` : `Service overdue +${fmt(rem)}h`, color:"#dc2626" });
+        else if (rem <= 50) notes.push({ rank:1, text: lang==="es" ? `Faltan ${fmt(rem)}h p/ servicio` : `${fmt(rem)}h to service`, color:"#d97706" });
+        else               notes.push({ rank:2, text: lang==="es" ? `Servicio a las ${target.hours}h (${fmt(rem)}h)` : `Service at ${target.hours}h (${fmt(rem)}h)`, color:"#94a3b8" });
+      }
+    }
+    if (target.date) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const days = Math.round((new Date(target.date+"T00:00:00") - today)/86400000);
+      const dStr = new Date(target.date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      if (days < 0)        notes.push({ rank:0, text: lang==="es" ? `Servicio vencido hace ${Math.abs(days)}d` : `Service overdue by ${Math.abs(days)}d`, color:"#dc2626" });
+      else if (days <= 14) notes.push({ rank:1, text: lang==="es" ? `Servicio en ${days}d (${dStr})` : `Service in ${days}d (${dStr})`, color:"#d97706" });
+      else                 notes.push({ rank:2, text: lang==="es" ? `Servicio: ${dStr}` : `Service: ${dStr}`, color:"#94a3b8" });
+    }
+    if (!notes.length) return null;
+    return notes.sort((a,b)=>a.rank-b.rank)[0];
   };
 
   const motorLabelsSvc = getMotorLabels(vessel);
@@ -1593,7 +1608,12 @@ function IndicatorsCard({ vessel }) {
 
   const saveSvcTargets = async () => {
     const clean = {};
-    Object.entries(svcDraft).forEach(([k,v])=>{ if(v!=="" && v!=null && !isNaN(Number(v))) clean[k]=Number(v); });
+    Object.entries(svcDraft).forEach(([k,v])=>{
+      const t={};
+      if (v?.hours!=="" && v?.hours!=null && !isNaN(Number(v.hours))) t.hours=Number(v.hours);
+      if (v?.date) t.date=v.date;
+      if (t.hours!=null || t.date) clean[k]=t;
+    });
     // Leer details frescos y mezclar: nunca pisar lo que otros flujos guardaron
     const { data: cur, error: rerr } = await supabase.from("vessels").select("details").eq("id", vessel.id).single();
     if (rerr) { alert("Error: "+rerr.message); return; }
@@ -1630,8 +1650,7 @@ function IndicatorsCard({ vessel }) {
             color:fc, bar:fuelPct!=null},
           {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false,note:motorNote},
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false,note:genNote},
-          ...(seakeeperHours!=null||svcTargets["Seakeeper"]!=null ? [{Icon:IconBolt,val:seakeeperHours!=null?`${seakeeperHours}h`:"—",lbl:"Seakeeper",color:"#0d9488",bar:false,note:skNote}] : []),
-          {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?tr("dash.nextService"):tr("dash.noServices"),color:nextService?"#dc2626":"#94a3b8",bar:false},
+          {Icon:IconGyro,val:seakeeperHours!=null?`${seakeeperHours}h`:"—",lbl:"Seakeeper",color:"#0d9488",bar:false,note:skNote},
         ].map(ind => (
           <div key={ind.lbl} style={s.indBox}>
             <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>
@@ -1645,9 +1664,11 @@ function IndicatorsCard({ vessel }) {
 
       {/* Configurar el próximo servicio por horas */}
       <button onClick={()=>{ 
-        const d={}; motorLabelsSvc.forEach(m=>{ if(svcTargets[m]!=null) d[m]=String(svcTargets[m]); });
-        if(svcTargets["Generador"]!=null) d["Generador"]=String(svcTargets["Generador"]);
-        if(svcTargets["Seakeeper"]!=null) d["Seakeeper"]=String(svcTargets["Seakeeper"]);
+        const d={};
+        [...motorLabelsSvc,"Generador","Seakeeper"].forEach(k=>{
+          const t=normTarget(svcTargets[k]);
+          if(t.hours!=null||t.date) d[k]={hours:t.hours!=null?String(t.hours):"",date:t.date||""};
+        });
         setSvcDraft(d); setShowSvc(true);
       }} style={{marginTop:8,background:"none",border:"none",color:"#94a3b8",fontSize:11,cursor:"pointer",padding:0}}>
         ⚙ {lang==="es"?"Configurar servicios por horas":"Set hour-based services"}
@@ -1661,7 +1682,7 @@ function IndicatorsCard({ vessel }) {
               <button onClick={()=>setShowSvc(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
             </div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>
-              {lang==="es"?"Escribe a qué horas toca el próximo servicio de cada equipo. El tablero calcula cuánto falta y avisa si está vencido.":"Set the hours at which each unit's next service is due. The dashboard shows what's left and flags overdue."}
+              {lang==="es"?"Por horas, por fecha, o ambas (como los fabricantes: \"cada 200h o 12 meses, lo que llegue primero\"). El tablero muestra la condición más urgente y avisa si está vencida.":"By hours, by date, or both (like manufacturers: \"every 200h or 12 months, whichever comes first\"). The dashboard shows the most urgent condition and flags overdue."}
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {[...motorLabelsSvc.map(m=>({key:m,label:m,cur:(vessel.motorHours||{})[m] ?? (motorLabelsSvc.length===1?vessel.engineHours:null)})),
@@ -1672,9 +1693,12 @@ function IndicatorsCard({ vessel }) {
                     <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{row.label}</div>
                     <div style={{fontSize:11,color:"#94a3b8"}}>{lang==="es"?"Actual:":"Current:"} {row.cur!=null?`${row.cur}h`:"—"}</div>
                   </div>
-                  <input type="number" min="0" inputMode="numeric" value={svcDraft[row.key]??""} placeholder={lang==="es"?"ej. 4500":"e.g. 4500"}
-                    onChange={e=>setSvcDraft(d=>({...d,[row.key]:e.target.value}))}
-                    style={{width:110,padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,textAlign:"right"}}/>
+                  <input type="number" min="0" inputMode="numeric" value={svcDraft[row.key]?.hours??""} placeholder={lang==="es"?"horas":"hours"}
+                    onChange={e=>setSvcDraft(d=>({...d,[row.key]:{...(d[row.key]||{}),hours:e.target.value}}))}
+                    style={{width:86,padding:"9px 8px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,textAlign:"right"}}/>
+                  <input type="date" value={svcDraft[row.key]?.date??""}
+                    onChange={e=>setSvcDraft(d=>({...d,[row.key]:{...(d[row.key]||{}),date:e.target.value}}))}
+                    style={{width:130,padding:"9px 8px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#334155"}}/>
                 </div>
               ))}
             </div>
