@@ -816,6 +816,7 @@ export default function App() {
         payload.gen_hours    = cur.gen_hours;
         payload.details._subscription = cur.details?._subscription || payload.details._subscription;
         payload.details.motor_hours   = cur.details?.motor_hours   ?? payload.details.motor_hours ?? {};
+        payload.details.service_targets = cur.details?.service_targets ?? payload.details?.service_targets ?? {};
       }
     } catch (e) { console.warn("No se pudo leer el estado actual del barco:", e?.message); }
     const { error } = await supabase.from("vessels").update(payload).eq("id", updated.id);
@@ -857,6 +858,7 @@ export default function App() {
           details:      { ...d, _subscription: acctSub },   // estampado para que getPlan use el plan de la cuenta
           crewRoster:   d.crew_roster || [],
           motorHours:   d.motor_hours || {},
+          serviceTargets: d.service_targets || {},
           tasks, log,
           records: [],
           alerts: tasks.filter(t => t.status === "overdue").length,
@@ -1552,6 +1554,51 @@ function AlertsCard({ vessel, setPage }) {
 
 function IndicatorsCard({ vessel }) {
   const { t: tr, lang } = useLang();
+  // ── Próximo servicio por horas (motores, generador, Seakeeper) ────────────────
+  const [svcTargets, setSvcTargets] = useState(vessel.serviceTargets || vessel.details?.service_targets || {});
+  const [showSvc, setShowSvc]       = useState(false);
+  const [svcDraft, setSvcDraft]     = useState({});
+  useEffect(()=>{ setSvcTargets(vessel.serviceTargets || vessel.details?.service_targets || {}); },[vessel.id]);
+
+  // Horas del Seakeeper: última lectura registrada en la bitácora
+  const seakeeperHours = (()=>{
+    const e = (vessel.log||[]).find(x => x.systemId==="seakeeper" && x.equipHours!=null && x.equipHours!=="");
+    return e ? Number(e.equipHours) : null;
+  })();
+
+  // "Faltan 40h p/ servicio" o "Vencido +12h" a partir de horas actuales y objetivo
+  const svcNote = (currentH, target) => {
+    if (target==null || target==="" || currentH==null) return null;
+    const remaining = Number(target) - Number(currentH);
+    if (isNaN(remaining)) return null;
+    if (remaining < 0) return { text: lang==="es" ? `Servicio vencido +${Math.abs(remaining)}h` : `Service overdue +${Math.abs(remaining)}h`, color:"#dc2626" };
+    if (remaining <= 50) return { text: lang==="es" ? `Faltan ${remaining}h p/ servicio` : `${remaining}h to service`, color:"#d97706" };
+    return { text: lang==="es" ? `Servicio a las ${target}h (${remaining}h)` : `Service at ${target}h (${remaining}h)`, color:"#94a3b8" };
+  };
+
+  const motorLabelsSvc = getMotorLabels(vessel);
+  const motorNote = (()=>{
+    const mh = vessel.motorHours||{};
+    const notes = motorLabelsSvc
+      .map(m => svcNote(mh[m] != null ? mh[m] : (motorLabelsSvc.length===1 ? vessel.engineHours : null), svcTargets[m]))
+      .filter(Boolean);
+    if (!notes.length) return svcNote(vessel.engineHours, svcTargets["Motores"]);
+    return notes.sort((a,b)=>(a.color==="#dc2626"?0:a.color==="#d97706"?1:2)-(b.color==="#dc2626"?0:b.color==="#d97706"?1:2))[0];
+  })();
+  const genNote  = svcNote(vessel.genHours, svcTargets["Generador"]);
+  const skNote   = svcNote(seakeeperHours, svcTargets["Seakeeper"]);
+
+  const saveSvcTargets = async () => {
+    const clean = {};
+    Object.entries(svcDraft).forEach(([k,v])=>{ if(v!=="" && v!=null && !isNaN(Number(v))) clean[k]=Number(v); });
+    // Leer details frescos y mezclar: nunca pisar lo que otros flujos guardaron
+    const { data: cur, error: rerr } = await supabase.from("vessels").select("details").eq("id", vessel.id).single();
+    if (rerr) { alert("Error: "+rerr.message); return; }
+    const details = { ...(cur?.details||{}), service_targets: clean };
+    const { error } = await supabase.from("vessels").update({ details }).eq("id", vessel.id);
+    if (error) { alert("Error: "+error.message); return; }
+    setSvcTargets(clean); setShowSvc(false);
+  };
   const fuelVal  = Number(vessel.fuel)||0;
   const fuelUnit = vessel.fuelUnit || "gal";
   const tankCap  = (vessel.details?.fuelTanks||[]).reduce((a,t)=>a+(Number(t.capacity)||0),0);
@@ -1578,18 +1625,66 @@ function IndicatorsCard({ vessel }) {
             val: isPctUnit ? `${fuelVal}%` : (tankCap>0 ? `${fuelVal}/${tankCap} ${fuelUnit}` : `${fuelVal} ${fuelUnit}`),
             lbl: (!isPctUnit && fuelPct!=null) ? `${tr("dash.fuel")} · ${Math.round(fuelPct)}%` : tr("dash.fuel"),
             color:fc, bar:fuelPct!=null},
-          {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false},
-          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false},
+          {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false,note:motorNote},
+          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false,note:genNote},
+          ...(seakeeperHours!=null||svcTargets["Seakeeper"]!=null ? [{Icon:IconBolt,val:seakeeperHours!=null?`${seakeeperHours}h`:"—",lbl:"Seakeeper",color:"#0d9488",bar:false,note:skNote}] : []),
           {Icon:IconCalendar,val:nextServiceVal,lbl:nextService?tr("dash.nextService"):tr("dash.noServices"),color:nextService?"#dc2626":"#94a3b8",bar:false},
         ].map(ind => (
           <div key={ind.lbl} style={s.indBox}>
             <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>
             <div style={{fontSize:17,fontWeight:700,color:ind.color}}>{ind.val}</div>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{ind.lbl}</div>
+            {ind.note && <div style={{fontSize:10,fontWeight:ind.note.color==="#94a3b8"?500:700,color:ind.note.color,marginTop:3}}>{ind.note.text}</div>}
             {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${fuelPct!=null?fuelPct:0}%`,background:ind.color}} /></div>}
           </div>
         ))}
       </div>
+
+      {/* Configurar el próximo servicio por horas */}
+      <button onClick={()=>{ 
+        const d={}; motorLabelsSvc.forEach(m=>{ if(svcTargets[m]!=null) d[m]=String(svcTargets[m]); });
+        if(svcTargets["Generador"]!=null) d["Generador"]=String(svcTargets["Generador"]);
+        if(svcTargets["Seakeeper"]!=null) d["Seakeeper"]=String(svcTargets["Seakeeper"]);
+        setSvcDraft(d); setShowSvc(true);
+      }} style={{marginTop:8,background:"none",border:"none",color:"#94a3b8",fontSize:11,cursor:"pointer",padding:0}}>
+        ⚙ {lang==="es"?"Configurar servicios por horas":"Set hour-based services"}
+      </button>
+
+      {showSvc && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:14}}>
+          <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+              <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{lang==="es"?"Próximo servicio por horas":"Next service by hours"}</div>
+              <button onClick={()=>setShowSvc(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>
+              {lang==="es"?"Escribe a qué horas toca el próximo servicio de cada equipo. El tablero calcula cuánto falta y avisa si está vencido.":"Set the hours at which each unit's next service is due. The dashboard shows what's left and flags overdue."}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {[...motorLabelsSvc.map(m=>({key:m,label:m,cur:(vessel.motorHours||{})[m] ?? (motorLabelsSvc.length===1?vessel.engineHours:null)})),
+                {key:"Generador",label:lang==="es"?"Generador":"Generator",cur:vessel.genHours},
+                {key:"Seakeeper",label:"Seakeeper",cur:seakeeperHours}].map(row=>(
+                <div key={row.key} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{row.label}</div>
+                    <div style={{fontSize:11,color:"#94a3b8"}}>{lang==="es"?"Actual:":"Current:"} {row.cur!=null?`${row.cur}h`:"—"}</div>
+                  </div>
+                  <input type="number" min="0" inputMode="numeric" value={svcDraft[row.key]??""} placeholder={lang==="es"?"ej. 4500":"e.g. 4500"}
+                    onChange={e=>setSvcDraft(d=>({...d,[row.key]:e.target.value}))}
+                    style={{width:110,padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,textAlign:"right"}}/>
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:10}}>
+              {lang==="es"?"Deja vacío el que no quieras controlar. Tras hacer el servicio, vuelve aquí y pon las horas del siguiente.":"Leave blank to skip. After servicing, come back and set the next target."}
+            </div>
+            <button onClick={saveSvcTargets}
+              style={{width:"100%",marginTop:12,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              {lang==="es"?"Guardar":"Save"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
