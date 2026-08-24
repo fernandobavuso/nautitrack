@@ -1569,11 +1569,14 @@ function IndicatorsCard({ vessel }) {
   // "Faltan 40h p/ servicio" o "Vencido +12h" a partir de horas actuales y objetivo
   const svcNote = (currentH, target) => {
     if (target==null || target==="" || currentH==null) return null;
-    const remaining = Number(target) - Number(currentH);
+    let remaining = Number(target) - Number(currentH);
     if (isNaN(remaining)) return null;
-    if (remaining < 0) return { text: lang==="es" ? `Servicio vencido +${Math.abs(remaining)}h` : `Service overdue +${Math.abs(remaining)}h`, color:"#dc2626" };
-    if (remaining <= 50) return { text: lang==="es" ? `Faltan ${remaining}h p/ servicio` : `${remaining}h to service`, color:"#d97706" };
-    return { text: lang==="es" ? `Servicio a las ${target}h (${remaining}h)` : `Service at ${target}h (${remaining}h)`, color:"#94a3b8" };
+    // Redondear a 1 decimal (los binarios producen colas tipo 1.6999999999998)
+    remaining = Math.round(remaining*10)/10;
+    const fmt = (n)=>{ const a=Math.abs(n); return Number.isInteger(a)?String(a):a.toFixed(1); };
+    if (remaining < 0) return { text: lang==="es" ? `Servicio vencido +${fmt(remaining)}h` : `Service overdue +${fmt(remaining)}h`, color:"#dc2626" };
+    if (remaining <= 50) return { text: lang==="es" ? `Faltan ${fmt(remaining)}h p/ servicio` : `${fmt(remaining)}h to service`, color:"#d97706" };
+    return { text: lang==="es" ? `Servicio a las ${target}h (${fmt(remaining)}h)` : `Service at ${target}h (${fmt(remaining)}h)`, color:"#94a3b8" };
   };
 
   const motorLabelsSvc = getMotorLabels(vessel);
