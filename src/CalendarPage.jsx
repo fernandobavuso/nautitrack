@@ -101,6 +101,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
     const LOG_COLOR = { Salida:"#0891b2", Compra:"#7c3aed", Combustible:"#0ea5e9", Servicio:"#2563eb", Reparación:"#dc2626", Visita:"#16a34a", Incidente:"#f59e0b" };
     logRows.forEach(le => {
       if (!le.date) return;
+      if (le.type === "Compra") return;   // las compras viven en Finanzas, no en el calendario
       const vName = fleetMode ? ((vessels||[]).find(v=>v.id===le.vessel_id)?.name) : vessel.name;
       const pending = le.type==="Salida" && !le.arr_time;
       events.push({
