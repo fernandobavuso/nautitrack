@@ -4982,7 +4982,7 @@ const s = {
   nav:        { display:"flex", alignItems:"flex-end", justifyContent:"space-between", padding:"0 20px 8px", paddingTop:"env(safe-area-inset-top, 0px)", height:"calc(56px + env(safe-area-inset-top, 0px))", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box" },
   navLogo:    { display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 },
   navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
-  navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center", minWidth:0, overflowX:"auto", scrollbarWidth:"none" },
+  navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center", minWidth:0 },
   navLink:    { padding:"18px 8px", background:"none", border:"none", cursor:"pointer", fontSize:12, transition:"all 0.15s", whiteSpace:"nowrap" },
   navRight:   { display:"flex", alignItems:"center", gap:10, flexShrink:0, paddingRight:4 },
   provBtn:    { padding:"5px 11px", border:"1.5px solid #e2e8f0", borderRadius:6, background:"#f8fafc", cursor:"pointer", fontSize:12, fontWeight:500, color:"#1e293b", whiteSpace:"nowrap" },
