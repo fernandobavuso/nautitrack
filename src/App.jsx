@@ -460,7 +460,7 @@ export default function App() {
       equipHours: e.equip_hours, photos: e.photos || [],
       brand: e.brand, model2: e.model2, partNum: e.part_num,
       reimbursable: !!e.reimbursable,
-      expCategory: e.exp_category,
+      expCategory: e.exp_category, skHours: e.sk_hours,
       vendor: e.vendor, invoiceNumber: e.invoice_number,
       cardBrand: e.card_brand, cardLast4: e.card_last4, cardOwner: e.card_owner,
       costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
@@ -532,7 +532,7 @@ export default function App() {
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
-      exp_category: entry.expCategory||null,
+      exp_category: entry.expCategory||null, sk_hours: num(entry.skHours),
       vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
       card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), cost_bs: num(entry.costBs), payment: entry.payment,
@@ -711,6 +711,11 @@ export default function App() {
       patch.details = { ...(cur.details || {}), motor_hours: mh };
       touched = true;
     }
+    const skN = Number(entry.skHours);
+    if (entry.skHours != null && entry.skHours !== "" && !isNaN(skN)) {
+      patch.details = { ...(patch.details || cur.details || {}), seakeeper_hours: skN };
+      touched = true;
+    }
     if (!touched) return;
 
     const { error } = await supabase.from("vessels").update(patch).eq("id", vesselId);
@@ -734,7 +739,7 @@ export default function App() {
       photos: entry.photos || [],
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
-      exp_category: entry.expCategory||null,
+      exp_category: entry.expCategory||null, sk_hours: num(entry.skHours),
       vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
       card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), payment: entry.payment,
@@ -817,6 +822,7 @@ export default function App() {
         payload.details._subscription = cur.details?._subscription || payload.details._subscription;
         payload.details.motor_hours   = cur.details?.motor_hours   ?? payload.details.motor_hours ?? {};
         payload.details.service_targets = cur.details?.service_targets ?? payload.details?.service_targets ?? {};
+        payload.details.seakeeper_hours = cur.details?.seakeeper_hours ?? payload.details?.seakeeper_hours ?? null;
       }
     } catch (e) { console.warn("No se pudo leer el estado actual del barco:", e?.message); }
     const { error } = await supabase.from("vessels").update(payload).eq("id", updated.id);
@@ -859,6 +865,7 @@ export default function App() {
           crewRoster:   d.crew_roster || [],
           motorHours:   d.motor_hours || {},
           serviceTargets: d.service_targets || {},
+          seakeeperHours: d.seakeeper_hours ?? null,
           tasks, log,
           records: [],
           alerts: tasks.filter(t => t.status === "overdue").length,
@@ -1562,8 +1569,9 @@ function IndicatorsCard({ vessel }) {
 
   // Horas del Seakeeper: última lectura registrada en la bitácora
   const seakeeperHours = (()=>{
-    const e = (vessel.log||[]).find(x => x.systemId==="seakeeper" && x.equipHours!=null && x.equipHours!=="");
-    return e ? Number(e.equipHours) : null;
+    if (vessel.seakeeperHours != null) return Number(vessel.seakeeperHours);
+    const e = (vessel.log||[]).find(x => (x.skHours!=null && x.skHours!=="") || (x.systemId==="seakeeper" && x.equipHours!=null && x.equipHours!==""));
+    return e ? Number(e.skHours ?? e.equipHours) : null;
   })();
 
   // "Faltan 40h p/ servicio" o "Vencido +12h" a partir de horas actuales y objetivo
@@ -2523,6 +2531,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
   const [showErrBanner,setShowErrBanner] = useState(false);
   const [reimbursable,setReimbursable]   = useState(initial?.reimbursable||false);
   const [expCategory,setExpCategory]     = useState(initial?.expCategory||"Repuestos");
+  const [skHours,setSkHours]             = useState(initial?.skHours||"");
   const [purchMeta,setPurchMeta]         = useState({
     vendor: initial?.vendor||"", invoice: initial?.invoiceNumber||"",
     cardBrand: initial?.cardBrand||"", cardLast4: initial?.cardLast4||"", cardOwner: initial?.cardOwner||"",
@@ -2576,6 +2585,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
   const inSys = (sysId) => getEquipmentList(vessel, sysId).some(eq => equipList2.includes(eq));
   const visitHasMotors = inSys("motores");
   const visitHasGen    = inSys("generador");
+  const visitHasSK     = inSys("seakeeper");
   const equipList     = systemId ? getEquipmentList(vessel, systemId) : [];
   const needsHours    = selectedSys?.trackHours && equipment && equipment!=="Otro";
   const provNames     = (vessel.providers||[]).map(p=>`${p.firstName} ${p.lastName} (${p.company})`);
@@ -2643,6 +2653,9 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
     // Actualizar horas si la visita fue una inspección de motores/generador
     if (type==="Visita" && visitTypes.includes("Inspección") && (visitHasMotors||visitHasGen)) {
       entry={...entry,engineHrsOut:engOut,genHrsOut:genOut};
+    }
+    if (type==="Visita" && visitTypes.includes("Inspección") && visitHasSK && skHours!=="") {
+      entry={...entry, skHours};
     }
     onSave(entry);
   };
@@ -2799,7 +2812,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
             {/* Horas de motor/generador (solo en inspecciones técnicas) */}
-            {hasVisit("Inspección") && (visitHasMotors||visitHasGen)&&(
+            {hasVisit("Inspección") && (visitHasMotors||visitHasGen||visitHasSK)&&(
               <div>
                 <label style={s.label}>Horas actuales del equipo</label>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
@@ -2811,6 +2824,10 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
                     <div key={g}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{g}</label>
                     <input type="number" value={genOut[g]||""} onChange={e=>setGenOut(v=>({...v,[g]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
                   ))}
+                  {visitHasSK&&(
+                    <div><label style={{...s.label,fontSize:11,color:"#64748b"}}>Seakeeper</label>
+                    <input type="number" value={skHours} onChange={e=>setSkHours(e.target.value)} placeholder={lang==="es"?"Horas":"Hours"} style={s.input}/></div>
+                  )}
                 </div>
                 <div style={{fontSize:11,color:"#0369a1",marginTop:4}}>💡 Las horas se actualizarán en el dashboard automáticamente</div>
               </div>
