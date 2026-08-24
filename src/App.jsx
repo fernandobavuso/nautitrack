@@ -164,6 +164,7 @@ const LOG_TYPES = ["Combustible", "Compra", "Salida", "Servicio", "Visita"];
 // Subtipos de "Visita"
 const VISIT_TYPES = [
   "Buceo / Casco",           // buzo, ánodos, limpieza de casco
+  "Combustible",             // cargar combustible durante la visita
   "Detailing",               // pulido, encerado
   "Inspección",
   "Lavada",                  // wash down
@@ -178,6 +179,7 @@ const LOG_TYPES_EN = {
 
 const VISIT_TYPES_EN = {
   "Buceo / Casco":"Diver / Hull",
+  "Combustible":"Fuel",
   "Detailing":"Detailing",
   "Inspección":"Inspection",
   "Lavada":"Wash Down",
@@ -575,7 +577,7 @@ export default function App() {
         const fq = Number(entry.fuelQty);
         const fIn = Number(entry.fuelIn);
         let newFuel = null;
-        if (entry.type === "Combustible" && entry.fuelQty !== null && entry.fuelQty !== "" && !isNaN(fq)) {
+        if ((entry.type === "Combustible" || (entry.type === "Visita" && (entry.visitTypes||[]).includes("Combustible"))) && entry.fuelQty !== null && entry.fuelQty !== "" && !isNaN(fq)) {
           newFuel = fq;
         } else if (entry.type === "Salida" && entry.fuelIn !== null && entry.fuelIn !== "" && entry.fuelIn !== undefined && !isNaN(fIn)) {
           newFuel = fIn;
@@ -692,7 +694,7 @@ export default function App() {
 
     const fq = Number(entry.fuelQty), fIn = Number(entry.fuelIn);
     let newFuel = null;
-    if (entry.type === "Combustible" && entry.fuelQty !== "" && entry.fuelQty != null && !isNaN(fq)) newFuel = fq;
+    if ((entry.type === "Combustible" || (entry.type === "Visita" && (entry.visitTypes||[]).includes("Combustible"))) && entry.fuelQty !== "" && entry.fuelQty != null && !isNaN(fq)) newFuel = fq;
     else if (entry.type === "Salida" && entry.fuelIn !== "" && entry.fuelIn != null && !isNaN(fIn)) newFuel = fIn;
     if (newFuel !== null) { patch.fuel = newFuel; patch.fuel_unit = entry.fuelUnit || cur.fuel_unit; touched = true; }
 
@@ -2473,6 +2475,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
     if (type==="Servicio"&&!systemId)    e.system="Requerido";
     if (type==="Servicio"&&!equipment)   e.equipment="Requerido";
     if (type==="Combustible"&&!fuelQty)  e.fuelQty="Requerido";
+    if (type==="Visita"&&visitTypes.includes("Combustible")&&!fuelQty) e.fuelQty="Requerido";
     if (["Inspección","Servicio","Combustible"].includes(type)&&!desc.trim()) e.desc="Descripción requerida";
     // photos optional now — real uploads
     if (type==="Compra"&&!item.trim()) e.item="Requerido";
@@ -2641,6 +2644,16 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
 
             {hasVisit("Inspección") && equipList2.includes("Otro")&&<div><label style={s.label}>{lang==="es"?"Especificar equipo":"Specify equipment"}</label><input value={otherEquip} onChange={e=>setOtherEquip(e.target.value)} placeholder={lang==="es"?"Nombre del equipo...":"Equipment name..."} style={s.input}/></div>}
             {/* En una supervisión, registrar a quién se supervisó */}
+            {hasVisit("Combustible") && (
+              <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:9,padding:"10px 11px"}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>{lang==="es"?"Combustible cargado — nivel del tanque al terminar":"Fuel added — tank level when done"}</div>
+                <div style={{display:"flex",gap:10}}>
+                  <div style={{flex:"0 0 100px"}}><label style={{...s.label,marginBottom:4}}>{lang==="es"?"Unidad":"Unit"}</label><select value={fuelUnit} onChange={e=>setFuelUnit(e.target.value)} style={s.input}>{["gal","lts","%"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+                  <div style={{flex:1}}><label style={{...s.label,marginBottom:4}}>{lang==="es"?"Nivel actual":"Current level"}</label><input type="number" value={fuelQty} onChange={e=>setFuelQty(e.target.value)} placeholder={lang==="es"?"Ej: 280":"e.g. 280"} style={{...s.input,borderColor:errors.fuelQty?"#dc2626":"#e2e8f0"}}/></div>
+                </div>
+                <div style={{fontSize:11,color:"#64748b",marginTop:6}}>{lang==="es"?"Este nivel actualiza el indicador de Inicio.":"This level updates the Home gauge."}</div>
+              </div>
+            )}
             {hasVisit("Supervisión de técnico") && (
               <div>
                 <label style={s.label}>Técnico / empresa supervisada</label>
