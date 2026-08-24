@@ -1405,7 +1405,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
             <span style={{...s.dot,background:STATUS_CFG[vessel.status].dot}} />
-            <span style={{fontWeight:600,color:"#0f172a",fontSize:12}}>{vessel.name}</span>
+            <span style={{fontWeight:600,color:"#0f172a",fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{vessel.name}</span>
             <span style={{color:"#94a3b8",fontSize:10}}>▼</span>
           </button>
           {showVesselMenu && (
@@ -4982,11 +4982,11 @@ const s = {
   nav:        { display:"flex", alignItems:"flex-end", justifyContent:"space-between", padding:"0 20px 8px", paddingTop:"env(safe-area-inset-top, 0px)", height:"calc(56px + env(safe-area-inset-top, 0px))", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box" },
   navLogo:    { display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 },
   navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
-  navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center" },
-  navLink:    { padding:"18px 11px", background:"none", border:"none", cursor:"pointer", fontSize:12, transition:"all 0.15s", whiteSpace:"nowrap" },
+  navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center", minWidth:0, overflowX:"auto", scrollbarWidth:"none" },
+  navLink:    { padding:"18px 8px", background:"none", border:"none", cursor:"pointer", fontSize:12, transition:"all 0.15s", whiteSpace:"nowrap" },
   navRight:   { display:"flex", alignItems:"center", gap:10, flexShrink:0, paddingRight:4 },
   provBtn:    { padding:"5px 11px", border:"1.5px solid #e2e8f0", borderRadius:6, background:"#f8fafc", cursor:"pointer", fontSize:12, fontWeight:500, color:"#1e293b", whiteSpace:"nowrap" },
-  vesselSelector: { display:"flex", alignItems:"center", gap:7, padding:"5px 10px", border:"1.5px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer", fontSize:12 },
+  vesselSelector: { display:"flex", alignItems:"center", gap:7, padding:"5px 10px", border:"1.5px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer", fontSize:12, maxWidth:180 },
   dot:        { width:8, height:8, borderRadius:"50%", flexShrink:0 },
   drop:       { position:"absolute", top:"calc(100% + 6px)", right:0, background:"#fff", border:"1px solid #e2e8f0", borderRadius:10, zIndex:30, minWidth:220, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", overflow:"hidden" },
   dropItem:   { display:"flex", alignItems:"center", gap:10, width:"100%", padding:"9px 14px", border:"none", borderBottom:"1px solid #f1f5f9", cursor:"pointer", textAlign:"left", background:"#fff" },
