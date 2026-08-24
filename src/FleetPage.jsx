@@ -45,6 +45,48 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
     totalAlerts += (v.tasks||[]).filter(t=>t.status==="overdue").length;
   });
 
+  // Próximo servicio por horas/fecha del barco (motores, generador, Seakeeper).
+  // Rojo si está vencido, a <=20h o a <=30 días; si no, comentario gris con lo que
+  // falta para el más cercano.
+  const svcSummary = (v) => {
+    const norm = (t)=> typeof t==="number" ? {hours:t} : (t||{});
+    const targets = v.serviceTargets || {};
+    const mh = v.motorHours || {};
+    const items = [];
+    Object.entries(targets).forEach(([key, raw]) => {
+      const t = norm(raw);
+      let cur = null;
+      if (key === "Generador") cur = v.genHours;
+      else if (key === "Seakeeper") cur = v.seakeeperHours;
+      else cur = mh[key] != null ? mh[key] : v.engineHours;   // motores por etiqueta
+      if (t.hours!=null && cur!=null) {
+        const rem = Math.round((Number(t.hours)-Number(cur))*10)/10;
+        if (!isNaN(rem)) items.push({ label:key, kind:"h", rem });
+      }
+      if (t.date) {
+        const today=new Date(); today.setHours(0,0,0,0);
+        const days = Math.round((new Date(t.date+"T00:00:00")-today)/86400000);
+        items.push({ label:key, kind:"d", rem: days });
+      }
+    });
+    if (!items.length) return null;
+    // urgencia: vencido primero, luego el que menos margen tiene (20h ≈ 30d en escala)
+    const score = (it)=> it.rem<0 ? -1000+it.rem : (it.kind==="h" ? it.rem/20 : it.rem/30);
+    items.sort((a,b)=>score(a)-score(b));
+    const w = items[0];
+    const lbl = w.label==="Generador" ? L("Generador","Generator") : w.label;
+    const fmtH = (n)=>{ const a=Math.abs(n); return Number.isInteger(a)?String(a):a.toFixed(1); };
+    if (w.rem < 0) return { color:"#dc2626", text: w.kind==="h"
+      ? `⚠ ${lbl}: ${L("servicio vencido","service overdue")} +${fmtH(w.rem)}h`
+      : `⚠ ${lbl}: ${L("servicio vencido hace","service overdue by")} ${Math.abs(w.rem)}d` };
+    if ((w.kind==="h" && w.rem<=20) || (w.kind==="d" && w.rem<=30)) return { color:"#dc2626", text: w.kind==="h"
+      ? `⚠ ${lbl}: ${L("servicio en","service in")} ${fmtH(w.rem)}h`
+      : `⚠ ${lbl}: ${L("servicio en","service in")} ${w.rem}d` };
+    return { color:"#64748b", text: w.kind==="h"
+      ? `${L("Próx. servicio","Next service")}: ${lbl} ${L("en","in")} ${fmtH(w.rem)}h`
+      : `${L("Próx. servicio","Next service")}: ${lbl} ${L("en","in")} ${w.rem}d` };
+  };
+
   const statusInfo = (v) => {
     const overdue = (v.tasks||[]).filter(t=>t.status==="overdue").length;
     const due = (v.tasks||[]).filter(t=>t.status==="due").length;
@@ -93,6 +135,9 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
                 </div>
                 <span style={{padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700,whiteSpace:"nowrap",background:st.bg,color:st.color}}>{st.label}</span>
               </div>
+              {(()=>{ const sv=svcSummary(v); return sv ? (
+                <div style={{fontSize:11,fontWeight:sv.color==="#dc2626"?700:500,color:sv.color,marginTop:-4,marginBottom:8}}>{sv.text}</div>
+              ) : null; })()}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
                 <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 10px"}}>
                   <div style={{color:"#94a3b8",marginBottom:2}}>{L("Motor","Engine")}</div>
