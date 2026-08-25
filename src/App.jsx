@@ -467,6 +467,7 @@ export default function App() {
       brand: e.brand, model2: e.model2, partNum: e.part_num,
       reimbursable: !!e.reimbursable,
       expCategory: e.exp_category, skHours: e.sk_hours,
+      visitTypes: e.visit_types || [], 
       vendor: e.vendor, invoiceNumber: e.invoice_number,
       cardBrand: e.card_brand, cardLast4: e.card_last4, cardOwner: e.card_owner,
       costUSD: e.cost_usd, costBs: e.cost_bs, payment: e.payment,
@@ -539,6 +540,7 @@ export default function App() {
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
       exp_category: entry.expCategory||null, sk_hours: num(entry.skHours),
+      visit_types: entry.visitTypes || [],
       vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
       card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), cost_bs: num(entry.costBs), payment: entry.payment,
@@ -746,6 +748,7 @@ export default function App() {
       brand: entry.brand, model2: entry.model2, part_num: entry.partNum,
       reimbursable: !!entry.reimbursable,
       exp_category: entry.expCategory||null, sk_hours: num(entry.skHours),
+      visit_types: entry.visitTypes || [],
       vendor: entry.vendor||null, invoice_number: entry.invoiceNumber||null,
       card_brand: entry.cardBrand||null, card_last4: entry.cardLast4||null, card_owner: entry.cardOwner||null,
       cost_usd: num(entry.costUSD), payment: entry.payment,
@@ -2663,6 +2666,9 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
     if (type==="Visita" && visitTypes.includes("Inspección") && visitHasSK && skHours!=="") {
       entry={...entry, skHours};
     }
+    if (type==="Visita" && visitTypes.includes("Combustible")) {
+      entry={...entry, fuelQty, fuelUnit};   // el nivel viaja al barco (indicador de Inicio)
+    }
     onSave(entry);
   };
 
@@ -2787,7 +2793,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
             {/* En una supervisión, registrar a quién se supervisó */}
             {hasVisit("Combustible") && (
               <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:9,padding:"10px 11px"}}>
-                <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>{lang==="es"?"Combustible cargado — nivel del tanque al terminar":"Fuel added — tank level when done"}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"#0369a1",marginBottom:8}}>{lang==="es"?"Nivel de combustible al terminar la visita":"Fuel level at the end of the visit"}</div>
                 <div style={{display:"flex",gap:10}}>
                   <div style={{flex:"0 0 100px"}}><label style={{...s.label,marginBottom:4}}>{lang==="es"?"Unidad":"Unit"}</label><select value={fuelUnit} onChange={e=>setFuelUnit(e.target.value)} style={s.input}>{["gal","lts","%"].map(u=><option key={u} value={u}>{u}</option>)}</select></div>
                   <div style={{flex:1}}><label style={{...s.label,marginBottom:4}}>{lang==="es"?"Nivel actual":"Current level"}</label><input type="number" value={fuelQty} onChange={e=>setFuelQty(e.target.value)} placeholder={lang==="es"?"Ej: 280":"e.g. 280"} style={{...s.input,borderColor:errors.fuelQty?"#dc2626":"#e2e8f0"}}/></div>
