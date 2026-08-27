@@ -3237,12 +3237,16 @@ function RecordTable({ rows }) {
 function ReportModal({ vessel, onClose }) {
   const { lang } = useLang();
   const [sel,setSel]   = useState([]);
+  const [vExpenses,setVExpenses] = useState([]);
+  useEffect(()=>{ supabase.from("expenses").select("*").eq("vessel_id", vessel.id)
+    .then(({data})=>setVExpenses(data||[])); },[vessel.id]);
   const [from,setFrom] = useState("");
   const [to,setTo]     = useState("");
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [gen,setGen]   = useState(false);
 
   const REPORT_TYPES = [
+    {key:"analysis",Icon:IconChart,     label:"Análisis del período", desc:"Uso, costo/hora, comparación y proyección"},
     {key:"service", Icon:IconWrench,    label:"Servicios",        desc:"Preventivo, reactivo, reparaciones"},
     {key:"inspect", Icon:IconSearch,    label:"Inspecciones",     desc:"Todas las inspecciones registradas"},
     {key:"fuel",    Icon:IconFuel,      label:"Combustible",      desc:"Historial de repostajes"},
@@ -3329,6 +3333,126 @@ function ReportModal({ vessel, onClose }) {
       </div>`;
 
     let sections = "";
+
+    // ── ANÁLISIS DEL PERÍODO ──────────────────────────────────────────────────
+    if (sel.includes("analysis")) {
+      const fD = parseInputDate(from), tD = parseInputDate(to);
+      const hasPeriod = !!(fD && tD);
+      const dayMs = 86400000;
+      const perDays = hasPeriod ? Math.max(1, Math.round((tD - fD)/dayMs) + 1) : null;
+      const prevTo   = hasPeriod ? new Date(fD.getTime() - dayMs) : null;
+      const prevFrom = hasPeriod ? new Date(fD.getTime() - perDays*dayMs) : null;
+      const inR = (dstr, a, b) => { if(!dstr) return false; const x=new Date(dstr+"T00:00:00"); return x>=a && x<=b; };
+
+      const expNow  = hasPeriod ? vExpenses.filter(e=>inR(e.expense_date, fD, tD)) : vExpenses;
+      const expPrev = hasPeriod ? vExpenses.filter(e=>inR(e.expense_date, prevFrom, prevTo)) : [];
+      const totNow  = expNow.reduce((a,e)=>a+Number(e.amount||0),0);
+      const totPrev = expPrev.reduce((a,e)=>a+Number(e.amount||0),0);
+
+      const logPrev = hasPeriod ? (vessel.log||[]).filter(e=>inR(e.date, prevFrom, prevTo)) : [];
+      const salPrev = logPrev.filter(e=>e.type==="Salida");
+      const hrsOf = (list)=>list.reduce((a,e)=>{
+        const o=Number(e.engineHrsOut), i2=Number(e.engineHrsIn);
+        return (!isNaN(o)&&!isNaN(i2)&&i2>o) ? a+(i2-o) : a;
+      },0);
+      const hrsNow = hrsOf(salidas), hrsPrev = hrsOf(salPrev);
+      const cph     = hrsNow>0 ? totNow/hrsNow : null;
+      const cphPrev = hrsPrev>0 && totPrev>0 ? totPrev/hrsPrev : null;
+      const pct = (now,prev)=> (prev>0 && now!=null) ? Math.round(((now-prev)/prev)*100) : null;
+      const deltaBadge = (d)=> d==null ? "" :
+        `<span style="font-size:10px;font-weight:700;color:${d>0?"#dc2626":"#16a34a"};"> ${d>0?"▲":"▼"} ${Math.abs(d)}% vs. período anterior</span>`;
+      const r1 = (n)=>Math.round(n*10)/10;
+
+      const destCount = {};
+      salidas.forEach(e=>{ if(e.dest) destCount[e.dest]=(destCount[e.dest]||0)+1; });
+      const topDest = Object.entries(destCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      const pobAvg = (()=>{ const p=salidas.map(e=>Number(e.persons)).filter(n=>!isNaN(n)&&n>0); return p.length?r1(p.reduce((a,b)=>a+b,0)/p.length):null; })();
+
+      // Sistema con más atención (servicios + reparaciones + inspecciones)
+      const attention = {};
+      filteredLog.filter(e=>e.type==="Servicio"||e.type==="Reparación"||isInspection(e)).forEach(e=>{
+        const k=e.systemId||"otros"; attention[k]=(attention[k]||0)+1;
+      });
+      const topSys = Object.entries(attention).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      const sysLabel = (k)=>({motores:"Motores",generador:"Generador",seakeeper:"Seakeeper",electrico:"Eléctrico",cubierta:"Cubierta y Exterior",navegacion:"Navegación",casco:"Casco",otros:"Otros"})[k]||k;
+
+      const vendCount = {};
+      expNow.filter(e=>e.vendor).forEach(e=>{ vendCount[e.vendor]={c:(vendCount[e.vendor]?.c||0)+1, t:(vendCount[e.vendor]?.t||0)+Number(e.amount||0)}; });
+      const topVend = Object.entries(vendCount).sort((a,b)=>b[1].t-a[1].t).slice(0,3);
+
+      const tasksAll = vessel.tasks||[];
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const tDone = tasksAll.filter(t=>t.status==="done").length;
+      const tOver = tasksAll.filter(t=>t.status!=="done"&&t.nextDue&&new Date(t.nextDue+"T00:00:00")<today0).length;
+      const tPend = tasksAll.length - tDone - tOver;
+
+      // Proyección de servicios por horas al ritmo del período
+      const months = hasPeriod ? perDays/30.4 : null;
+      const normT = (t)=> typeof t==="number"?{hours:t}:(t||{});
+      const projRows = [];
+      if (months && months>0) {
+        const genUse = salidas.reduce((a,e)=>{ const o=Number(e.genHrsOut),i2=Number(e.genHrsIn); return (!isNaN(o)&&!isNaN(i2)&&i2>o)?a+(i2-o):a; },0);
+        const cand = [
+          { label:"Motores", cur:(()=>{ const mh=Object.values(vessel.motorHours||{}); return mh.length?Math.max(...mh.map(Number)):Number(vessel.engineHours)||null; })(),
+            target: normT((vessel.serviceTargets||{})[getMotorLabels(vessel)[0]] ?? (vessel.serviceTargets||{})["Motores"]).hours, rate: hrsNow/months },
+          { label:"Generador", cur:Number(vessel.genHours)||null, target: normT((vessel.serviceTargets||{})["Generador"]).hours, rate: genUse/months },
+        ];
+        cand.forEach(c=>{
+          if (c.cur==null || c.target==null) return;
+          const remaining = c.target - c.cur;
+          if (remaining <= 0) { projRows.push(`<b>${c.label}</b>: servicio de las ${c.target}h <b style="color:#dc2626">ya vencido</b> (+${r1(-remaining)}h)`); return; }
+          if (c.rate > 0) {
+            const eta = new Date(Date.now() + (remaining/c.rate)*30.4*dayMs);
+            projRows.push(`<b>${c.label}</b>: al ritmo actual (~${r1(c.rate)}h/mes), el servicio de las ${c.target}h caerá ~<b>${eta.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</b> (faltan ${r1(remaining)}h)`);
+          } else {
+            projRows.push(`<b>${c.label}</b>: faltan ${r1(remaining)}h para el servicio (sin uso en el período para proyectar fecha)`);
+          }
+        });
+      }
+
+      sections += sectionHeader("📊","Análisis del Período",
+        hasPeriod ? `${fmtD(from)} — ${fmtD(to)} · comparado con los ${perDays} días anteriores` : "Todo el historial (elige un período para comparar)",
+        "#ede9fe","#6d28d9");
+
+      const card = (label, value, sub="")=>`<div style="flex:1;min-width:150px;background:#f8fafc;border-radius:10px;padding:12px 14px;">
+        <div style="font-size:11px;color:#64748b;font-weight:600;">${label}</div>
+        <div style="font-size:22px;font-weight:800;color:#0f172a;margin-top:2px;">${value}</div>
+        ${sub?`<div style="margin-top:2px;">${sub}</div>`:""}
+      </div>`;
+
+      sections += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+        ${card("Costo por hora de uso", cph!=null?`$${cph.toFixed(0)}/h`:"—", cph!=null&&cphPrev!=null?deltaBadge(pct(cph,cphPrev)):(cph==null?`<span style="font-size:10px;color:#94a3b8;">sin horas de salida registradas</span>`:""))}
+        ${card("Gastos del período", `$${totNow.toLocaleString("en-US",{maximumFractionDigits:0})}`, deltaBadge(pct(totNow,totPrev)))}
+        ${card("Salidas · horas de uso", `${salidas.length} · ${r1(hrsNow)}h`, salidas.length?`<span style="font-size:10px;color:#64748b;">promedio ${r1(hrsNow/salidas.length)}h por salida${pobAvg?` · ${pobAvg} pers. a bordo`:""}</span>`:"")}
+        ${card("Tareas", `${tDone}✓ ${tOver>0?`<span style=\"color:#dc2626\">${tOver}⚠</span>`:"0⚠"}`, `<span style="font-size:10px;color:#64748b;">${tPend} pendientes al día</span>`)}
+      </div>`;
+
+      const listBlock = (title, rows)=> rows.length?`<div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">${title}</div>
+        ${rows.join("")}
+      </div>`:"";
+      const liRow = (a,b)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 10px;background:#fff;border:1px solid #f1f5f9;border-radius:8px;margin-bottom:4px;"><span style="color:#0f172a;font-weight:600;">${a}</span><span style="color:#64748b;">${b}</span></div>`;
+
+      sections += `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
+        <div style="flex:1;min-width:220px;">
+          ${listBlock("Sistemas con más atención", topSys.map(([k,c])=>liRow(sysLabel(k), `${c} intervención${c===1?"":"es"}`)))}
+          ${listBlock("Destinos frecuentes", topDest.map(([d,c])=>liRow(d, `${c} salida${c===1?"":"s"}`)))}
+        </div>
+        <div style="flex:1;min-width:220px;">
+          ${listBlock("Top proveedores del período", topVend.map(([v,i])=>liRow(v, `${i.c} compra${i.c===1?"":"s"} · $${i.t.toLocaleString("en-US",{maximumFractionDigits:0})}`)))}
+        </div>
+      </div>`;
+
+      if (projRows.length) {
+        sections += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:11px 14px;margin-bottom:28px;">
+          <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">Proyección de servicios (estimación al ritmo del período)</div>
+          ${projRows.map(r=>`<div style="font-size:12px;color:#78350f;margin-bottom:3px;">• ${r}</div>`).join("")}
+        </div>`;
+      } else {
+        sections += `<div style="height:14px;"></div>`;
+      }
+    }
+
 
     // ── FUEL ──────────────────────────────────────────────────────────────────
     if (sel.includes("fuel") && fuelLog.length > 0) {
