@@ -3336,8 +3336,11 @@ function ReportModal({ vessel, onClose }) {
 
     // ── ANÁLISIS DEL PERÍODO ──────────────────────────────────────────────────
     if (sel.includes("analysis")) {
-      const fD = parseInputDate(from), tD = parseInputDate(to);
-      const hasPeriod = !!(fD && tD);
+      // parseInputDate devuelve "AAAA-MM-DD" (texto): convertir a Date real
+      const fStr = parseInputDate(from), tStr = parseInputDate(to);
+      const fD = fStr ? new Date(fStr+"T00:00:00") : null;
+      const tD = tStr ? new Date(tStr+"T23:59:59") : null;
+      const hasPeriod = !!(fD && tD && !isNaN(fD) && !isNaN(tD));
       const dayMs = 86400000;
       const perDays = hasPeriod ? Math.max(1, Math.round((tD - fD)/dayMs) + 1) : null;
       const prevTo   = hasPeriod ? new Date(fD.getTime() - dayMs) : null;
@@ -3732,7 +3735,13 @@ function ReportModal({ vessel, onClose }) {
 
   const openReport = () => {
     if (sel.length === 0) { alert(lang==="es"?"Elige al menos una sección para el reporte.":"Pick at least one section for the report."); return; }
-    const html = generateHTML();
+    let html;
+    try { html = generateHTML(); }
+    catch (err) {
+      console.error("[Carive] reporte falló:", err);
+      alert((lang==="es"?"No se pudo generar el reporte: ":"Couldn't generate the report: ")+err.message);
+      return;
+    }
     const w = window.open("","_blank");
     if (!w) {   // ventanas emergentes bloqueadas: descargar el archivo
       const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
