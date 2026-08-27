@@ -1905,6 +1905,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const [sortBy, setSortBy]       = useState("due_asc");
   const [sysFilter, setSysFilter] = useState("Todos");
   const [resched, setResched]     = useState(null);   // tarea a reprogramar {task, date}
+  const [completing, setCompleting] = useState(null); // tarea a completar {task, note}
   const [whoFilter, setWhoFilter] = useState("Todos");
   const FILTERS = ["Todas","Sin completar","Por vencer","Vencidas","Completadas"];
   const filtered = (vessel.tasks||[]).filter(t => {
@@ -2038,9 +2039,8 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                         <div style={{padding:"0 24px 16px",display:"flex",gap:8,flexWrap:"wrap"}}>
                           <button onClick={()=>{setEditingTask(task);setExpanded(null);}}
                             style={{padding:"7px 16px",border:"1.5px solid #2563eb",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"#eff6ff",color:"#2563eb"}}>✏️ Editar</button>
-                          <button onClick={()=>{
-                            updateTask(task.id,{status:"done"});setExpanded(null);
-                          }} style={{padding:"7px 16px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff"}}>Completar</button>
+                          <button onClick={()=>setCompleting({ task, note:"" })}
+                            style={{padding:"7px 16px",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff"}}>Completar</button>
                           <button onClick={()=>setResched({ task, date: task.nextDue || todayISO() })}
                             style={{padding:"7px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>{lang==="es"?"Reprogramar":"Reschedule"}</button>
                           <button onClick={()=>{
@@ -2056,6 +2056,37 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
           </tbody>
         </table>
       </div>
+      {/* Completar con comentario opcional */}
+      {completing && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:14}}>
+          <div style={{background:"#fff",borderRadius:14,padding:18,maxWidth:380,width:"100%"}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",marginBottom:2}}>{lang==="es"?"Completar tarea":"Complete task"}</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{completing.task.name}</div>
+            <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{lang==="es"?"Comentarios (opcional)":"Comments (optional)"}</label>
+            <textarea value={completing.note} onChange={e=>setCompleting(c=>({...c,note:e.target.value}))}
+              placeholder={lang==="es"?"Cómo quedó, qué se encontró, repuestos usados...":"How it went, findings, parts used..."}
+              rows={3} style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",border:"1.5px solid #e2e8f0",borderRadius:9,fontSize:13,color:"#0f172a",resize:"vertical",fontFamily:"inherit"}}/>
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button onClick={()=>setCompleting(null)}
+                style={{flex:1,padding:"10px",border:"1.5px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#334155",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                {lang==="es"?"Cancelar":"Cancel"}
+              </button>
+              <button onClick={()=>{
+                const note = completing.note.trim();
+                const stamp = new Date().toLocaleDateString("en-US");
+                const patch = { status:"done" };
+                if (note) patch.notes = [completing.task.notes, `✔ ${stamp}: ${note}`].filter(Boolean).join("\n");
+                updateTask(completing.task.id, patch);
+                setCompleting(null); setExpanded(null);
+              }}
+                style={{flex:1,padding:"10px",border:"none",borderRadius:9,background:"linear-gradient(120deg,#16a34a,#22c55e)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                ✓ {lang==="es"?"Completar":"Complete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reprogramar con calendario */}
       {resched && (
         <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:14}}>
