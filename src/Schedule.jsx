@@ -92,6 +92,13 @@ export default function Schedule({ user, vessels = [], onClose }) {
   // el resto del personal se registra como "Sueldos".
   const CLEAN_WORKS = ["Lavada","Detailing","Limpieza interior","Buceo / Casco"];
 
+  // Trabajo de agenda → tipo de visita de bitácora (los que tienen equivalente)
+  const WORK_TO_VISIT = {
+    "Lavada":"Lavada", "Detailing":"Detailing", "Limpieza interior":"Limpieza interior",
+    "Buceo / Casco":"Buceo / Casco", "Combustible":"Combustible",
+    "Chequeo de sistemas":"Inspección", "Supervisión":"Supervisión de técnico",
+  };
+
   const updateShift = async (id, patch) => {
     const before = shifts.find(x => x.id === id);
     setShifts(s => s.map(x => x.id === id ? { ...x, ...patch } : x));
@@ -132,6 +139,38 @@ export default function Schedule({ user, vessels = [], onClose }) {
     }
     if (patch.payment_status === "Pendiente" && before?.payment_status === "Pagado") {
       await supabase.from("company_expenses").delete().eq("shift_id", id);
+    }
+
+    // Al marcar COMPLETADO, el trabajo queda registrado en la bitácora del barco,
+    // como si se hubiera anotado directo ahí (Visita con sus tipos, persona y fecha).
+    if (patch.work_status === "Completado" && before?.work_status !== "Completado") {
+      const sh = { ...before, ...patch };
+      const v = vessels.find(x => x.name === sh.vessel_name);
+      if (!v) { flash(L("Completado. (No encontré el barco para anotarlo en bitácora)","Done. (Couldn't find the vessel to log it)")); return; }
+      if (sh.log_entry_id) return;   // ya tiene su entrada
+      const vTypes = [...new Set((sh.works||[]).map(w=>WORK_TO_VISIT[w]).filter(Boolean))];
+      const extras = (sh.works||[]).filter(w=>!WORK_TO_VISIT[w]);
+      const desc = [
+        (sh.works||[]).length ? (sh.works||[]).join(", ") : null,
+        sh.notes || null,
+        L("Registrado desde la Agenda","Logged from the Schedule"),
+      ].filter(Boolean).join(" · ");
+      const { data: le, error: leErr } = await supabase.from("log_entries").insert({
+        vessel_id: v.id, owner_id: v.owner_id,
+        date: sh.shift_date, type: "Visita",
+        visit_types: vTypes.length ? vTypes : ["Supervisión de técnico"],
+        description: desc, performed_by: sh.person_name || null,
+        photos: [], crew_sel: [],
+      }).select().single();
+      if (leErr) { flash(L("Completado, pero no se pudo anotar en bitácora: ","Done, but couldn't log it: ")+leErr.message); return; }
+      await supabase.from("work_shifts").update({ log_entry_id: le.id }).eq("id", id);
+      setShifts(list=>list.map(x=>x.id===id?{...x,log_entry_id:le.id}:x));
+      flash(L(`Completado y anotado en la bitácora de ${v.name}.`,`Done and logged in ${v.name}'s logbook.`));
+    }
+    if (patch.work_status && patch.work_status !== "Completado" && before?.work_status === "Completado" && before?.log_entry_id) {
+      await supabase.from("log_entries").delete().eq("id", before.log_entry_id);
+      await supabase.from("work_shifts").update({ log_entry_id: null }).eq("id", id);
+      setShifts(list=>list.map(x=>x.id===id?{...x,log_entry_id:null}:x));
     }
   };
 
