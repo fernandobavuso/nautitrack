@@ -71,6 +71,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
       person_name: form.personName.trim(),
       vessel_name: form.vesselName || null,
       shift_date:  form.date,
+      works:       form.works,
       description: form.works.length ? form.works.join(" + ") : null,
       notes:       form.notes.trim() || null,
       // "hora": horas × tarifa. "flat": el precio va en rate y hours queda vacío
@@ -91,6 +92,13 @@ export default function Schedule({ user, vessels = [], onClose }) {
   // Trabajos que cuentan como servicio de limpieza (categoría "Limpiezas");
   // el resto del personal se registra como "Sueldos".
   const CLEAN_WORKS = ["Lavada","Detailing","Limpieza interior","Buceo / Casco"];
+
+  // Trabajos de un turno: el campo works si existe; para turnos viejos (que solo
+  // guardaban el texto "Lavada + Detailing" en description) se derivan de ahí.
+  const shiftWorks = (sh) =>
+    (Array.isArray(sh.works) && sh.works.length)
+      ? sh.works
+      : String(sh.description||"").split(" + ").map(x=>x.trim()).filter(Boolean);
 
   // Trabajo de agenda → tipo de visita de bitácora (los que tienen equivalente)
   const WORK_TO_VISIT = {
@@ -116,8 +124,9 @@ export default function Schedule({ user, vessels = [], onClose }) {
                 "Paid. Add a rate (and hours) to the shift to log it as a company expense."));
         return;
       }
-      const works = (sh.works||[]).length ? sh.works.join(", ") : L("Servicio","Service");
-      const isClean = (sh.works||[]).some(w => CLEAN_WORKS.includes(w));
+      const wlist = shiftWorks(sh);
+      const works = wlist.length ? wlist.join(", ") : L("Servicio","Service");
+      const isClean = wlist.some(w => CLEAN_WORKS.includes(w));
       // Bajo la empresa compartida: si quien paga es co-gestor, el gasto vive con el
       // dueño de la flota, igual que en Mi Empresa.
       const { data: fm } = await supabase.from("fleet_managers")
@@ -148,10 +157,10 @@ export default function Schedule({ user, vessels = [], onClose }) {
       const v = vessels.find(x => x.name === sh.vessel_name);
       if (!v) { flash(L("Completado. (No encontré el barco para anotarlo en bitácora)","Done. (Couldn't find the vessel to log it)")); return; }
       if (sh.log_entry_id) return;   // ya tiene su entrada
-      const vTypes = [...new Set((sh.works||[]).map(w=>WORK_TO_VISIT[w]).filter(Boolean))];
-      const extras = (sh.works||[]).filter(w=>!WORK_TO_VISIT[w]);
+      const wlist = shiftWorks(sh);
+      const vTypes = [...new Set(wlist.map(w=>WORK_TO_VISIT[w]).filter(Boolean))];
       const desc = [
-        (sh.works||[]).length ? (sh.works||[]).join(", ") : null,
+        wlist.length ? wlist.join(", ") : null,
         sh.notes || null,
         L("Registrado desde la Agenda","Logged from the Schedule"),
       ].filter(Boolean).join(" · ");
@@ -234,7 +243,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
     for (let w = 1; w <= weeks; w++) {
       rows.push({
         manager_id: user.id, person_name: sh.person_name, vessel_name: sh.vessel_name,
-        shift_date: addDays(sh.shift_date, 7 * w), description: sh.description, notes: sh.notes,
+        shift_date: addDays(sh.shift_date, 7 * w), works: sh.works ?? null, description: sh.description, notes: sh.notes,
         hours: sh.hours, rate: sh.rate, work_status: "Agendado", payment_status: "Pendiente",
       });
     }
@@ -252,7 +261,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
       for (let w = 1; w <= weeks; w++) {
         rows.push({
           manager_id: user.id, person_name: sh.person_name, vessel_name: sh.vessel_name,
-          shift_date: addDays(sh.shift_date, 7 * w), description: sh.description, notes: sh.notes,
+          shift_date: addDays(sh.shift_date, 7 * w), works: sh.works ?? null, description: sh.description, notes: sh.notes,
           hours: sh.hours, rate: sh.rate, work_status: "Agendado", payment_status: "Pendiente",
         });
       }
