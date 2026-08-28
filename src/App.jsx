@@ -11,7 +11,7 @@ import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 import PartnerView from "./PartnerView.jsx";
-import PurchaseMeta, { EXPENSE_CATEGORIES } from "./PaymentFields.jsx";
+import PurchaseMeta, { EXPENSE_CATEGORIES, paymentSummary } from "./PaymentFields.jsx";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
@@ -3261,7 +3261,7 @@ function ReportModal({ vessel, onClose }) {
     {key:"inspect", Icon:IconSearch,    label:"Inspecciones",     desc:"Todas las inspecciones registradas"},
     {key:"fuel",    Icon:IconFuel,      label:"Combustible",      desc:"Historial de repostajes"},
     {key:"salidas", Icon:IconBoat,      label:"Salidas al Mar",   desc:"Destinos, tripulación, horas"},
-    {key:"costs",   Icon:IconMoney,     label:"Costos y Compras", desc:"Gastos y repuestos comprados"},
+    {key:"costs",   Icon:IconMoney,     label:"Costos y Compras", desc:"Por categoría, proveedor, pago y factura"},
     {key:"tasks",   Icon:IconCheck,     label:"Estado de Tareas", desc:"Pendientes, vencidas, completadas"},
     {key:"log",     Icon:IconBook,      label:"Bitácora Completa",desc:"Todas las entradas del período"},
     {key:"sale",    Icon:IconAnchor,    label:"Para Venta",       desc:"Historial completo para compradores"},
@@ -3550,27 +3550,71 @@ function ReportModal({ vessel, onClose }) {
     }
 
     // ── COSTS ─────────────────────────────────────────────────────────────────
-    if (sel.includes("costs") && compras.length > 0) {
-      sections += sectionHeader("💰","Compras y Gastos",`${compras.length} ítems · Total: $${totalCost.toFixed(2)} USD`,"#dcfce7","#16a34a");
-      sections += `<table>
-        <thead><tr><th>Fecha</th><th>Descripción</th><th>Marca</th><th>Modelo</th><th>N° Parte</th><th>USD</th><th>Pago</th></tr></thead>
-        <tbody>
-          ${compras.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
-            <td class="td-date">${fmtD(e.date)}</td>
-            <td class="td-bold">${e.item||"—"}</td>
-            <td style="color:#64748b;">${e.brand||"—"}</td>
-            <td style="color:#64748b;">${e.model2||"—"}</td>
-            <td style="font-family:monospace;font-size:11px;color:#475569;">${e.partNum||"—"}</td>
-            <td class="td-money">$${(e.costUSD||0).toFixed(2)}</td>
-            <td><span class="badge badge-blue">${e.payment||"—"}</span></td>
-          </tr>`).join("")}
-          <tr style="background:#f0fdf4;">
-            <td colspan="5" style="font-weight:700;color:#15803d;padding:12px 16px;">TOTAL</td>
-            <td class="td-money" style="font-size:16px;">$${totalCost.toFixed(2)}</td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>`;
+    // Fuente: los GASTOS del barco (categoría, proveedor, comprador, tarjeta,
+    // factura), no solo las compras de bitácora. Así el reporte refleja lo que se
+    // ve en Finanzas.
+    if (sel.includes("costs")) {
+      const fD2 = parseInputDate(from), tD2 = parseInputDate(to);
+      const expList = vExpenses.filter(e=>{
+        if (fD2 && String(e.expense_date) < fD2) return false;
+        if (tD2 && String(e.expense_date) > tD2) return false;
+        return true;
+      }).sort((a,b)=>String(b.expense_date).localeCompare(String(a.expense_date)));
+
+      if (expList.length > 0) {
+        const totExp = expList.reduce((a,e)=>a+Number(e.amount||0),0);
+        sections += sectionHeader("💰","Compras y Gastos",`${expList.length} ítems · Total: $${totExp.toFixed(2)} USD`,"#dcfce7","#16a34a");
+
+        // Resumen por categoría antes del detalle
+        const byCat = {};
+        expList.forEach(e=>{ const k=e.category||"Otro"; byCat[k]=(byCat[k]||0)+Number(e.amount||0); });
+        const catsSorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+        const CATC = {Combustible:"#0ea5e9",Consumibles:"#0d9488",Mantenimiento:"#2563eb","Reparación":"#dc2626",Repuestos:"#7c3aed",Sueldos:"#16a34a",Marina:"#d97706",Seguro:"#0891b2",Impuestos:"#be185d",Otro:"#64748b"};
+        sections += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+          ${catsSorted.map(([c,a])=>`<div style="background:#f8fafc;border-left:3px solid ${CATC[c]||"#94a3b8"};border-radius:7px;padding:7px 11px;">
+            <div style="font-size:10px;color:#64748b;font-weight:600;">${c}</div>
+            <div style="font-size:14px;font-weight:800;color:#0f172a;">$${a.toLocaleString("en-US",{maximumFractionDigits:2})}</div>
+            <div style="font-size:9px;color:#94a3b8;">${Math.round((a/totExp)*100)}% del total</div>
+          </div>`).join("")}
+        </div>`;
+
+        sections += `<table>
+          <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Proveedor</th><th>Compró</th><th>Pago</th><th>N° factura</th><th>USD</th></tr></thead>
+          <tbody>
+            ${expList.map((e,i2)=>`<tr style="background:${i2%2===0?"#fff":"#f8fafc"}">
+              <td class="td-date">${fmtD(e.expense_date)}</td>
+              <td><span class="badge" style="background:${(CATC[e.category]||"#64748b")}1a;color:${CATC[e.category]||"#64748b"};">${e.category||"Otro"}</span></td>
+              <td class="td-bold">${e.description||"—"}</td>
+              <td style="color:#64748b;">${e.vendor||"—"}</td>
+              <td style="color:#64748b;">${e.purchased_by||"—"}</td>
+              <td style="color:#64748b;font-size:11px;">${paymentSummary(e, lang)||"—"}</td>
+              <td style="font-family:monospace;font-size:11px;color:#475569;">${e.invoice_number||"—"}</td>
+              <td class="td-money">$${Number(e.amount||0).toFixed(2)}</td>
+            </tr>`).join("")}
+            <tr style="background:#f0fdf4;">
+              <td colspan="7" style="font-weight:700;color:#15803d;padding:12px 16px;">TOTAL</td>
+              <td class="td-money" style="font-size:16px;">$${totExp.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>`;
+
+        // Repuestos con su ficha técnica (marca/modelo/n° parte de la bitácora)
+        const parts = compras.filter(e=>e.brand||e.model2||e.partNum);
+        if (parts.length) {
+          sections += `<div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin:6px 0 8px;">Detalle técnico de repuestos comprados</div>
+          <table>
+            <thead><tr><th>Fecha</th><th>Ítem</th><th>Marca</th><th>Modelo</th><th>N° Parte</th><th>USD</th></tr></thead>
+            <tbody>${parts.map((e,i2)=>`<tr style="background:${i2%2===0?"#fff":"#f8fafc"}">
+              <td class="td-date">${fmtD(e.date)}</td>
+              <td class="td-bold">${e.item||"—"}</td>
+              <td style="color:#64748b;">${e.brand||"—"}</td>
+              <td style="color:#64748b;">${e.model2||"—"}</td>
+              <td style="font-family:monospace;font-size:11px;color:#475569;">${e.partNum||"—"}</td>
+              <td class="td-money">$${(e.costUSD||0).toFixed(2)}</td>
+            </tr>`).join("")}</tbody>
+          </table>`;
+        }
+      }
     }
 
     // ── TASKS ─────────────────────────────────────────────────────────────────
