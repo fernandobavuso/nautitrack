@@ -34,6 +34,16 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding]   = useState(false);
   const [msg, setMsg]         = useState("");
+  const addDays = (dateStr, n) => {
+    const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  const [view, setView] = useState("lista");           // "lista" | "semana"
+  const [weekStart, setWeekStart] = useState(() => {    // lunes de la semana actual
+    const d = new Date(); const dow = (d.getDay()+6)%7;  // 0=lunes
+    d.setDate(d.getDate()-dow); d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
+  });
   const [editShift, setEditShift] = useState(null);   // turno en edición
   const [showCut, setShowCut]     = useState(false);
   const [cutCopied, setCutCopied] = useState("");
@@ -282,10 +292,6 @@ export default function Schedule({ user, vessels = [], onClose }) {
       : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
   };
 
-  const addDays = (dateStr, n) => {
-    const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
 
   // Repetir UN turno hacia las próximas N semanas
   const repeatShift = async (sh, weeks = 1) => {
@@ -581,8 +587,80 @@ export default function Schedule({ user, vessels = [], onClose }) {
             </div>
           )}
 
+          {/* Vista: lista o semana */}
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:9,padding:3}}>
+              {[{k:"lista",l:L("Lista","List")},{k:"semana",l:L("Semana","Week")}].map(v=>(
+                <button key={v.k} onClick={()=>setView(v.k)}
+                  style={{padding:"6px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:12,fontWeight:view===v.k?700:500,
+                    background:view===v.k?"#fff":"transparent",color:view===v.k?"#0f172a":"#64748b",
+                    boxShadow:view===v.k?"0 1px 3px rgba(15,23,42,0.1)":"none"}}>
+                  {v.l}
+                </button>
+              ))}
+            </div>
+            {view==="semana" && (
+              <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
+                <button onClick={()=>setWeekStart(addDays(weekStart,-7))} style={{...inp,marginTop:0,padding:"6px 11px",cursor:"pointer"}}>‹</button>
+                <button onClick={()=>{ const d=new Date(); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); setWeekStart(d.toISOString().slice(0,10)); }}
+                  style={{...inp,marginTop:0,padding:"6px 12px",cursor:"pointer",fontSize:12}}>{L("Hoy","Today")}</button>
+                <button onClick={()=>setWeekStart(addDays(weekStart,7))} style={{...inp,marginTop:0,padding:"6px 11px",cursor:"pointer"}}>›</button>
+              </div>
+            )}
+          </div>
+
+          {/* Vista SEMANA: 7 columnas con los turnos de cada día */}
+          {view==="semana" && !loading && (()=>{
+            const days = Array.from({length:7},(_,i)=>addDays(weekStart,i));
+            const dayName = (d)=>new Date(d+"T00:00:00").toLocaleDateString(lang==="es"?"es":"en-US",{weekday:"short"});
+            const dayNum  = (d)=>new Date(d+"T00:00:00").getDate();
+            const todayStr = new Date().toISOString().slice(0,10);
+            const ofDay = (d)=>filtered.filter(x=>x.shift_date===d);
+            const weekTotal = days.reduce((a,d)=>a+ofDay(d).reduce((b,x)=>b+total(x),0),0);
+            const monthLbl = new Date(weekStart+"T00:00:00").toLocaleDateString(lang==="es"?"es":"en-US",{month:"long",year:"numeric"});
+            return (
+              <div style={{marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#0f172a",textTransform:"capitalize"}}>{monthLbl}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{L("Total de la semana","Week total")}: <strong style={{color:"#0f172a"}}>${weekTotal.toLocaleString("en-US",{maximumFractionDigits:2})}</strong></div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(96px,1fr))",gap:6,overflowX:"auto"}}>
+                  {days.map(d=>{
+                    const list=ofDay(d); const isToday=d===todayStr;
+                    return (
+                      <div key={d} style={{background:isToday?"#eff6ff":"#f8fafc",border:`1px solid ${isToday?"#bfdbfe":"#f1f5f9"}`,borderRadius:10,padding:"7px 6px",minHeight:96}}>
+                        <div style={{textAlign:"center",marginBottom:6}}>
+                          <div style={{fontSize:10,color:isToday?"#1d4ed8":"#94a3b8",fontWeight:700,textTransform:"uppercase"}}>{dayName(d)}</div>
+                          <div style={{fontSize:15,fontWeight:800,color:isToday?"#1d4ed8":"#334155"}}>{dayNum(d)}</div>
+                        </div>
+                        {list.length===0
+                          ? <div style={{fontSize:10,color:"#cbd5e1",textAlign:"center",marginTop:6}}>—</div>
+                          : list.map(sh=>(
+                              <button key={sh.id} onClick={()=>setEditShift({ ...sh, works: shiftWorks(sh), payMode:(Number(sh.hours)>0?"hora":"flat"), hours: sh.hours ?? "", rate: sh.rate ?? "" })}
+                                title={`${sh.person_name} · ${sh.vessel_name||""} · $${total(sh).toFixed(2)}`}
+                                style={{display:"block",width:"100%",textAlign:"left",marginBottom:4,padding:"5px 6px",borderRadius:7,cursor:"pointer",
+                                  border:`1px solid ${WS_COLOR[sh.work_status]||"#d97706"}33`,
+                                  background:sh.payment_status==="Pagado"?"#f0fdf4":"#fff",
+                                  borderLeft:`3px solid ${WS_COLOR[sh.work_status]||"#d97706"}`}}>
+                                <div style={{fontSize:10,fontWeight:700,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sh.person_name}</div>
+                                <div style={{fontSize:9,color:"#64748b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sh.vessel_name||"—"}</div>
+                                <div style={{fontSize:9,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{shiftWorks(sh).join(", ")||L("Servicio","Service")}</div>
+                                <div style={{fontSize:10,fontWeight:700,color:sh.payment_status==="Pagado"?"#16a34a":"#0f172a",marginTop:2}}>${total(sh).toFixed(0)}</div>
+                              </button>
+                            ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:7}}>
+                  {L("Toca un turno para editarlo. El borde indica el estado del trabajo; verde = pagado.","Tap a shift to edit it. The left border shows work status; green = paid.")}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Lista de turnos */}
-          {loading ? (
+          {view==="lista" && (loading ? (
             <div style={{textAlign:"center",padding:30,color:"#94a3b8",fontSize:13}}>{L("Cargando...", "Loading...")}</div>
           ) : filtered.length === 0 ? (
             <div style={{textAlign:"center",padding:"36px 20px",color:"#94a3b8"}}>
@@ -628,7 +706,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </div>
       </div>
 
