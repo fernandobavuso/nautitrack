@@ -34,6 +34,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding]   = useState(false);
   const [msg, setMsg]         = useState("");
+  const [editShift, setEditShift] = useState(null);   // turno en edición
   const [showCut, setShowCut]     = useState(false);
   const [cutCopied, setCutCopied] = useState("");
   const [payingAll, setPayingAll] = useState(false);
@@ -213,6 +214,23 @@ export default function Schedule({ user, vessels = [], onClose }) {
     }
     setPayingAll(false);
     flash(L(`${row.person} queda en cero.`, `${row.person} is settled.`));
+  };
+
+  const saveShiftEdit = async () => {
+    const e = editShift;
+    if (!e.person_name?.trim()) { flash(L("Falta la persona","Person is required")); return; }
+    const patch = {
+      shift_date: e.shift_date, person_name: e.person_name, vessel_name: e.vessel_name || null,
+      works: e.works || [], description: (e.works||[]).length ? (e.works||[]).join(" + ") : null,
+      notes: e.notes || null,
+      hours: e.payMode==="flat" ? null : (e.hours!==""&&e.hours!=null ? Number(e.hours) : null),
+      rate:  e.rate!==""&&e.rate!=null ? Number(e.rate) : null,
+    };
+    const { data, error } = await supabase.from("work_shifts").update(patch).eq("id", e.id).select();
+    if (error || !data?.length) { flash("Error: "+(error?.message||L("no se guardó","not saved"))); return; }
+    setShifts(list=>list.map(x=>x.id===e.id?{...x,...data[0]}:x));
+    setEditShift(null);
+    flash(L("Turno actualizado.","Shift updated."));
   };
 
   const removeShift = async (id) => {
@@ -601,7 +619,10 @@ export default function Schedule({ user, vessels = [], onClose }) {
                       style={{fontSize:11,fontWeight:700,padding:"4px 8px",borderRadius:20,border:`1.5px solid ${PS_COLOR[s.payment_status]||"#dc2626"}`,cursor:"pointer",color:PS_COLOR[s.payment_status]||"#dc2626",background:"#fff"}}>
                       {PAY_STATUS.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
-                    <button onClick={() => repeatShift(s, 1)} title={L("Repetir la próxima semana","Repeat next week")} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:12,fontWeight:600}}>🔁 {L("Repetir","Repeat")}</button>
+                    <button onClick={() => setEditShift({ ...s, works: shiftWorks(s), payMode: (Number(s.hours)>0 ? "hora" : "flat"), hours: s.hours ?? "", rate: s.rate ?? "" })}
+                      title={L("Editar turno","Edit shift")}
+                      style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:"#64748b",fontSize:13,fontWeight:600}}>✎ {L("Editar","Edit")}</button>
+                    <button onClick={() => repeatShift(s, 1)} title={L("Repetir la próxima semana","Repeat next week")} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:12,fontWeight:600}}>🔁 {L("Repetir","Repeat")}</button>
                     <button onClick={() => removeShift(s.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#ef4444",fontSize:14}}>{L("Eliminar","Delete")}</button>
                   </div>
                 </div>
@@ -610,6 +631,94 @@ export default function Schedule({ user, vessels = [], onClose }) {
           )}
         </div>
       </div>
+
+      {/* Editar turno */}
+      {editShift && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14,overflowY:"auto"}}>
+          <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:440,width:"100%",maxHeight:"92vh",overflowY:"auto"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+              <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Editar turno","Edit shift")}</div>
+              <button onClick={()=>setEditShift(null)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:11}}>
+              <div style={{display:"flex",gap:8}}>
+                <div style={{flex:1}}>
+                  <label style={lbl}>{L("Fecha","Date")}</label>
+                  <input type="date" value={editShift.shift_date} onChange={e=>setEditShift(x=>({...x,shift_date:e.target.value}))} style={{...inp,width:"100%"}}/>
+                </div>
+                <div style={{flex:1}}>
+                  <label style={lbl}>{L("Persona","Person")}</label>
+                  <input list="edit-people" value={editShift.person_name||""} onChange={e=>setEditShift(x=>({...x,person_name:e.target.value}))} style={{...inp,width:"100%"}}/>
+                  <datalist id="edit-people">{team.map(t=><option key={t.id} value={t.name}/>)}</datalist>
+                </div>
+              </div>
+
+              <div>
+                <label style={lbl}>{L("Barco","Vessel")}</label>
+                <select value={editShift.vessel_name||""} onChange={e=>setEditShift(x=>({...x,vessel_name:e.target.value}))} style={{...inp,width:"100%"}}>
+                  <option value="">{L("Sin barco","No vessel")}</option>
+                  {vessels.map(v=><option key={v.id} value={v.name}>{v.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={lbl}>{L("Trabajos","Works")}</label>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {WORK_TYPES.map(w=>{
+                    const on=(editShift.works||[]).includes(w);
+                    return (
+                      <button key={w} type="button" onClick={()=>setEditShift(x=>({...x,works:on?x.works.filter(y=>y!==w):[...(x.works||[]),w]}))}
+                        style={{padding:"6px 11px",borderRadius:18,border:`1.5px solid ${on?"#2563eb":"#e2e8f0"}`,background:on?"#eff6ff":"#fff",color:on?"#1e40af":"#64748b",fontSize:11,fontWeight:on?700:400,cursor:"pointer"}}>
+                        {on?"✓ ":""}{w}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label style={lbl}>{L("Pago","Pay")}</label>
+                <div style={{display:"flex",gap:6,marginBottom:8}}>
+                  {[{k:"hora",l:L("Por hora","Hourly")},{k:"flat",l:L("Precio fijo","Flat rate")}].map(m=>(
+                    <button key={m.k} type="button" onClick={()=>setEditShift(x=>({...x,payMode:m.k}))}
+                      style={{flex:1,padding:"7px",borderRadius:8,border:`1.5px solid ${editShift.payMode===m.k?"#2563eb":"#e2e8f0"}`,background:editShift.payMode===m.k?"#eff6ff":"#fff",color:editShift.payMode===m.k?"#1e40af":"#64748b",fontSize:12,fontWeight:editShift.payMode===m.k?700:500,cursor:"pointer"}}>
+                      {m.l}
+                    </button>
+                  ))}
+                </div>
+                {editShift.payMode==="hora" ? (
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{flex:1}}><label style={lbl}>{L("Horas","Hours")}</label>
+                      <input type="number" value={editShift.hours} onChange={e=>setEditShift(x=>({...x,hours:e.target.value}))} style={{...inp,width:"100%"}}/></div>
+                    <div style={{flex:1}}><label style={lbl}>{L("Tarifa/hora ($)","Rate/hr ($)")}</label>
+                      <input type="number" value={editShift.rate} onChange={e=>setEditShift(x=>({...x,rate:e.target.value}))} style={{...inp,width:"100%"}}/></div>
+                  </div>
+                ) : (
+                  <div><label style={lbl}>{L("Precio por el trabajo ($)","Price for the job ($)")}</label>
+                    <input type="number" value={editShift.rate} onChange={e=>setEditShift(x=>({...x,rate:e.target.value}))} style={{...inp,width:"100%"}}/></div>
+                )}
+              </div>
+
+              <div>
+                <label style={lbl}>{L("Notas","Notes")}</label>
+                <input value={editShift.notes||""} onChange={e=>setEditShift(x=>({...x,notes:e.target.value}))} style={{...inp,width:"100%"}}/>
+              </div>
+
+              {editShift.payment_status==="Pagado" && (
+                <div style={{fontSize:11,color:"#b45309",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 10px"}}>
+                  {L("Este turno ya está pagado. Si cambias el monto, corrige también el gasto en Mi Empresa.","This shift is already paid. If you change the amount, fix the expense in My Company too.")}
+                </div>
+              )}
+
+              <button onClick={saveShiftEdit}
+                style={{padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                {L("Guardar cambios","Save changes")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Corte de nómina por persona */}
       {showCut && (
