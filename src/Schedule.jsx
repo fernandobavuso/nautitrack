@@ -183,6 +183,30 @@ export default function Schedule({ user, vessels = [], onClose }) {
     }
   };
 
+  // Corte de nómina: lo pendiente por persona (trabajo completado, pago pendiente)
+  const cutRows = (() => {
+    const pend = shifts.filter(s => s.payment_status !== "Pagado" && s.work_status === "Completado");
+    const by = {};
+    pend.forEach(s => {
+      const k = s.person_name || "—";
+      if (!by[k]) by[k] = { person:k, shifts:[], total:0, hours:0 };
+      by[k].shifts.push(s); by[k].total += total(s); by[k].hours += Number(s.hours)||0;
+    });
+    return Object.values(by).sort((a,b)=>b.total-a.total);
+  })();
+  const cutTotal = cutRows.reduce((a,r)=>a+r.total,0);
+
+  const payPerson = async (row) => {
+    if (!confirm(L(`¿Marcar como pagados los ${row.shifts.length} turnos de ${row.person} ($${row.total.toFixed(2)})?`,
+                   `Mark ${row.person}'s ${row.shifts.length} shifts as paid ($${row.total.toFixed(2)})?`))) return;
+    setPayingAll(true);
+    for (const sh of row.shifts) {
+      await updateShift(sh.id, { payment_status: "Pagado" });   // cada uno crea su gasto de empresa
+    }
+    setPayingAll(false);
+    flash(L(`${row.person} queda en cero.`, `${row.person} is settled.`));
+  };
+
   const removeShift = async (id) => {
     if (!window.confirm(L("¿Eliminar este turno?", "Delete this shift?"))) return;
     setShifts(s => s.filter(x => x.id !== id));
@@ -332,6 +356,23 @@ export default function Schedule({ user, vessels = [], onClose }) {
 
         <div style={{padding:22,overflowY:"auto"}}>
           {msg && <div style={{background:"#f0fdf4",color:"#15803d",padding:"9px 12px",borderRadius:8,fontSize:12,marginBottom:14}}>{msg}</div>}
+
+          {/* Corte de nómina: trabajos completados aún sin pagar */}
+          {cutRows.length>0 && (
+            <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"13px 15px",marginBottom:14,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:170}}>
+                <div style={{fontSize:11,color:"#15803d",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{L("Por pagar al equipo","To pay the team")}</div>
+                <div style={{fontSize:12,color:"#166534",marginTop:2}}>
+                  {cutRows.length} {cutRows.length===1?L("persona","person"):L("personas","people")} · {cutRows.reduce((a,r)=>a+r.shifts.length,0)} {L("turnos completados","completed shifts")}
+                </div>
+              </div>
+              <div style={{fontSize:24,fontWeight:800,color:"#15803d"}}>${cutTotal.toLocaleString("en-US",{maximumFractionDigits:2})}</div>
+              <button onClick={()=>setShowCut(true)}
+                style={{padding:"8px 14px",background:"#16a34a",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                {L("Hacer corte","Payroll cut")}
+              </button>
+            </div>
+          )}
 
           {/* Botón agregar */}
           {!adding && (
@@ -564,6 +605,70 @@ export default function Schedule({ user, vessels = [], onClose }) {
           )}
         </div>
       </div>
+
+      {/* Corte de nómina por persona */}
+      {showCut && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14}} onClick={()=>setShowCut(false)}>
+          <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:560,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:12}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Corte de pagos al equipo","Team payroll cut")}</div>
+                <div style={{fontSize:12,color:"#64748b",marginTop:2}}>
+                  {L("Trabajos completados que aún no se han pagado.","Completed work not yet paid.")}
+                </div>
+              </div>
+              <button onClick={()=>setShowCut(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
+              {cutRows.map(row=>(
+                <div key={row.person} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:"11px 13px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <div style={{flex:1,minWidth:150}}>
+                      <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{row.person}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>
+                        {row.shifts.length} {row.shifts.length===1?L("turno","shift"):L("turnos","shifts")}{row.hours>0?` · ${row.hours}h`:""}
+                      </div>
+                    </div>
+                    <div style={{fontSize:18,fontWeight:800,color:"#0f172a"}}>${row.total.toLocaleString("en-US",{maximumFractionDigits:2})}</div>
+                    <button onClick={()=>payPerson(row)} disabled={payingAll}
+                      style={{padding:"7px 13px",background:"#16a34a",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",opacity:payingAll?0.6:1}}>
+                      ✓ {L("Pagado","Paid")}
+                    </button>
+                  </div>
+                  <div style={{marginTop:7,paddingTop:7,borderTop:"1px dashed #f1f5f9"}}>
+                    {row.shifts.map(sh=>(
+                      <div key={sh.id} style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#64748b",padding:"2px 0"}}>
+                        <span>{new Date(sh.shift_date+"T00:00:00").toLocaleDateString("en-US",{day:"numeric",month:"short"})} · {sh.vessel_name} · {shiftWorks(sh).join(", ")||L("Servicio","Service")}</span>
+                        <span style={{fontWeight:600}}>${total(sh).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#f0fdf4",borderRadius:10,padding:"11px 14px",marginBottom:12}}>
+              <span style={{fontSize:13,fontWeight:700,color:"#166534"}}>{L("Total del corte","Cut total")}</span>
+              <span style={{fontSize:20,fontWeight:800,color:"#15803d"}}>${cutTotal.toLocaleString("en-US",{maximumFractionDigits:2})}</span>
+            </div>
+
+            <button onClick={()=>{
+              const txt=[
+                `${L("Corte de pagos","Payroll cut")} — ${new Date().toLocaleDateString("en-US")}`,"",
+                ...cutRows.map(r=>`${r.person}: $${r.total.toFixed(2)} (${r.shifts.length} ${L("turnos","shifts")})`),
+                "", `${L("TOTAL","TOTAL")}: $${cutTotal.toFixed(2)}`,
+              ].join("\n");
+              navigator.clipboard?.writeText(txt).then(()=>{setCutCopied("y");setTimeout(()=>setCutCopied(""),2000);});
+            }} style={{width:"100%",padding:"10px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#334155",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              {cutCopied ? `✓ ${L("Copiado","Copied")}` : L("Copiar resumen","Copy summary")}
+            </button>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:8,lineHeight:1.5}}>
+              {L("Al marcar Pagado, esos turnos salen del corte y se registran como gasto en Mi Empresa.","Marking Paid removes those shifts from the cut and logs them as expenses in My Company.")}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
