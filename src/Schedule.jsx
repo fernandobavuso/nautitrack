@@ -100,6 +100,11 @@ export default function Schedule({ user, vessels = [], onClose }) {
       ? sh.works
       : String(sh.description||"").split(" + ").map(x=>x.trim()).filter(Boolean);
 
+  // horas × tarifa; si no hay horas (precio fijo), el total es la tarifa sola
+  const total  = (s) => (Number(s.hours) > 0 && Number(s.rate) > 0)
+    ? Number(s.hours) * Number(s.rate)
+    : (Number(s.rate) || 0);
+
   // Trabajo de agenda → tipo de visita de bitácora (los que tienen equivalente)
   const WORK_TO_VISIT = {
     "Lavada":"Lavada", "Detailing":"Detailing", "Limpieza interior":"Limpieza interior",
@@ -318,9 +323,6 @@ export default function Schedule({ user, vessels = [], onClose }) {
   };
 
   // horas × tarifa; si no hay horas (precio fijo), el total es la tarifa sola
-  const total  = (s) => (Number(s.hours) > 0 && Number(s.rate) > 0)
-    ? Number(s.hours) * Number(s.rate)
-    : (Number(s.rate) || 0);
   const filtered = shifts.filter(s => {
     if (filterPerson && s.person_name !== filterPerson) return false;
     if (from && s.shift_date < from) return false;
