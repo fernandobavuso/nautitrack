@@ -2606,10 +2606,20 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
   const [arrTime,setArrTime]         = useState(initial?.arrTime||"");
   const [fuelOut,setFuelOut]         = useState(initial?.fuelOut||"");
   const [fuelIn,setFuelIn]           = useState(initial?.fuelIn||"");
-  const [engOut,setEngOut]           = useState(initial?.engineHrsOut||{});
-  const [engIn,setEngIn]             = useState(initial?.engineHrsIn||{});
-  const [genOut,setGenOut]           = useState(initial?.genHrsOut||{});
-  const [genIn,setGenIn]             = useState(initial?.genHrsIn||{});
+  // La BD guarda las horas como UN número (el máximo), pero los inputs trabajan con
+  // {equipo: horas}. Al reabrir una entrada hay que repartir ese número entre los
+  // equipos, o el campo aparece vacío y se pierde la lectura de salida.
+  const spreadHrs = (val, labels) => {
+    if (val == null || val === "") return {};
+    if (typeof val === "object") return val;
+    const o = {}; (labels||[]).forEach(k => { o[k] = val; }); return o;
+  };
+  const motorLabelsInit = getMotorLabels(vessel);
+  const genLabelsInit   = getGenLabels(vessel);
+  const [engOut,setEngOut]           = useState(spreadHrs(initial?.engineHrsOut, motorLabelsInit));
+  const [engIn,setEngIn]             = useState(spreadHrs(initial?.engineHrsIn,  motorLabelsInit));
+  const [genOut,setGenOut]           = useState(spreadHrs(initial?.genHrsOut,    genLabelsInit));
+  const [genIn,setGenIn]             = useState(spreadHrs(initial?.genHrsIn,     genLabelsInit));
   const [clima,setClima]             = useState(initial?.salidaClima||"");
   const [item,setItem]               = useState(initial?.item||"");
   const [brand,setBrand]             = useState(initial?.brand||"");
