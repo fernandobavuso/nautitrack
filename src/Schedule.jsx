@@ -363,7 +363,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const people = team.map(t => t.name);
 
   return (
-    <div style={ov} onClick={onClose}>
+    <div style={ov}>
       <div style={box} onClick={e => e.stopPropagation()}>
 
         {/* Cabecera */}
@@ -634,7 +634,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
 
       {/* Editar turno */}
       {editShift && (
-        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14,overflowY:"auto"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14,overflowY:"auto"}}>
           <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:440,width:"100%",maxHeight:"92vh",overflowY:"auto"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Editar turno","Edit shift")}</div>
@@ -722,7 +722,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
 
       {/* Corte de nómina por persona */}
       {showCut && (
-        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14}} onClick={()=>setShowCut(false)}>
+        <div onClick={e=>{ e.stopPropagation(); setShowCut(false); }} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2100,padding:14}}>
           <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:560,width:"100%",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
             <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:12}}>
               <div style={{flex:1}}>
