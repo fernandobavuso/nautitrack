@@ -590,7 +590,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
           {/* Vista: lista o semana */}
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
             <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:9,padding:3}}>
-              {[{k:"lista",l:L("Lista","List")},{k:"semana",l:L("Semana","Week")}].map(v=>(
+              {[{k:"lista",l:L("Lista","List")},{k:"semana",l:L("Semana","Week")},{k:"mes",l:L("Mes","Month")}].map(v=>(
                 <button key={v.k} onClick={()=>setView(v.k)}
                   style={{padding:"6px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:12,fontWeight:view===v.k?700:500,
                     background:view===v.k?"#fff":"transparent",color:view===v.k?"#0f172a":"#64748b",
@@ -599,12 +599,18 @@ export default function Schedule({ user, vessels = [], onClose }) {
                 </button>
               ))}
             </div>
-            {view==="semana" && (
+            {(view==="semana"||view==="mes") && (
               <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
-                <button onClick={()=>setWeekStart(addDays(weekStart,-7))} style={{...inp,marginTop:0,padding:"6px 11px",cursor:"pointer"}}>‹</button>
+                <button onClick={()=>{
+                  if (view==="mes") { const d=new Date(weekStart+"T00:00:00"); d.setMonth(d.getMonth()-1); d.setDate(1); setWeekStart(d.toISOString().slice(0,10)); }
+                  else setWeekStart(addDays(weekStart,-7));
+                }} style={{...inp,marginTop:0,padding:"6px 11px",cursor:"pointer"}}>‹</button>
                 <button onClick={()=>{ const d=new Date(); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); setWeekStart(d.toISOString().slice(0,10)); }}
                   style={{...inp,marginTop:0,padding:"6px 12px",cursor:"pointer",fontSize:12}}>{L("Hoy","Today")}</button>
-                <button onClick={()=>setWeekStart(addDays(weekStart,7))} style={{...inp,marginTop:0,padding:"6px 11px",cursor:"pointer"}}>›</button>
+                <button onClick={()=>{
+                  if (view==="mes") { const d=new Date(weekStart+"T00:00:00"); d.setMonth(d.getMonth()+1); d.setDate(1); setWeekStart(d.toISOString().slice(0,10)); }
+                  else setWeekStart(addDays(weekStart,7));
+                }} style={{...inp,marginTop:0,padding:"6px 11px",cursor:"pointer"}}>›</button>
               </div>
             )}
           </div>
@@ -654,6 +660,70 @@ export default function Schedule({ user, vessels = [], onClose }) {
                 </div>
                 <div style={{fontSize:10,color:"#94a3b8",marginTop:7}}>
                   {L("Toca un turno para editarlo. El borde indica el estado del trabajo; verde = pagado.","Tap a shift to edit it. The left border shows work status; green = paid.")}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Vista MES: cuadrícula completa del mes */}
+          {view==="mes" && !loading && (()=>{
+            const base = new Date(weekStart+"T00:00:00");
+            const y = base.getFullYear(), m = base.getMonth();
+            const first = new Date(y, m, 1);
+            const startOffset = (first.getDay()+6)%7;           // lunes = 0
+            const gridStart = new Date(y, m, 1 - startOffset);
+            const daysInGrid = Math.ceil((startOffset + new Date(y, m+1, 0).getDate())/7)*7;
+            const cells = Array.from({length:daysInGrid},(_,i)=>{
+              const d = new Date(gridStart); d.setDate(gridStart.getDate()+i);
+              return d.toISOString().slice(0,10);
+            });
+            const todayStr = new Date().toISOString().slice(0,10);
+            const ofDay = (d)=>filtered.filter(x=>x.shift_date===d);
+            const inMonth = (d)=>new Date(d+"T00:00:00").getMonth()===m;
+            const monthShifts = filtered.filter(x=>{ const dt=new Date(x.shift_date+"T00:00:00"); return dt.getMonth()===m && dt.getFullYear()===y; });
+            const monthTotal = monthShifts.reduce((a,x)=>a+total(x),0);
+            const monthLbl = first.toLocaleDateString(lang==="es"?"es":"en-US",{month:"long",year:"numeric"});
+            const dows = lang==="es" ? ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"] : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+            return (
+              <div style={{marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#0f172a",textTransform:"capitalize"}}>{monthLbl}</div>
+                  <div style={{fontSize:12,color:"#64748b"}}>{monthShifts.length} {L("turnos","shifts")} · <strong style={{color:"#0f172a"}}>${monthTotal.toLocaleString("en-US",{maximumFractionDigits:2})}</strong></div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(60px,1fr))",gap:3,marginBottom:3}}>
+                  {dows.map(d=><div key={d} style={{textAlign:"center",fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",padding:"2px 0"}}>{d}</div>)}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(60px,1fr))",gap:3,overflowX:"auto"}}>
+                  {cells.map(d=>{
+                    const list=ofDay(d); const isToday=d===todayStr; const dim=!inMonth(d);
+                    return (
+                      <div key={d} style={{background:isToday?"#eff6ff":dim?"#fcfcfd":"#f8fafc",border:`1px solid ${isToday?"#bfdbfe":"#f1f5f9"}`,borderRadius:8,padding:"4px 4px 5px",minHeight:74,opacity:dim?0.5:1}}>
+                        <div style={{fontSize:11,fontWeight:isToday?800:600,color:isToday?"#1d4ed8":"#64748b",textAlign:"right",marginBottom:3}}>
+                          {new Date(d+"T00:00:00").getDate()}
+                        </div>
+                        {list.slice(0,3).map(sh=>(
+                          <button key={sh.id} onClick={()=>setEditShift({ ...sh, works: shiftWorks(sh), payMode:(Number(sh.hours)>0?"hora":"flat"), hours: sh.hours ?? "", rate: sh.rate ?? "" })}
+                            title={`${sh.person_name} · ${sh.vessel_name||""} · ${shiftWorks(sh).join(", ")} · $${total(sh).toFixed(2)}`}
+                            style={{display:"block",width:"100%",textAlign:"left",marginBottom:2,padding:"2px 4px",borderRadius:5,cursor:"pointer",border:"none",
+                              borderLeft:`3px solid ${WS_COLOR[sh.work_status]||"#d97706"}`,
+                              background:sh.payment_status==="Pagado"?"#f0fdf4":"#fff",
+                              fontSize:9,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            <span style={{fontWeight:700}}>{(sh.person_name||"").split(" ")[0]}</span>
+                            {sh.vessel_name ? <span style={{color:"#94a3b8"}}> · {sh.vessel_name}</span> : null}
+                          </button>
+                        ))}
+                        {list.length>3 && (
+                          <button onClick={()=>{ const d2=new Date(d+"T00:00:00"); const dow=(d2.getDay()+6)%7; d2.setDate(d2.getDate()-dow); setWeekStart(d2.toISOString().slice(0,10)); setView("semana"); }}
+                            style={{background:"none",border:"none",padding:0,cursor:"pointer",fontSize:9,color:"#2563eb",fontWeight:700}}>
+                            +{list.length-3} {L("más","more")}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:7}}>
+                  {L("Toca un turno para editarlo, o “+N más” para ver esa semana completa.","Tap a shift to edit it, or “+N more” to open that week.")}
                 </div>
               </div>
             );
