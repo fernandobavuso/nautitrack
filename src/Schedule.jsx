@@ -267,19 +267,31 @@ export default function Schedule({ user, vessels = [], onClose }) {
       return;
     }
 
-    // Una entrada por turno: "Lun 1 Sep Miaras II Lavada 4h"
-    const shiftText = (x) => {
-      const parts = [new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang==="es"?"es-ES":"en-US", { weekday:"short", day:"numeric", month:"short" })];
-      if (x.vessel_name) parts.push(x.vessel_name);
+    // WhatsApp rechaza saltos de línea DENTRO de un parámetro de plantilla, así que
+    // se agrupa por día y se usan separadores visuales: "▸" abre cada día y "·"
+    // separa barco/trabajo/horas. Mucho más legible que todo corrido.
+    const byDay = {};
+    upcoming.forEach(x => { (byDay[x.shift_date] = byDay[x.shift_date] || []).push(x); });
+
+    const dayLabel = (d) => {
+      const dt = new Date(d + "T00:00:00");
+      const wd = dt.toLocaleDateString(lang==="es"?"es-ES":"en-US", { weekday:"long" });
+      const dm = dt.toLocaleDateString(lang==="es"?"es-ES":"en-US", { day:"numeric", month:"short" }).replace(".","");
+      return `${wd.charAt(0).toUpperCase()+wd.slice(1)} ${dm}`;   // "Martes 1 sept"
+    };
+    const jobText = (x) => {
+      const bits = [];
+      if (x.vessel_name) bits.push(x.vessel_name);
       const w = shiftWorks(x).join(", ");
-      if (w) parts.push(w);
-      if (Number(x.hours) > 0) parts.push(`${x.hours}h`);
-      return parts.join(" ").replace(/\s{2,}/g, " ").trim();
+      if (w) bits.push(w);
+      if (Number(x.hours) > 0) bits.push(`${x.hours}h`);
+      return bits.join(" · ");
     };
 
-    // WhatsApp rechaza saltos de línea en los parámetros de plantilla: se separan
-    // los turnos con " | " en un solo texto.
-    const list = upcoming.map(shiftText).join("  |  ").replace(/\s{4,}/g, "   ").trim();
+    const list = Object.keys(byDay).sort().map(d =>
+      `▸ ${dayLabel(d)}: ${byDay[d].map(jobText).join(" + ")}`
+    ).join("   ").replace(/\s{4,}/g, "   ").trim();
+
     const r = await notifySchedule(p.phone, personName, list);
     if (r.ok) {
       flash(L(`Horario enviado a ${personName} (${upcoming.length} turnos)`, `Schedule sent to ${personName} (${upcoming.length} shifts)`));
