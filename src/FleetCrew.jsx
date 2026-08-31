@@ -31,7 +31,7 @@ export default function FleetCrew({ user, onClose }) {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState("");
-  const [form, setForm] = useState({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"" });
+  const [form, setForm] = useState({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"", pin:"" });
 
   useEffect(() => { load(); }, []);
 
@@ -55,9 +55,10 @@ export default function FleetCrew({ user, onClose }) {
       email: form.email.trim() || null,
       notes: form.notes.trim() || null,
       rate: form.rate!=="" ? Number(form.rate) : null,
+      pin: (form.pin||"").trim() || String(Math.floor(1000 + Math.random()*9000)),
     });
     if (error) { flash("Error: " + error.message); return; }
-    setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"" });
+    setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"", pin:"" });
     setAdding(false);
     flash(L("Agregado a tu equipo", "Added to your team"));
     load();
@@ -68,6 +69,22 @@ export default function FleetCrew({ user, onClose }) {
     await supabase.from("fleet_crew").delete().eq("id", c.id);
     flash(L("Quitado del equipo", "Removed from team"));
     load();
+  };
+
+  // PIN de 4 dígitos para el acceso por QR (sin cuenta de Carive)
+  const updatePin = async (c, val) => {
+    const pin = String(val||"").replace(/\D/g,"").slice(0,4);
+    setCrew(cs => cs.map(x => x.id===c.id ? {...x, pin} : x));
+    if (pin.length === 4 || pin === "") {
+      await supabase.from("fleet_crew").update({ pin: pin || null }).eq("id", c.id);
+    }
+  };
+
+  const newPin = async (c) => {
+    const pin = String(Math.floor(1000 + Math.random()*9000));
+    setCrew(cs => cs.map(x => x.id===c.id ? {...x, pin} : x));
+    await supabase.from("fleet_crew").update({ pin }).eq("id", c.id);
+    flash(L(`PIN de ${c.name}: ${pin}`, `${c.name}'s PIN: ${pin}`));
   };
 
   const updateRate = async (c, val) => {
@@ -149,7 +166,7 @@ export default function FleetCrew({ user, onClose }) {
                 placeholder={L("Ej: Licencia OUPV, disponible fines de semana", "e.g. OUPV license, available weekends")} style={inp}/>
 
               <div style={{display:"flex",gap:8,marginTop:14}}>
-                <button onClick={() => { setAdding(false); setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"" }); }}
+                <button onClick={() => { setAdding(false); setForm({ name:"", role:"Capitán", phone:"", email:"", notes:"", rate:"", pin:"" }); }}
                   style={{flex:1,padding:"10px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#64748b",fontSize:13,fontWeight:600,cursor:"pointer"}}>
                   {L("Cancelar", "Cancel")}
                 </button>
@@ -197,6 +214,11 @@ export default function FleetCrew({ user, onClose }) {
                       <span style={{fontSize:11,color:"#64748b"}}>$</span>
                       <input type="number" defaultValue={c.rate ?? ""} onBlur={e=>updateRate(c, e.target.value)}
                         placeholder="0" style={{width:60,padding:"3px 6px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,color:"#0f172a"}}/>
+                      <span style={{fontSize:11,color:"#64748b",marginLeft:8}}>{L("PIN del QR","QR PIN")}:</span>
+                      <input value={c.pin ?? ""} onChange={e=>updatePin(c, e.target.value)} inputMode="numeric" maxLength={4}
+                        placeholder="0000" style={{width:56,padding:"3px 6px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,letterSpacing:"0.12em",textAlign:"center",color:"#0f172a"}}/>
+                      <button onClick={()=>newPin(c)} title={L("Generar otro PIN","Generate a new PIN")}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:600,padding:0}}>↻</button>
                     </div>
                     {c.notes && (
                       <div style={{fontSize:11,color:"#94a3b8",marginTop:3,fontStyle:"italic"}}>{c.notes}</div>

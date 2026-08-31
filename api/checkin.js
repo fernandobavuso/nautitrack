@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     if (vesselOwner?.owner_id) {
       const { data: team } = await supabase
         .from('fleet_crew')
-        .select('id, name, role')
+        .select('id, name, role, pin')
         .eq('manager_id', vesselOwner.owner_id)
         .order('name');
       roster = team || [];
@@ -88,18 +88,88 @@ export default async function handler(req, res) {
         date: s.shift_date,
       }));
 
+    // Sin PIN válido no se entrega información operativa: el QR está pegado en el
+    // barco y cualquiera podría escanearlo. Solo el nombre del barco y la lista de
+    // nombres (para elegir quién eres) son públicos.
+    const pin  = String(req.query.pin || '').trim();
+    const who  = String(req.query.who || '').trim().toLowerCase();
+    const authed = !!pin && (roster || []).some(r =>
+      String(r.pin || '') === pin && (!who || String(r.name || '').toLowerCase() === who));
+
+    const publicRoster = (roster || []).map(r => ({ id: r.id, name: r.name, role: r.role }));
+
+    if (!authed) {
+      return res.status(200).json({
+        vessel: { id: vessel.id, name: vessel.name },
+        roster: publicRoster,
+        needsPin: true,
+      });
+    }
+
     return res.status(200).json({
       vessel: { id: vessel.id, name: vessel.name, type: vessel.type, marina: vessel.marina, captain: vessel.captain },
       recentLogs: lastLogs || [],
-      roster,
+      roster: publicRoster,
       pendingTasks,
       todayShifts,
+      needsPin: false,
     });
   }
 
   // POST — registrar check-in o check-out
   if (req.method === 'POST') {
-    const { vesselId, crewName, crewRole, action, locationNote, notes, taskId, taskName } = req.body;
+    const { vesselId, crewName, crewRole, action, locationNote, notes, taskId, taskName, pin, logEntry } = req.body;
+
+    // El PIN también se valida al escribir: sin él, cualquiera con el QR podría
+    // registrar movimientos o anotar en la bitácora del barco.
+    {
+      const { data: vOwner } = await supabase.from('vessels').select('owner_id').eq('id', vesselId).single();
+      if (!vOwner?.owner_id) return res.status(400).json({ error: 'Embarcación no encontrada' });
+      const { data: crewRow } = await supabase
+        .from('fleet_crew').select('name, pin').eq('manager_id', vOwner.owner_id);
+      const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const ok = (crewRow || []).some(c => String(c.pin || '') === String(pin || '').trim() && norm(c.name) === norm(crewName));
+      if (!ok) return res.status(401).json({ error: 'PIN incorrecto' });
+    }
+
+    // Anotación directa de bitácora desde el QR (sin check-in/out)
+    if (action === 'logbook') {
+      const { data: vOwn } = await supabase.from('vessels').select('owner_id, name').eq('id', vesselId).single();
+      const le = logEntry || {};
+      const { error: lErr } = await supabase.from('log_entries').insert({
+        vessel_id:    vesselId,
+        owner_id:     vOwn?.owner_id,
+        date:         le.date || new Date().toISOString().slice(0, 10),
+        type:         'Visita',
+        visit_types:  Array.isArray(le.visitTypes) && le.visitTypes.length ? le.visitTypes : ['Inspección'],
+        description:  String(le.description || '').trim(),
+        performed_by: crewName.trim(),
+        equipment:    le.equipment || null,
+        eng_out:      le.engHours != null && le.engHours !== '' ? Number(le.engHours) : null,
+        gen_out:      le.genHours != null && le.genHours !== '' ? Number(le.genHours) : null,
+        sk_hours:     le.skHours  != null && le.skHours  !== '' ? Number(le.skHours)  : null,
+        fuel_qty:     le.fuelQty  != null && le.fuelQty  !== '' ? Number(le.fuelQty)  : null,
+        fuel_unit:    le.fuelUnit || null,
+        photos:       [],
+        crew_sel:     [],
+      });
+      if (lErr) return res.status(500).json({ error: lErr.message });
+
+      // Las lecturas actualizan el tablero del barco
+      const patch = {};
+      if (le.fuelQty !== '' && le.fuelQty != null) patch.fuel = Number(le.fuelQty);
+      if (le.fuelUnit) patch.fuel_unit = le.fuelUnit;
+      if (le.engHours !== '' && le.engHours != null) patch.engine_hours = Number(le.engHours);
+      if (le.genHours !== '' && le.genHours != null) patch.gen_hours = Number(le.genHours);
+      if (Object.keys(patch).length) {
+        if (le.skHours !== '' && le.skHours != null) {
+          const { data: cur } = await supabase.from('vessels').select('details').eq('id', vesselId).single();
+          patch.details = { ...(cur?.details || {}), seakeeper_hours: Number(le.skHours) };
+        }
+        await supabase.from('vessels').update(patch).eq('id', vesselId);
+      }
+      return res.status(200).json({ ok: true, logged: true });
+    }
 
     if (!vesselId || !crewName || !action) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
