@@ -190,7 +190,7 @@ export default function CompanyPage({ user, vessels }) {
   const sel = {padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,color:"#334155",background:"#fff"};
 
   return (
-    <div style={{padding:"24px 28px",maxWidth:860}}>
+    <div style={{maxWidth:900,margin:"0 auto"}}>
       {/* Encabezado */}
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
         <div style={{flex:1,minWidth:200}}>
