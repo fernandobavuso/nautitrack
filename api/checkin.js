@@ -240,10 +240,12 @@ export default async function handler(req, res) {
       const { data: v2 } = await supabase.from('vessels').select('owner_id, name').eq('id', vesselId).single();
       if (v2?.owner_id) {
         const today = new Date().toISOString().slice(0, 10);
+        // Se busca por BARCO y FECHA, no por manager_id: un co-gestor (p. ej. Joana)
+        // crea el turno con SU id, y filtrar por el dueño lo dejaría fuera.
         const { data: todayShifts } = await supabase
           .from('work_shifts')
           .select('id, person_name, vessel_name, work_status, works, description, log_entry_id')
-          .eq('manager_id', v2.owner_id)
+          .eq('vessel_name', v2.name)
           .eq('shift_date', today);
         const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
         const cn = norm(crewName);
