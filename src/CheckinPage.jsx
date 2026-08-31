@@ -45,6 +45,11 @@ export default function CheckinPage() {
   const [sending,  setSending]  = useState(false);
   const [done,     setDone]     = useState(null);
   const [formError,setFormError]= useState("");
+  const [pin,      setPin]      = useState("");      // PIN de 4 dígitos
+  const [authed,   setAuthed]   = useState(false);   // pasó el PIN
+  const [pinError, setPinError] = useState("");
+  const [mode,     setMode]     = useState(null);    // "movimiento" | "bitacora"
+  const [logForm,  setLogForm]  = useState({ visitTypes:[], description:"", equipment:"", engHours:"", genHours:"", skHours:"", fuelQty:"", fuelUnit:"gal" });
 
   useEffect(() => {
     if (!vesselId) { setError("QR inválido — no se encontró la embarcación."); setLoading(false); return; }
@@ -87,6 +92,32 @@ export default function CheckinPage() {
     if (p?.role) setRole(p.role);
   };
 
+  const verifyPin = async () => {
+    if (!name.trim()) { setPinError(L("Elige tu nombre primero","Pick your name first")); return; }
+    if (pin.length !== 4) { setPinError(L("El PIN son 4 dígitos","The PIN is 4 digits")); return; }
+    setPinError("");
+    const r = await fetch(`/api/checkin?vesselId=${vesselId}&pin=${encodeURIComponent(pin)}&who=${encodeURIComponent(name.trim())}`).then(x=>x.json());
+    if (r.needsPin) { setPinError(L("PIN incorrecto","Wrong PIN")); return; }
+    setVessel(r.vessel); setTasks(r.pendingTasks||[]); setShiftsToday(r.todayShifts||[]); setRecentLogs(r.recentLogs||[]);
+    setAuthed(true);
+  };
+
+  const submitLog = async () => {
+    if (!logForm.description.trim()) { setFormError(L("Escribe qué se hizo","Describe what was done")); return; }
+    if (!logForm.visitTypes.length)  { setFormError(L("Elige al menos un tipo de trabajo","Pick at least one work type")); return; }
+    setSending(true);
+    try {
+      const resp = await fetch("/api/checkin", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vesselId, crewName: name.trim(), crewRole: role, action: "logbook", pin, logEntry: logForm }),
+      });
+      const d = await resp.json();
+      if (d.error) { setFormError(d.error); setSending(false); return; }
+      setDone({ action:"logbook", name:name.trim(), role, time:new Date() });
+    } catch { setFormError(L("Error de conexión. Intenta de nuevo.","Connection error. Try again.")); }
+    setSending(false);
+  };
+
   const submit = async () => {
     setFormError("");
     if (!name.trim()) { setFormError("Elige o escribe tu nombre."); return; }
@@ -109,6 +140,7 @@ export default function CheckinPage() {
           notes: notes.trim(),
           taskId: taskId || null,
           taskName: taskId ? (tasks.find(t => String(t.id) === String(taskId))?.task || "") : "",
+          pin,
         }),
       });
       const d = await resp.json();
@@ -138,7 +170,8 @@ export default function CheckinPage() {
           </div>
 
           <div style={{fontSize:22,fontWeight:800,color:"#0a2540",fontFamily:"'Sora',system-ui,sans-serif",marginBottom:8}}>
-            {isIn ? (lang==="es"?"Check-in registrado":"Check-in recorded") : (lang==="es"?"Check-out registrado":"Check-out recorded")}
+            {done.action==="logbook" ? (lang==="es"?"Anotado en la bitácora":"Saved to logbook")
+              : isIn ? (lang==="es"?"Check-in registrado":"Check-in recorded") : (lang==="es"?"Check-out registrado":"Check-out recorded")}
           </div>
 
           <div style={{fontSize:14,color:"#64748b",lineHeight:1.6}}>
@@ -233,8 +266,45 @@ export default function CheckinPage() {
           )}
         </Card>
 
+        {/* 1.b PIN — sin él no se ve nada del barco */}
+        {name.trim() && !authed && (
+          <Card title={L("Tu PIN","Your PIN")}>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>
+              {L(`Hola ${name.trim()}. Escribe tu PIN de 4 dígitos para continuar.`,`Hi ${name.trim()}. Enter your 4-digit PIN to continue.`)}
+            </div>
+            <input value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,"").slice(0,4));setPinError("");}}
+              inputMode="numeric" maxLength={4} placeholder="0000" autoFocus
+              style={{...inp,fontSize:28,letterSpacing:"0.5em",textAlign:"center",fontWeight:700,padding:"14px"}}/>
+            {pinError && <div style={{fontSize:12,color:"#dc2626",marginTop:8}}>{pinError}</div>}
+            <button onClick={verifyPin} disabled={pin.length!==4}
+              style={{width:"100%",marginTop:12,padding:"14px",background:pin.length===4?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#e2e8f0",
+                border:"none",borderRadius:11,color:pin.length===4?"#fff":"#94a3b8",fontSize:15,fontWeight:700,cursor:pin.length===4?"pointer":"default"}}>
+              {L("Entrar","Continue")}
+            </button>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
+              {L("¿No tienes PIN? Pídeselo al gestor de la flota.","No PIN? Ask your fleet manager for one.")}
+            </div>
+          </Card>
+        )}
+
+        {/* 1.c Qué vienes a hacer */}
+        {authed && !mode && (
+          <Card title={L("¿Qué vas a hacer?","What are you doing?")}>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <button onClick={()=>setMode("movimiento")} style={{display:"block",width:"100%",textAlign:"left",padding:"16px",borderRadius:12,border:"1.5px solid #bbf7d0",background:"#f0fdf4",cursor:"pointer"}}>
+                <div style={{fontSize:15,fontWeight:800,color:"#15803d"}}>{L("Check-in / Check-out","Check-in / Check-out")}</div>
+                <div style={{fontSize:12,color:"#166534",marginTop:2}}>{L("Registrar tu entrada o salida del barco","Log your arrival or departure")}</div>
+              </button>
+              <button onClick={()=>setMode("bitacora")} style={{display:"block",width:"100%",textAlign:"left",padding:"16px",borderRadius:12,border:"1.5px solid #bfdbfe",background:"#eff6ff",cursor:"pointer"}}>
+                <div style={{fontSize:15,fontWeight:800,color:"#1e40af"}}>{L("Anotar en la bitácora","Add a logbook entry")}</div>
+                <div style={{fontSize:12,color:"#1d4ed8",marginTop:2}}>{L("Inspección, lavada, combustible, lo que hiciste","Inspection, wash, fuel, whatever you did")}</div>
+              </button>
+            </div>
+          </Card>
+        )}
+
         {/* 2. Entras o sales */}
-        <Card title="¿Entras o sales?">
+        {authed && mode==="movimiento" && (<Card title="¿Entras o sales?">
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             {[
               { k:"checkin",  l:(lang==="es"?"Entrar":"Check in"),  sub:"Check-in",  c:"#16a34a", bg:"#f0fdf4", bd:"#bbf7d0" },
@@ -250,10 +320,10 @@ export default function CheckinPage() {
               </button>
             ))}
           </div>
-        </Card>
+        </Card>)}
 
         {/* Trabajo agendado hoy para esta persona en este barco */}
-        {(() => {
+        {authed && (() => {
           const mine = shiftsToday.filter(sh => {
             const a = normName(sh.person), b = normName(name);
             return !!a && !!b && (a===b || a.includes(b) || b.includes(a));
@@ -275,7 +345,7 @@ export default function CheckinPage() {
         })()}
 
         {/* Si entra: a qué viene (linkea la tarea desde el check-in) */}
-        {action === "checkin" && tasks.length > 0 && (
+        {authed && mode==="movimiento" && action === "checkin" && tasks.length > 0 && (
           <Card title="¿A qué vienes?">
             {(() => {
               const myTasks = tasks.filter(t => isMyTask(t, name));
@@ -304,7 +374,7 @@ export default function CheckinPage() {
         )}
 
         {/* 3. Si sale: tarea + comentarios obligatorios */}
-        {action === "checkout" && (
+        {authed && mode==="movimiento" && action === "checkout" && (
           <Card title="¿Qué hiciste?">
             {tasks.length > 0 && (
               <>
@@ -339,19 +409,69 @@ export default function CheckinPage() {
           </Card>
         )}
 
+        {/* Modo BITÁCORA: formulario simplificado */}
+        {authed && mode==="bitacora" && (
+          <Card title={L("Anotar en la bitácora","Logbook entry")}>
+            <label style={lbl}>{L("¿Qué tipo de trabajo?","What kind of work?")}</label>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+              {["Inspección","Lavada","Detailing","Limpieza interior","Buceo / Casco","Combustible","Supervisión de técnico"].map(w=>{
+                const on=logForm.visitTypes.includes(w);
+                return (
+                  <button key={w} onClick={()=>setLogForm(f=>({...f,visitTypes:on?f.visitTypes.filter(x=>x!==w):[...f.visitTypes,w]}))}
+                    style={{padding:"8px 13px",borderRadius:20,cursor:"pointer",fontSize:12,fontWeight:on?700:500,
+                      border:`1.5px solid ${on?"#2563eb":"#e2e8f0"}`,background:on?"#eff6ff":"#fff",color:on?"#1e40af":"#64748b"}}>
+                    {on?"✓ ":""}{w}
+                  </button>
+                );
+              })}
+            </div>
+
+            <label style={lbl}>{L("¿Qué hiciste? ¿Viste algo que atender?","What did you do? Anything to flag?")}</label>
+            <textarea value={logForm.description} onChange={e=>setLogForm(f=>({...f,description:e.target.value}))}
+              rows={4} placeholder={L("Revisé filtros, todo en orden. El ánodo de estribor está gastado.","Checked filters, all good. Starboard anode is worn.")}
+              style={{...inp,resize:"vertical",fontFamily:"inherit"}}/>
+
+            <label style={lbl}>{L("Equipo o sistema (opcional)","Equipment or system (optional)")}</label>
+            <input value={logForm.equipment} onChange={e=>setLogForm(f=>({...f,equipment:e.target.value}))}
+              placeholder={L("Motores, Generador, Cubierta...","Engines, Generator, Deck...")} style={inp}/>
+
+            <div style={{background:"#f8fafc",borderRadius:10,padding:"12px",marginTop:12}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:8}}>{L("Lecturas (opcional)","Readings (optional)")}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div><label style={{...lbl,fontSize:11}}>{L("Horas motor","Engine hours")}</label>
+                  <input type="number" value={logForm.engHours} onChange={e=>setLogForm(f=>({...f,engHours:e.target.value}))} style={inp}/></div>
+                <div><label style={{...lbl,fontSize:11}}>{L("Horas generador","Generator hours")}</label>
+                  <input type="number" value={logForm.genHours} onChange={e=>setLogForm(f=>({...f,genHours:e.target.value}))} style={inp}/></div>
+                <div><label style={{...lbl,fontSize:11}}>Seakeeper</label>
+                  <input type="number" value={logForm.skHours} onChange={e=>setLogForm(f=>({...f,skHours:e.target.value}))} style={inp}/></div>
+                <div><label style={{...lbl,fontSize:11}}>{L("Combustible","Fuel")}</label>
+                  <div style={{display:"flex",gap:5}}>
+                    <input type="number" value={logForm.fuelQty} onChange={e=>setLogForm(f=>({...f,fuelQty:e.target.value}))} style={{...inp,flex:1}}/>
+                    <select value={logForm.fuelUnit} onChange={e=>setLogForm(f=>({...f,fuelUnit:e.target.value}))} style={{...inp,width:70}}>
+                      {["gal","lts","%"].map(u=><option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </div></div>
+              </div>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:7}}>
+                {L("Lo que anotes aquí actualiza el tablero del barco.","What you enter here updates the vessel dashboard.")}
+              </div>
+            </div>
+          </Card>
+        )}
+
         {formError && (
           <div style={{background:"#fef2f2",border:"1px solid #fecaca",color:"#dc2626",padding:"11px 14px",borderRadius:10,fontSize:13,marginBottom:14}}>
             {formError}
           </div>
         )}
 
-        <button onClick={submit} disabled={sending} style={{
+        {authed && mode && <button onClick={mode==="bitacora"?submitLog:submit} disabled={sending} style={{
           width:"100%", padding:"15px", borderRadius:12, border:"none", cursor: sending ? "default" : "pointer",
           background: sending ? "#94a3b8" : "linear-gradient(120deg,#2563eb,#0ea5e9)",
           color:"#fff", fontSize:16, fontWeight:700,
         }}>
           {sending ? "Registrando..." : action === "checkout" ? "Registrar salida" : "Registrar entrada"}
-        </button>
+        </button>}
 
         {/* Actividad reciente */}
         {recentLogs.length > 0 && (
