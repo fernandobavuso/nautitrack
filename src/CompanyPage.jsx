@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "./supabase.js";
 import { useLang } from "./i18n.jsx";
 import { accountHasFleet } from "./plans.jsx";
-import PurchaseMeta, { paymentSummary } from "./PaymentFields.jsx";
+import PurchaseMeta, { paymentSummary, photoUrl } from "./PaymentFields.jsx";
 
 const CATEGORIES = [
   "Materiales y suministros", "Limpiezas", "Transporte y gasolina",
@@ -313,7 +313,7 @@ export default function CompanyPage({ user, vessels }) {
                     {Array.isArray(r.receipt_urls)&&r.receipt_urls.length>0 && (
                       <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
                         {r.receipt_urls.map((ph,i)=>(
-                          <a key={i} href={ph} target="_blank" rel="noreferrer"><img src={ph} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:6,border:"1px solid #e2e8f0"}}/></a>
+                          <a key={i} href={photoUrl(ph)} target="_blank" rel="noreferrer"><img src={photoUrl(ph)} alt="" style={{width:32,height:32,objectFit:"cover",borderRadius:6,border:"1px solid #e2e8f0"}}/></a>
                         ))}
                       </div>
                     )}
@@ -489,7 +489,7 @@ export default function CompanyPage({ user, vessels }) {
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                   {(form.receipt_urls||[]).map((ph,i)=>(
                     <div key={i} style={{position:"relative"}}>
-                      <img src={ph} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+                      <img src={photoUrl(ph)} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
                       <button onClick={()=>setForm(f=>({...f,receipt_urls:f.receipt_urls.filter((_,ix)=>ix!==i)}))}
                         style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",border:"none",background:"#dc2626",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",padding:0}}>×</button>
                     </div>

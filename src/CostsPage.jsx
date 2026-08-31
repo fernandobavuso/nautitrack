@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import { jsPDF } from "jspdf";
-import PurchaseMeta, { paymentSummary } from "./PaymentFields.jsx";
+import PurchaseMeta, { paymentSummary, photoUrl } from "./PaymentFields.jsx";
 import { hasFeature, PremiumLock, accountHasFleet } from "./plans.jsx";
 
 const CATEGORIES = ["Combustible","Consumibles","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
@@ -113,7 +113,9 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
       let first = true;
       for (const e of withPhotos) {
-        for (const url of e.receipt_urls) {
+        for (const raw of e.receipt_urls) {
+          const url = photoUrl(raw);
+          if (!url) continue;
           const dataUrl = await fetch(url).then(r=>r.blob()).then(b=>new Promise(res=>{
             const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);
           })).catch(()=>null);
@@ -299,8 +301,8 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
               {Array.isArray(e.receipt_urls)&&e.receipt_urls.length>0 && (
                 <div style={{display:"flex",gap:4,marginTop:5,flexWrap:"wrap"}}>
                   {e.receipt_urls.map((ph,i)=>(
-                    <a key={i} href={ph} target="_blank" rel="noreferrer" title={L("Ver factura","View invoice")}>
-                      <img src={ph} alt="" style={{width:34,height:34,objectFit:"cover",borderRadius:6,border:"1px solid #e2e8f0"}}/>
+                    <a key={i} href={photoUrl(ph)} target="_blank" rel="noreferrer" title={L("Ver factura","View invoice")}>
+                      <img src={photoUrl(ph)} alt="" style={{width:34,height:34,objectFit:"cover",borderRadius:6,border:"1px solid #e2e8f0"}}/>
                     </a>
                   ))}
                 </div>
@@ -385,7 +387,7 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                   {(editExp.receipt_urls||[]).map((ph,i)=>(
                     <div key={i} style={{position:"relative"}}>
-                      <img src={ph} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+                      <img src={photoUrl(ph)} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
                       <button onClick={()=>setEditExp(x=>({...x,receipt_urls:x.receipt_urls.filter((_,ix)=>ix!==i)}))}
                         style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",border:"none",background:"#dc2626",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",padding:0}}>×</button>
                     </div>

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import CalendarPage from "./CalendarPage.jsx";
+import { photoUrl } from "./PaymentFields.jsx";
 
 const fmtD = (d) => { if(!d) return "—"; const p=String(d).split("-"); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; };
 const money = (n) => "$" + Number(n||0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -147,8 +148,8 @@ export default function PartnerView({ user, onLogout }) {
                     {Array.isArray(e.photos)&&e.photos.length>0 && (
                       <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
                         {e.photos.map((ph,i)=>(
-                          <a key={i} href={ph} target="_blank" rel="noreferrer">
-                            <img src={ph} alt="" style={{width:64,height:64,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
+                          <a key={i} href={photoUrl(ph)} target="_blank" rel="noreferrer">
+                            <img src={photoUrl(ph)} alt="" style={{width:64,height:64,objectFit:"cover",borderRadius:8,border:"1px solid #e2e8f0"}}/>
                           </a>
                         ))}
                       </div>

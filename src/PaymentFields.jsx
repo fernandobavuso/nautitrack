@@ -33,6 +33,10 @@ export const paymentSummary = (e, lang) => {
   return s;
 };
 
+// Una foto puede venir como texto (URL) o como objeto {url, path, name}: la
+// bitácora guarda objetos y los formularios de gasto guardan texto.
+export const photoUrl = (p) => (typeof p === "string" ? p : (p?.url || ""));
+
 const COMMON_STORES = ["Amazon", "West Marine", "Lewis Marine Supply", "Home Depot", "eBay"];
 
 const lbl = { fontSize: 11, fontWeight: 700, color: "#64748b", display: "block", marginBottom: 4 };
