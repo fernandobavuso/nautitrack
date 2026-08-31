@@ -40,6 +40,7 @@ export default function CheckinPage() {
   const [manual,   setManual]   = useState(false);   // escribir nombre a mano
   const [action,   setAction]   = useState(null);    // "checkin" | "checkout"
   const [taskId,   setTaskId]   = useState("");      // tarea que completó
+  const [shiftsToday, setShiftsToday] = useState([]); // turnos agendados hoy aquí
   const [notes,    setNotes]    = useState("");
   const [sending,  setSending]  = useState(false);
   const [done,     setDone]     = useState(null);
@@ -55,6 +56,7 @@ export default function CheckinPage() {
           setVessel(d.vessel);
           setRoster(d.roster || []);
           setTasks(d.pendingTasks || []);
+          setShiftsToday(d.todayShifts || []);
           setRecentLogs(d.recentLogs || []);
           if ((d.roster || []).length === 0) setManual(true);  // sin roster → escribir a mano
         }
@@ -249,6 +251,28 @@ export default function CheckinPage() {
             ))}
           </div>
         </Card>
+
+        {/* Trabajo agendado hoy para esta persona en este barco */}
+        {(() => {
+          const mine = shiftsToday.filter(sh => {
+            const a = normName(sh.person), b = normName(name);
+            return !!a && !!b && (a===b || a.includes(b) || b.includes(a));
+          });
+          if (!mine.length) return null;
+          const works = [...new Set(mine.flatMap(sh => sh.works))].join(", ");
+          return (
+            <Card title={L("Tu trabajo de hoy","Your work today")}>
+              <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:9,padding:"10px 12px",fontSize:13,color:"#1e40af"}}>
+                <strong>{works || L("Servicio","Service")}</strong>
+                <div style={{fontSize:11,color:"#3b82f6",marginTop:3}}>
+                  {action === "checkin"
+                    ? L("Al hacer check-in queda 'En proceso' en la agenda.","Checking in marks it 'In progress' in the schedule.")
+                    : L("Al hacer check-out se marca como completado y se registra en la bitácora del barco con tus comentarios.","Checking out marks it complete and logs it in the vessel's logbook with your comments.")}
+                </div>
+              </div>
+            </Card>
+          );
+        })()}
 
         {/* Si entra: a qué viene (linkea la tarea desde el check-in) */}
         {action === "checkin" && tasks.length > 0 && (

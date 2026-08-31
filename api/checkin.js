@@ -68,11 +68,32 @@ export default async function handler(req, res) {
         status: t.status || 'pending',
       }));
 
+    // Turnos AGENDADOS para hoy en este barco (aún sin completar): la lavada de
+    // John vive aquí, no en `tasks`, y debe poder cerrarse desde el check-out.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const { data: shiftRows } = await supabase
+      .from('work_shifts')
+      .select('id, person_name, vessel_name, works, description, shift_date, work_status, hours, rate')
+      .eq('vessel_name', vessel.name)
+      .eq('shift_date', todayStr);
+
+    const todayShifts = (shiftRows || [])
+      .filter(s => s.work_status !== 'Completado')
+      .map(s => ({
+        id: s.id,
+        person: s.person_name || '',
+        works: (Array.isArray(s.works) && s.works.length)
+          ? s.works
+          : String(s.description || '').split(' + ').map(x => x.trim()).filter(Boolean),
+        date: s.shift_date,
+      }));
+
     return res.status(200).json({
       vessel: { id: vessel.id, name: vessel.name, type: vessel.type, marina: vessel.marina, captain: vessel.captain },
       recentLogs: lastLogs || [],
       roster,
       pendingTasks,
+      todayShifts,
     });
   }
 
@@ -144,13 +165,14 @@ export default async function handler(req, res) {
     }
 
     // 1.c Conectar con la Agenda: mover el estado del turno agendado
+    let shiftDone = null;
     try {
       const { data: v2 } = await supabase.from('vessels').select('owner_id, name').eq('id', vesselId).single();
       if (v2?.owner_id) {
         const today = new Date().toISOString().slice(0, 10);
         const { data: todayShifts } = await supabase
           .from('work_shifts')
-          .select('id, person_name, vessel_name, work_status')
+          .select('id, person_name, vessel_name, work_status, works, description, log_entry_id')
           .eq('manager_id', v2.owner_id)
           .eq('shift_date', today);
         const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -166,6 +188,41 @@ export default async function handler(req, res) {
             await supabase.from('work_shifts').update({ work_status: 'En proceso' }).eq('id', match.id);
           } else if (action === 'checkout') {
             await supabase.from('work_shifts').update({ work_status: 'Completado' }).eq('id', match.id);
+
+            // El trabajo agendado (una lavada, por ejemplo) también queda en la
+            // bitácora del barco, con los comentarios del check-out. Sin esto, el
+            // turno se completaba pero no dejaba rastro en el historial.
+            if (!match.log_entry_id) {
+              const works = (Array.isArray(match.works) && match.works.length)
+                ? match.works
+                : String(match.description || '').split(' + ').map(x => x.trim()).filter(Boolean);
+              const WORK_TO_VISIT = {
+                'Lavada':'Lavada', 'Detailing':'Detailing', 'Limpieza interior':'Limpieza interior',
+                'Buceo / Casco':'Buceo / Casco', 'Combustible':'Combustible',
+                'Chequeo de sistemas':'Inspección', 'Supervisión':'Supervisión de técnico',
+              };
+              const vTypes = [...new Set(works.map(w => WORK_TO_VISIT[w]).filter(Boolean))];
+              const desc = [
+                works.length ? works.join(', ') : null,
+                String(notes || '').trim() || null,
+                'Registrado desde el check-out (QR)',
+              ].filter(Boolean).join(' · ');
+              const { data: le } = await supabase.from('log_entries').insert({
+                vessel_id:    vesselId,
+                owner_id:     v2.owner_id,
+                date:         today,
+                type:         'Visita',
+                visit_types:  vTypes.length ? vTypes : ['Supervisión de técnico'],
+                description:  desc,
+                performed_by: crewName.trim(),
+                photos:       [],
+                crew_sel:     [],
+              }).select().single();
+              if (le?.id) await supabase.from('work_shifts').update({ log_entry_id: le.id }).eq('id', match.id);
+            }
+            shiftDone = (Array.isArray(match.works) && match.works.length)
+              ? match.works.join(', ')
+              : String(match.description || '').split(' + ')[0] || null;
           }
         }
       }
@@ -207,6 +264,7 @@ export default async function handler(req, res) {
         `📍 ${vessel?.marina || ''}\n` +
         `🕐 ${timeStr} · ${dateStr}` +
         (taskName ? `\n📋 Tarea: ${taskName}` : '') +
+        (shiftDone ? `\n🧽 Trabajo: ${shiftDone}` : '') +
         (detail ? `\n📝 "${detail}"` : '');
 
       const to  = notifyPhone.replace(/[^0-9]/g, '');
@@ -222,7 +280,7 @@ export default async function handler(req, res) {
         clean(action === 'checkin' ? 'Check-in' : 'Check-out'),  // {{2}} movimiento
         clean(crewName),                                         // {{3}} persona
         clean(`${timeStr} · ${dateStr}`),                        // {{4}} hora
-        clean(taskName || detail || 'Sin detalle'),              // {{5}} detalle
+        clean([shiftDone, taskName, detail].filter(Boolean).join(' · ') || 'Sin detalle'), // {{5}} detalle
       ];
 
       let sent = false;
