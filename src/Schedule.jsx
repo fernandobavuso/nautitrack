@@ -38,6 +38,7 @@ export default function Schedule({ user, vessels = [], onClose }) {
     const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + n);
     return d.toISOString().slice(0, 10);
   };
+  const [scope, setScope] = useState("activos");   // activos | porcobrar | todo
   const [view, setView] = useState("lista");           // "lista" | "semana"
   const [weekStart, setWeekStart] = useState(() => {    // lunes de la semana actual
     const d = new Date(); const dow = (d.getDay()+6)%7;  // 0=lunes
@@ -358,12 +359,24 @@ export default function Schedule({ user, vessels = [], onClose }) {
   };
 
   // horas × tarifa; si no hay horas (precio fijo), el total es la tarifa sola
+  // Alcance: por defecto la lista no arrastra todo el historial (crecería sin fin).
+  // "activos" = de hace 7 días en adelante; "porcobrar" = completados sin pagar de
+  // cualquier fecha (nada se escapa); "todo" = historial completo. Las vistas
+  // Semana y Mes navegan por fecha, así que ignoran este alcance.
+  const scopeFrom = (() => { const d = new Date(); d.setDate(d.getDate()-7); return d.toISOString().slice(0,10); })();
   const filtered = shifts.filter(s => {
     if (filterPerson && s.person_name !== filterPerson) return false;
     if (from && s.shift_date < from) return false;
     if (to   && s.shift_date > to)   return false;
+    if (view === "lista" && !from && !to) {
+      if (scope === "activos"   && s.shift_date < scopeFrom) return false;
+      if (scope === "porcobrar" && !(s.work_status === "Completado" && s.payment_status !== "Pagado")) return false;
+    }
     return true;
   });
+  const hiddenCount = (view==="lista" && scope==="activos" && !from && !to)
+    ? shifts.filter(s => s.shift_date < scopeFrom && (!filterPerson || s.person_name===filterPerson)).length
+    : 0;
   const grandTotal = filtered.reduce((a, s) => a + total(s), 0);
   const totalHours = filtered.reduce((a, s) => a + (Number(s.hours) || 0), 0);
   const byPerson = {};
@@ -612,6 +625,18 @@ export default function Schedule({ user, vessels = [], onClose }) {
                 </button>
               ))}
             </div>
+            {view==="lista" && (
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                {[{k:"activos",l:L("Activos","Active")},{k:"porcobrar",l:L("Por cobrar","To collect")},{k:"todo",l:L("Todo","All")}].map(o=>(
+                  <button key={o.k} onClick={()=>setScope(o.k)}
+                    style={{padding:"5px 11px",borderRadius:18,cursor:"pointer",fontSize:11,fontWeight:scope===o.k?700:500,
+                      border:`1.5px solid ${scope===o.k?"#2563eb":"#e2e8f0"}`,
+                      background:scope===o.k?"#eff6ff":"#fff",color:scope===o.k?"#1e40af":"#64748b"}}>
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            )}
             {(view==="semana"||view==="mes") && (
               <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto"}}>
                 <button onClick={()=>{
@@ -741,6 +766,15 @@ export default function Schedule({ user, vessels = [], onClose }) {
               </div>
             );
           })()}
+
+          {hiddenCount > 0 && (
+            <div style={{fontSize:11,color:"#94a3b8",marginBottom:10,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+              <span>{L(`${hiddenCount} turnos anteriores ocultos para que la lista no crezca sin fin.`,`${hiddenCount} older shifts hidden to keep the list short.`)}</span>
+              <button onClick={()=>setScope("todo")} style={{background:"none",border:"none",padding:0,cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:700}}>
+                {L("Ver historial completo","Show full history")}
+              </button>
+            </div>
+          )}
 
           {/* Lista de turnos */}
           {view==="lista" && (loading ? (
