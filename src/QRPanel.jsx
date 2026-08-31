@@ -52,10 +52,10 @@ export default function QRPanel({ vessel, onClose }) {
       </style></head><body>
       <div class="box">
         <div class="logo">CARIVE</div>
-        <h2>🚢 ${vessel.name}</h2>
+        <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:7px;"><circle cx="12" cy="5" r="2"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>${vessel.name}</h2>
         <div class="sub">${vessel.marina||""}</div>
         <img src="${`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(checkinUrl)}&margin=10&color=1e3a5f`}" width="240" height="240"/>
-        <div class="inst">📱 Escanea para registrar<br/>tu <strong>Check-in / Check-out</strong></div>
+        <div class="inst"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="21"/><line x1="18" y1="14" x2="21" y2="14"/><line x1="21" y1="18" x2="21" y2="21"/></svg>Escanea para registrar<br/>tu <strong>Check-in / Check-out</strong></div>
         <div class="url">${checkinUrl}</div>
       </div>
       </body></html>
