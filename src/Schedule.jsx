@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
-import { notifySchedule, notifyWeeklySchedule } from "./whatsapp.js";
+import { notifySchedule } from "./whatsapp.js";
 
 // ─────────────────────────────────────────────────────────────
 // Agenda — horario de trabajo del equipo de flota.
@@ -252,46 +252,42 @@ export default function Schedule({ user, vessels = [], onClose }) {
   const sendSchedule = async (personName) => {
     const p = team.find(t => t.name === personName);
     if (!p || !p.phone) { flash(L("Esa persona no tiene teléfono en Personal", "That person has no phone in Staff")); return; }
-    const upcoming = shifts
-      .filter(x => x.person_name === personName && x.shift_date >= today)
-      .sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1));
-    if (upcoming.length === 0) { flash(L("No hay turnos próximos para esa persona", "No upcoming shifts for that person")); return; }
-    // Descripción corta de un turno (sin saltos de línea: WhatsApp los rechaza)
-    const shiftText = (x, withDate) => {
-      const parts = [];
-      if (withDate) parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short" }));
-      else          parts.push(new Date(x.shift_date + "T00:00:00").toLocaleDateString("en-US", { day:"numeric", month:"short" }));
-      if (x.vessel_name) parts.push(x.vessel_name);
-      if (x.description) parts.push(x.description);
-      if (x.hours)       parts.push(`${x.hours}h`);
-      return parts.join(" ").replace(/\s{4,}/g, "   ").trim();
-    };
 
-    // Preferido: horario semanal (una línea por día, Lun..Dom) — los 7 días próximos
-    const start = new Date(today + "T00:00:00");
-    const monday = new Date(start); monday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday); d.setDate(monday.getDate() + i);
-      const key = d.toISOString().slice(0, 10);
-      const dayShifts = upcoming.filter(x => x.shift_date === key);
-      days.push(dayShifts.length ? dayShifts.map(x => shiftText(x, false)).join(" + ") : L("Libre", "Off"));
-    }
-    let r = await notifyWeeklySchedule(p.phone, personName, days);
-    if (r.ok) {
-      flash(L("Horario enviado (formato semanal)", "Schedule sent (weekly format)"));
+    // Se respeta el RANGO de fechas elegido arriba; si no hay rango, de hoy en
+    // adelante. Solo se envían los días CON trabajo: los libres no se listan.
+    const desde = from || today;
+    const hasta = to || null;
+    const upcoming = shifts
+      .filter(x => x.person_name === personName && x.shift_date >= desde && (!hasta || x.shift_date <= hasta))
+      .sort((a, b) => (a.shift_date > b.shift_date ? 1 : -1));
+    if (upcoming.length === 0) {
+      flash(hasta
+        ? L("Esa persona no tiene turnos en el rango elegido", "That person has no shifts in the selected range")
+        : L("No hay turnos próximos para esa persona", "No upcoming shifts for that person"));
       return;
     }
-    // Si la plantilla semanal falla, avisar por qué y usar la de una sola línea
-    console.warn("[Carive] horario_semanal falló:", r.error, "| params:", [personName, ...days]);
-    const weeklyErr = r.error || "?";
-    const list = upcoming.map(x => shiftText(x, true)).join("  |  ").replace(/\s{4,}/g, "   ").trim();
-    r = await notifySchedule(p.phone, personName, list);
-    flash(r.ok
-      ? L(`Enviado en formato simple. El semanal falló: ${weeklyErr}`, `Sent in simple format. Weekly failed: ${weeklyErr}`)
-      : L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
-  };
 
+    // Una entrada por turno: "Lun 1 Sep Miaras II Lavada 4h"
+    const shiftText = (x) => {
+      const parts = [new Date(x.shift_date + "T00:00:00").toLocaleDateString(lang==="es"?"es-ES":"en-US", { weekday:"short", day:"numeric", month:"short" })];
+      if (x.vessel_name) parts.push(x.vessel_name);
+      const w = shiftWorks(x).join(", ");
+      if (w) parts.push(w);
+      if (Number(x.hours) > 0) parts.push(`${x.hours}h`);
+      return parts.join(" ").replace(/\s{2,}/g, " ").trim();
+    };
+
+    // WhatsApp rechaza saltos de línea en los parámetros de plantilla: se separan
+    // los turnos con " | " en un solo texto.
+    const list = upcoming.map(shiftText).join("  |  ").replace(/\s{4,}/g, "   ").trim();
+    const r = await notifySchedule(p.phone, personName, list);
+    if (r.ok) {
+      flash(L(`Horario enviado a ${personName} (${upcoming.length} turnos)`, `Schedule sent to ${personName} (${upcoming.length} shifts)`));
+    } else {
+      console.warn("[Carive] envío de horario falló:", r.error);
+      flash(L("No se pudo enviar: ", "Could not send: ") + (r.error || ""));
+    }
+  };
 
   // Repetir UN turno hacia las próximas N semanas
   const repeatShift = async (sh, weeks = 1) => {
@@ -525,6 +521,11 @@ export default function Schedule({ user, vessels = [], onClose }) {
           {filterPerson && (
             <button onClick={() => sendSchedule(filterPerson)} style={{width:"100%",padding:"10px",background:"#f0fdf4",border:"1.5px solid #16a34a",borderRadius:9,color:"#15803d",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:14}}>
               📱 {L(`Enviar horario a ${filterPerson}`, `Send schedule to ${filterPerson}`)}
+              <span style={{display:"block",fontSize:10,fontWeight:500,color:"#16a34a",marginTop:2}}>
+                {(from||to)
+                  ? L(`Turnos ${from?`desde ${from}`:""}${to?` hasta ${to}`:""}`, `Shifts ${from?`from ${from}`:""}${to?` to ${to}`:""}`)
+                  : L("De hoy en adelante — elige un rango arriba para acotarlo","From today onward — pick a range above to narrow it")}
+              </span>
             </button>
           )}
 
