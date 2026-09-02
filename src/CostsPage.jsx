@@ -5,9 +5,9 @@ import { jsPDF } from "jspdf";
 import PurchaseMeta, { paymentSummary, photoUrl } from "./PaymentFields.jsx";
 import { hasFeature, PremiumLock, accountHasFleet } from "./plans.jsx";
 
-const CATEGORIES = ["Combustible","Consumibles","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Seguro","Impuestos","Otro"];
+const CATEGORIES = ["Combustible","Consumibles","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Transporte y parking","Seguro","Impuestos","Otro"];
 const CAT_COLORS = {
-  "Consumibles":"#0d9488",
+  "Consumibles":"#0d9488", "Transporte y parking":"#ea580c",
   Combustible:"#0ea5e9", Mantenimiento:"#2563eb", "Reparación":"#dc2626",
   Repuestos:"#7c3aed", Sueldos:"#16a34a", Marina:"#d97706",
   Seguro:"#0891b2", Impuestos:"#be185d", Otro:"#64748b",

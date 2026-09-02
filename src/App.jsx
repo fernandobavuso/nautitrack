@@ -3569,7 +3569,7 @@ function ReportModal({ vessel, onClose }) {
         const byCat = {};
         expList.forEach(e=>{ const k=e.category||"Otro"; byCat[k]=(byCat[k]||0)+Number(e.amount||0); });
         const catsSorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-        const CATC = {Combustible:"#0ea5e9",Consumibles:"#0d9488",Mantenimiento:"#2563eb","Reparación":"#dc2626",Repuestos:"#7c3aed",Sueldos:"#16a34a",Marina:"#d97706",Seguro:"#0891b2",Impuestos:"#be185d",Otro:"#64748b"};
+        const CATC = {Combustible:"#0ea5e9",Consumibles:"#0d9488",Mantenimiento:"#2563eb","Reparación":"#dc2626",Repuestos:"#7c3aed",Sueldos:"#16a34a",Marina:"#d97706","Transporte y parking":"#ea580c",Seguro:"#0891b2",Impuestos:"#be185d",Otro:"#64748b"};
         sections += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
           ${catsSorted.map(([c,a])=>`<div style="background:#f8fafc;border-left:3px solid ${CATC[c]||"#94a3b8"};border-radius:7px;padding:7px 11px;">
             <div style="font-size:10px;color:#64748b;font-weight:600;">${c}</div>
