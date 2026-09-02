@@ -9,6 +9,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+// El servidor corre en UTC, pero la operación es en Miami: después de las 8 PM
+// locales, toISOString() ya devuelve el día siguiente y los turnos del día no se
+// encontrarían. Todas las fechas "de hoy" se calculan en la zona del negocio.
+const BIZ_TZ = 'America/New_York';
+const todayLocal = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: BIZ_TZ }).format(new Date());
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -70,7 +77,7 @@ export default async function handler(req, res) {
 
     // Turnos AGENDADOS para hoy en este barco (aún sin completar): la lavada de
     // John vive aquí, no en `tasks`, y debe poder cerrarse desde el check-out.
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = todayLocal();
     const { data: shiftRows } = await supabase
       .from('work_shifts')
       .select('id, person_name, vessel_name, works, description, shift_date, work_status, hours, rate')
@@ -139,7 +146,7 @@ export default async function handler(req, res) {
       const { error: lErr } = await supabase.from('log_entries').insert({
         vessel_id:    vesselId,
         owner_id:     vOwn?.owner_id,
-        date:         le.date || new Date().toISOString().slice(0, 10),
+        date:         le.date || todayLocal(),
         type:         'Visita',
         visit_types:  Array.isArray(le.visitTypes) && le.visitTypes.length ? le.visitTypes : ['Inspección'],
         description:  String(le.description || '').trim(),
@@ -222,7 +229,7 @@ export default async function handler(req, res) {
         await supabase.from('log_entries').insert({
           vessel_id:    vesselId,
           owner_id:     taskRow.owner_id,
-          date:         new Date().toISOString().slice(0, 10),
+          date:         todayLocal(),
           type:         'Servicio',
           system_id:    taskRow.system_id || null,
           equipment:    taskRow.equipment || null,
@@ -239,7 +246,7 @@ export default async function handler(req, res) {
     try {
       const { data: v2 } = await supabase.from('vessels').select('owner_id, name').eq('id', vesselId).single();
       if (v2?.owner_id) {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
         // Se busca por BARCO y FECHA, no por manager_id: un co-gestor (p. ej. Joana)
         // crea el turno con SU id, y filtrar por el dueño lo dejaría fuera.
         const { data: todayShifts } = await supabase
@@ -322,9 +329,12 @@ export default async function handler(req, res) {
     const WA_ID = process.env.WHATSAPP_PHONE_ID || process.env.WA_PHONE_ID;
 
     if (notifyPhone && WA_TK && WA_ID) {
+      // El servidor corre en UTC: sin zona horaria explícita el aviso llegaba con
+      // 4 horas de adelanto respecto a la hora real de Miami.
       const now = new Date();
-      const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: true });
-      const dateStr = now.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' });
+      const TZ = 'America/New_York';
+      const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: TZ });
+      const dateStr = now.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ });
 
       const actionEmoji = action === 'checkin' ? '✅' : '🔴';
       const actionText  = action === 'checkin' ? 'CHECK-IN'  : 'CHECK-OUT';
