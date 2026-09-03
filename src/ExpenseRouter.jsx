@@ -184,8 +184,8 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
             <select value={adm.category} onChange={e=>setAdm({...adm,category:e.target.value})} style={inp}>
               <option>Seguro</option><option>Marina</option><option>Sueldos</option><option>Matrícula</option><option>Impuestos</option><option>Administrativo</option><option>Otro</option>
             </select>
-            <label style={lbl}>Descripción (opcional)</label>
-            <input value={adm.description} onChange={e=>setAdm({...adm,description:e.target.value})} placeholder="Ej: Seguro anual, mensualidad marina..." style={inp}/>
+            <label style={lbl}>{L("Descripción (opcional)","Description (optional)")}</label>
+            <input value={adm.description} onChange={e=>setAdm({...adm,description:e.target.value})} placeholder={L("Ej: Seguro anual, mensualidad marina...","e.g. Annual insurance, marina fee...")} style={inp}/>
             <div><label style={lbl}>{L("Monto (USD)","Amount (USD)")}</label><input type="number" value={adm.amount} onChange={e=>setAdm({...adm,amount:e.target.value})} placeholder="0" style={inp}/></div>
             <div style={{marginBottom:10}}><label style={lbl}>{L("Método de pago","Payment method")}</label>
               <select value={adm.payment} onChange={e=>setAdm({...adm,payment:e.target.value})} style={{...inp,width:"100%"}}>

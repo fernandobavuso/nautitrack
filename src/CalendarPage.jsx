@@ -157,7 +157,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
           <div style={{fontSize:13,color:"#64748b"}}>{vessel.name}</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={goToday} style={btnGhost}>Hoy</button>
+          <button onClick={goToday} style={btnGhost}>{L("Hoy","Today")}</button>
           <button onClick={prevMonth} style={btnIcon}>←</button>
           <div style={{fontSize:15,fontWeight:700,color:"#0f172a",minWidth:130,textAlign:"center"}}>{MESES[month]} {year}</div>
           <button onClick={nextMonth} style={btnIcon}>→</button>

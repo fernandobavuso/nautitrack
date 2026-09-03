@@ -2062,7 +2062,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                             style={{padding:"7px 14px",border:"1.5px solid #e2e8f0",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#1e293b"}}>{lang==="es"?"Reprogramar":"Reschedule"}</button>
                           <button onClick={()=>{
                             if(confirm("¿Eliminar esta tarea?")){deleteTask(task.id);setExpanded(null);}
-                          }} style={{padding:"7px 14px",border:"1.5px solid #fecaca",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>Eliminar</button>
+                          }} style={{padding:"7px 14px",border:"1.5px solid #fecaca",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",background:"#fff",color:"#dc2626"}}>{lang==="es"?"Eliminar":"Delete"}</button>
                         </div>
                       </td>
                     </tr>
@@ -2255,19 +2255,19 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
             </div>
             {showAddSys && (
               <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:14,marginBottom:12}}>
-                <div style={{fontWeight:700,fontSize:12,color:"#0369a1",marginBottom:10}}>Nuevo Sistema</div>
+                <div style={{fontWeight:700,fontSize:12,color:"#0369a1",marginBottom:10}}>{lang==="es"?"Nuevo Sistema":"New System"}</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                  <div><label style={s.label}>Nombre *</label><input value={newSysLabel} onChange={e=>setNewSysLabel(e.target.value)} placeholder="Ej: Sistema de Limpiaparabrisas" style={s.input}/></div>
+                  <div><label style={s.label}>{lang==="es"?"Nombre *":"Name *"}</label><input value={newSysLabel} onChange={e=>setNewSysLabel(e.target.value)} placeholder={lang==="es"?"Ej: Sistema de Limpiaparabrisas":"e.g. Wiper System"} style={s.input}/></div>
                   <div><label style={s.label}>Ícono</label><input value={newSysIcon} onChange={e=>setNewSysIcon(e.target.value)} style={{...s.input,width:60}}/></div>
                 </div>
-                <div style={{marginBottom:10}}><label style={s.label}>Equipos * <span style={{color:"#94a3b8",fontWeight:400}}>(separados por coma)</span></label><input value={newSysEquip} onChange={e=>setNewSysEquip(e.target.value)} placeholder="Motor 1, Motor 2, Panel de control" style={s.input}/></div>
+                <div style={{marginBottom:10}}><label style={s.label}>Equipos * <span style={{color:"#94a3b8",fontWeight:400}}>(separados por coma)</span></label><input value={newSysEquip} onChange={e=>setNewSysEquip(e.target.value)} placeholder={lang==="es"?"Motor 1, Motor 2, Panel de control":"Engine 1, Engine 2, Control panel"} style={s.input}/></div>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                   <input type="checkbox" checked={newSysHours} onChange={e=>setNewSysHours(e.target.checked)} id="trackHrs"/>
                   <label htmlFor="trackHrs" style={{fontSize:12,color:"#374151"}}>Registrar horas de uso</label>
                 </div>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                  <button style={s.btnOutline} onClick={() => setShowAddSys(false)}>Cancelar</button>
-                  <button style={s.btnPrimary} onClick={addCustomSystem}>Guardar Sistema</button>
+                  <button style={s.btnOutline} onClick={() => setShowAddSys(false)}>{lang==="es"?"Cancelar":"Cancel"}</button>
+                  <button style={s.btnPrimary} onClick={addCustomSystem}>{lang==="es"?"Guardar Sistema":"Save System"}</button>
                 </div>
               </div>
             )}
@@ -2311,7 +2311,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
 
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label style={s.label}>Asignado a</label>
+              <label style={s.label}>{lang==="es"?"Asignado a":"Assigned to"}</label>
               <select value={assigned} onChange={e=>setAssigned(e.target.value)} style={s.input}>
                 <option value="">Seleccionar...</option>
                 {allAssigned.map(p=><option key={p} value={p}>{p}</option>)}
@@ -2365,12 +2365,12 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
           )}
 
           <div>
-            <label style={s.label}>Notas</label>
+            <label style={s.label}>{lang==="es"?"Notas":"Notes"}</label>
             <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Observaciones, materiales, instrucciones..." rows={3} style={{...s.input,resize:"vertical"}}/>
           </div>
         </div>
         <div style={s.modalFooter}>
-          <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
+          <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cancelar":"Cancel"}</button>
           <button style={s.btnPrimary} onClick={handleSave}>{initial ? "Guardar Cambios" : "Guardar Tarea"}</button>
         </div>
       </div>
@@ -2453,7 +2453,7 @@ function LogPage({ vessel, vessels, updateVessel, addLogEntry, updateLogEntry, d
               <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>Esta acción no se puede deshacer.</div>
             </div>
             <div style={s.modalFooter}>
-              <button style={s.btnOutline} onClick={()=>{setDeleteTarget(null);setDeleteReason("");}}>Cancelar</button>
+              <button style={s.btnOutline} onClick={()=>{setDeleteTarget(null);setDeleteReason("");}}>{lang==="es"?"Cancelar":"Cancel"}</button>
               <button style={{...s.btnPrimary,background:"#dc2626",opacity:deleteReason.trim().length<3?0.4:1}}
                 onClick={()=>{if(deleteReason.trim().length>=3)confirmDelete();}}>
                 Eliminar
@@ -2869,7 +2869,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
                 </select>
                 {supervised==="Otro" && (
                   <input value={otherSupervised} onChange={e=>setOtherSupervised(e.target.value)}
-                    placeholder="Nombre del técnico o empresa" style={{...s.input, marginTop:8}} autoFocus/>
+                    placeholder={lang==="es"?"Nombre del técnico o empresa":"Technician or company name"} style={{...s.input, marginTop:8}} autoFocus/>
                 )}
                 <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>
                   Los proveedores vienen de tu directorio. Si no está, elige "Otro".
@@ -2884,15 +2884,15 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
             {/* Horas de motor/generador (solo en inspecciones técnicas) */}
             {hasVisit("Inspección") && (visitHasMotors||visitHasGen||visitHasSK)&&(
               <div>
-                <label style={s.label}>Horas actuales del equipo</label>
+                <label style={s.label}>{lang==="es"?"Horas actuales del equipo":"Current equipment hours"}</label>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
                   {visitHasMotors&&getMotorLabels(vessel).map(m=>(
                     <div key={m}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{m}</label>
-                    <input type="number" value={engOut[m]||""} onChange={e=>setEngOut(v=>({...v,[m]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
+                    <input type="number" value={engOut[m]||""} onChange={e=>setEngOut(v=>({...v,[m]:e.target.value}))} placeholder={lang==="es"?"Horas":"Hours"} style={s.input}/></div>
                   ))}
                   {visitHasGen&&getGenLabels(vessel).map(g=>(
                     <div key={g}><label style={{...s.label,fontSize:11,color:"#64748b"}}>{g}</label>
-                    <input type="number" value={genOut[g]||""} onChange={e=>setGenOut(v=>({...v,[g]:e.target.value}))} placeholder="Horas" style={s.input}/></div>
+                    <input type="number" value={genOut[g]||""} onChange={e=>setGenOut(v=>({...v,[g]:e.target.value}))} placeholder={lang==="es"?"Horas":"Hours"} style={s.input}/></div>
                   ))}
                   {visitHasSK&&(
                     <div><label style={{...s.label,fontSize:11,color:"#64748b"}}>Seakeeper</label>
@@ -2903,7 +2903,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
               </div>
             )}
             <div>
-              <label style={s.label}>Realizado por</label>
+              <label style={s.label}>{lang==="es"?"Realizado por":"Performed by"}</label>
               <select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}>
                 <option value="">Seleccionar...</option>
                 {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
@@ -2959,7 +2959,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
               {errors.desc&&<div style={s.errMsg}>{errors.desc}</div>}
             </div>
             <div>
-              <label style={s.label}>Realizado por</label>
+              <label style={s.label}>{lang==="es"?"Realizado por":"Performed by"}</label>
               <select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}>
                 <option value="">Seleccionar...</option>
                 {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
@@ -2978,7 +2978,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
               </div>
             </div>
             <div><label style={s.label}>Comentarios</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Proveedor, tipo de combustible..." rows={2} style={{...s.input,resize:"vertical"}}/></div>
-            <div><label style={s.label}>Realizado por</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{allPerformed.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
+            <div><label style={s.label}>{lang==="es"?"Realizado por":"Performed by"}</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{allPerformed.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
           </>)}
 
           {type==="Salida"&&(<>
@@ -3020,7 +3020,7 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
                   {/* Agregar tripulante por nombre libre */}
                   <div style={{display:"flex",gap:6,marginTop:8}}>
                     <input value={crewInput} onChange={e=>setCrewInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&crewInput.trim()){setCrewSel(cs=>[...cs,crewInput.trim()]);setCrewInput("");}}} placeholder="Escribe un nombre y presiona Enter" style={{...s.input,flex:1}}/>
-                    <button onClick={()=>{if(crewInput.trim()){setCrewSel(cs=>[...cs,crewInput.trim()]);setCrewInput("");}}} style={{...s.typeChip,background:"#eff6ff",borderColor:"#2563eb",color:"#2563eb",fontWeight:700,whiteSpace:"nowrap"}}>Agregar</button>
+                    <button onClick={()=>{if(crewInput.trim()){setCrewSel(cs=>[...cs,crewInput.trim()]);setCrewInput("");}}} style={{...s.typeChip,background:"#eff6ff",borderColor:"#2563eb",color:"#2563eb",fontWeight:700,whiteSpace:"nowrap"}}>{lang==="es"?"Agregar":"Add"}</button>
                   </div>
                   {/* Tripulantes seleccionados por nombre libre (no en vessel.crew) */}
                   {crewSel.filter(c=>!aboardPeople.includes(c)).length>0 && (
@@ -3082,8 +3082,8 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
           {type==="Compra"&&(<>
             <div><label style={s.label}>Descripción <span style={{color:"#dc2626"}}>*</span></label><input value={item} onChange={e=>setItem(e.target.value)} placeholder="Ej: Filtro de aceite marino" style={{...s.input,borderColor:errors.item?"#dc2626":"#e2e8f0"}}/>{errors.item&&<div style={s.errMsg}>{errors.item}</div>}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={s.label}>Marca</label><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Ej: Fleetguard" style={s.input}/></div>
-              <div><label style={s.label}>Modelo</label><input value={model2} onChange={e=>setModel2(e.target.value)} placeholder="Ej: FF5052" style={s.input}/></div>
+              <div><label style={s.label}>{lang==="es"?"Marca":"Brand"}</label><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Ej: Fleetguard" style={s.input}/></div>
+              <div><label style={s.label}>{lang==="es"?"Modelo":"Model"}</label><input value={model2} onChange={e=>setModel2(e.target.value)} placeholder="Ej: FF5052" style={s.input}/></div>
             </div>
             <div><label style={s.label}>Número de Parte</label><input value={partNum} onChange={e=>setPartNum(e.target.value)} placeholder="Ej: FF5052-A" style={s.input}/></div>
             <div><label style={s.label}>Costo (USD)</label><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:"#64748b"}}>$</span><input type="number" value={costUSD} onChange={e=>setCostUSD(e.target.value)} placeholder="0.00" style={s.input}/></div></div>
@@ -3189,7 +3189,7 @@ function RecordsPage({ vessel }) {
     <div style={{padding:"24px 28px"}}>
       <div style={s.toolbar}>
         <h2 style={s.toolbarTitle}>Records — {vessel.name}</h2>
-        <button style={{...s.btnPrimary,background:"linear-gradient(120deg,#7c3aed,#a855f7)"}} onClick={()=>setShowReport(true)}>Generar Reporte</button>
+        <button style={{...s.btnPrimary,background:"linear-gradient(120deg,#7c3aed,#a855f7)"}} onClick={()=>setShowReport(true)}>{lang==="es"?"Generar Reporte":"Generate Report"}</button>
       </div>
       <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
         {[{label:"Servicios",val:serviceLog.length,color:"#2563eb",key:"Servicio"},{label:"Inspecciones",val:inspLog.length,color:"#16a34a",key:"Inspecciones"},{label:"Combustible",val:fuelLog.length,color:"#d97706",key:"Combustible"},{label:"Compras",val:purchaseLog.length,color:"#0891b2",sub:`$${totalPurch.toFixed(2)}`,key:"Compras"},{label:"Histórico",val:(vessel.records||[]).length,color:"#7c3aed",sub:`$${totalCost.toLocaleString("en-US",{minimumFractionDigits:2})}`,key:"Historico"}].map(item=>(
@@ -3489,7 +3489,7 @@ function ReportModal({ vessel, onClose }) {
       sections += sectionHeader("⛽","Historial de Combustible",`${fuelLog.length} repostajes · Total acumulado: ${totalFuel.toFixed(0)} ${fuelLog[0]?.fuelUnit||"gal"}`,"#fef3c7","#d97706");
       sections += `<table>
         <thead><tr>
-          <th>Fecha</th><th>Cantidad</th><th>Unidad</th><th>Notas / Proveedor</th>
+          <th>{lang==="es"?"Fecha":"Date"}</th><th>Cantidad</th><th>Unidad</th><th>Notas / Proveedor</th>
         </tr></thead>
         <tbody>
           ${fuelLog.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
@@ -3516,7 +3516,7 @@ function ReportModal({ vessel, onClose }) {
       sections += sectionHeader("🔧","Registro de Servicios",`${services.length} servicios — ${prev} preventivos · ${reac} reactivos · ${rep} reparaciones`,"#dbeafe","#1d4ed8");
       sections += `<table>
         <thead><tr>
-          <th>Fecha</th><th>Tipo</th><th>Sistema / Equipo</th><th>Descripción</th><th>Realizado por</th>
+          <th>{lang==="es"?"Fecha":"Date"}</th><th>{lang==="es"?"Tipo":"Type"}</th><th>Sistema / Equipo</th><th>{lang==="es"?"Descripción":"Description"}</th><th>{lang==="es"?"Realizado por":"Performed by"}</th>
         </tr></thead>
         <tbody>
           ${services.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
@@ -3534,7 +3534,7 @@ function ReportModal({ vessel, onClose }) {
     if (sel.includes("inspect") && inspections.length > 0) {
       sections += sectionHeader("🔍","Inspecciones Realizadas",`${inspections.length} inspecciones`,"#dcfce7","#16a34a");
       sections += `<table>
-        <thead><tr><th>Fecha</th><th>Equipo / Sistema</th><th>Descripción</th><th>Realizado por</th></tr></thead>
+        <thead><tr><th>{lang==="es"?"Fecha":"Date"}</th><th>Equipo / Sistema</th><th>{lang==="es"?"Descripción":"Description"}</th><th>{lang==="es"?"Realizado por":"Performed by"}</th></tr></thead>
         <tbody>
           ${inspections.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
             <td class="td-date">${fmtD(e.date)}</td>
@@ -3551,7 +3551,7 @@ function ReportModal({ vessel, onClose }) {
       const totalPersons = salidas.reduce((a,e)=>a+(parseInt(e.persons)||0),0);
       sections += sectionHeader("🚢","Salidas al Mar",`${salidas.length} salidas · ${totalPersons} personas-viaje`,"#ede9fe","#7c3aed");
       sections += `<table>
-        <thead><tr><th>Fecha</th><th>Destino</th><th>Personas</th><th>Salida</th><th>Regreso</th><th>Clima</th><th>Dueño</th></tr></thead>
+        <thead><tr><th>{lang==="es"?"Fecha":"Date"}</th><th>Destino</th><th>Personas</th><th>Salida</th><th>Regreso</th><th>Clima</th><th>Dueño</th></tr></thead>
         <tbody>
           ${salidas.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
             <td class="td-date">${fmtD(e.date)}</td>
@@ -3596,7 +3596,7 @@ function ReportModal({ vessel, onClose }) {
         </div>`;
 
         sections += `<table>
-          <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Proveedor</th><th>Compró</th><th>Pago</th><th>N° factura</th><th>USD</th></tr></thead>
+          <thead><tr><th>{lang==="es"?"Fecha":"Date"}</th><th>Categoría</th><th>{lang==="es"?"Descripción":"Description"}</th><th>Proveedor</th><th>Compró</th><th>Pago</th><th>N° factura</th><th>USD</th></tr></thead>
           <tbody>
             ${expList.map((e,i2)=>`<tr style="background:${i2%2===0?"#fff":"#f8fafc"}">
               <td class="td-date">${fmtD(e.expense_date)}</td>
@@ -3620,7 +3620,7 @@ function ReportModal({ vessel, onClose }) {
         if (parts.length) {
           sections += `<div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin:6px 0 8px;">Detalle técnico de repuestos comprados</div>
           <table>
-            <thead><tr><th>Fecha</th><th>Ítem</th><th>Marca</th><th>Modelo</th><th>N° Parte</th><th>USD</th></tr></thead>
+            <thead><tr><th>{lang==="es"?"Fecha":"Date"}</th><th>Ítem</th><th>{lang==="es"?"Marca":"Brand"}</th><th>{lang==="es"?"Modelo":"Model"}</th><th>N° Parte</th><th>USD</th></tr></thead>
             <tbody>${parts.map((e,i2)=>`<tr style="background:${i2%2===0?"#fff":"#f8fafc"}">
               <td class="td-date">${fmtD(e.date)}</td>
               <td class="td-bold">${e.item||"—"}</td>
@@ -3659,7 +3659,7 @@ function ReportModal({ vessel, onClose }) {
         </div>
       </div>
       <table>
-        <thead><tr><th>Sistema</th><th>Equipo</th><th>Tarea</th><th>Intervalo</th><th>Próx. Venc.</th><th>Estado</th></tr></thead>
+        <thead><tr><th>{lang==="es"?"Sistema":"System"}</th><th>{lang==="es"?"Equipo":"Equipment"}</th><th>Tarea</th><th>Intervalo</th><th>Próx. Venc.</th><th>{lang==="es"?"Estado":"Status"}</th></tr></thead>
         <tbody>
           ${filteredTasks.sort((a,b)=>a.status==="overdue"?-1:b.status==="overdue"?1:0).map((t,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
             <td style="color:#64748b;">${t.system||"—"}</td>
@@ -3677,7 +3677,7 @@ function ReportModal({ vessel, onClose }) {
     if (sel.includes("log")) {
       sections += sectionHeader("📓","Bitácora Completa",`${filteredLog.length} entradas registradas`,"#f1f5f9","#475569");
       sections += `<table>
-        <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Realizado por</th></tr></thead>
+        <thead><tr><th>{lang==="es"?"Fecha":"Date"}</th><th>{lang==="es"?"Tipo":"Type"}</th><th>Detalle</th><th>{lang==="es"?"Realizado por":"Performed by"}</th></tr></thead>
         <tbody>
           ${filteredLog.map((e,i)=>{
             const typeColors = {Servicio:"badge-blue",Inspección:"badge-green",Combustible:"badge-yellow",Salida:"#ede9fe color:#7c3aed",Compra:"badge-blue"};
@@ -3735,7 +3735,7 @@ function ReportModal({ vessel, onClose }) {
     <div style="position:absolute;bottom:-60px;left:200px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,0.03);"></div>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;">
       <div>
-        <div style="font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:8px;text-transform:uppercase;">Reporte Oficial de Embarcación</div>
+        <div style="font-size:10px;letter-spacing:0.2em;opacity:0.6;margin-bottom:8px;text-transform:uppercase;">{lang==="es"?"Reporte Oficial de Embarcación":"Official Vessel Report"}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
           <svg width="34" height="34" viewBox="0 0 48 48" fill="none"><path d="M24 6 L39 12 V25 C39 34 24 43 24 43 C24 43 9 34 9 25 V12 Z" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linejoin="round"/><path d="M24 15 L31 31 H17 Z" fill="#38bdf8"/><path d="M16 34 Q24 30 32 34" stroke="#7dd3fc" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
           <div style="font-size:32px;font-weight:900;letter-spacing:-1px;">Carive</div>
@@ -3873,7 +3873,7 @@ function ReportModal({ vessel, onClose }) {
 
         {/* Fixed footer — always visible */}
         <div style={{...s.modalFooter,background:"#fff",borderTop:"1px solid #e2e8f0",flexWrap:"wrap",gap:8}}>
-          <button style={s.btnOutline} onClick={onClose}>Cancelar</button>
+          <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cancelar":"Cancel"}</button>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button style={{...s.btnOutline,fontSize:11}} onClick={()=>setSel(REPORT_TYPES.map(r=>r.key))}>
               Seleccionar todo
@@ -3924,7 +3924,7 @@ function ReportModal({ vessel, onClose }) {
                   Primero se abrirá el reporte para que lo revises y lo guardes como PDF. Luego se abrirá tu correo con el mensaje listo — adjunta el PDF antes de enviar. <strong>Nada se envía sin tu confirmación.</strong>
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setShowSendConfirm(false)} style={{...s.btnOutline,flex:1}}>Cancelar</button>
+                  <button onClick={()=>setShowSendConfirm(false)} style={{...s.btnOutline,flex:1}}>{lang==="es"?"Cancelar":"Cancel"}</button>
                   <button onClick={()=>{ openReport(); window.location.href = mailto; setShowSendConfirm(false); onClose&&onClose(); }} style={{...s.btnPrimary,flex:1,background:"linear-gradient(135deg,#16a34a,#22c55e)"}}>Generar y abrir correo</button>
                 </div>
               </div>
@@ -4313,14 +4313,14 @@ function DocsPage({ vessel, user }) {
           </div>
           {showAddLink&&(
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:20,marginBottom:20}}>
-              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Nuevo Link</div>
+              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>{lang==="es"?"Nuevo Link":"New Link"}</div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div><label style={s.label}>Título *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="Ej: Carpeta Google Drive" style={s.input}/></div>
                 <div><label style={s.label}>URL *</label><input value={newUrl} onChange={e=>setNewUrl(e.target.value)} placeholder="https://drive.google.com/..." style={s.input}/></div>
               </div>
               <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
-                <button style={s.btnOutline} onClick={()=>{setShowAddLink(false);setNewTitle("");setNewUrl("");}}>Cancelar</button>
-                <button style={s.btnPrimary} onClick={addLink}>Guardar</button>
+                <button style={s.btnOutline} onClick={()=>{setShowAddLink(false);setNewTitle("");setNewUrl("");}}>{lang==="es"?"Cancelar":"Cancel"}</button>
+                <button style={s.btnPrimary} onClick={addLink}>{lang==="es"?"Guardar":"Save"}</button>
               </div>
             </div>
           )}
@@ -4349,6 +4349,7 @@ function DocsPage({ vessel, user }) {
 
 // ── NOTIFICATIONS MODAL ───────────────────────────────────────────────────────
 function NotificationsModal({ vessel, user, onClose }) {
+  const { lang } = useLang();
   const [tab, setTab]           = useState("send");
   const [sending, setSending]   = useState(false);
   const [result, setResult]     = useState(null);
@@ -4534,7 +4535,7 @@ function NotificationsModal({ vessel, user, onClose }) {
         </div>
 
         <div style={s.modalFooter}>
-          <button style={s.btnOutline} onClick={onClose}>Cerrar</button>
+          <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cerrar":"Close"}</button>
           {tab==="send"&&(
             <button onClick={send} disabled={sending} style={{...s.btnPrimary,background:"#25D366",opacity:sending?0.6:1,display:"flex",alignItems:"center",gap:8}}>
               {sending?"⏳ Enviando...":"📲 Enviar WhatsApp"}
@@ -4548,6 +4549,7 @@ function NotificationsModal({ vessel, user, onClose }) {
 
 
 function ProfileModal({ vessel, updateVessel, user, onClose }) {
+  const { lang } = useLang();
   const [tab,setTab]   = useState("profile");
   const [form,setForm] = useState({
     firstName: "", lastName: "", phone: "", email: "", marinaAddress: "",
@@ -4620,7 +4622,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <div><label style={s.label}>Nombre</label><input value={form.firstName||""} onChange={e=>set("firstName",e.target.value)} style={s.input}/></div>
-                <div><label style={s.label}>Apellido</label><input value={form.lastName||""} onChange={e=>set("lastName",e.target.value)} style={s.input}/></div>
+                <div><label style={s.label}>{lang==="es"?"Apellido":"Last name"}</label><input value={form.lastName||""} onChange={e=>set("lastName",e.target.value)} style={s.input}/></div>
               </div>
               <div>
                 <label style={s.label}>Teléfono / WhatsApp <span style={{color:"#dc2626"}}>*</span></label>
@@ -4698,7 +4700,7 @@ function ProfileModal({ vessel, updateVessel, user, onClose }) {
             </div>
           )}
         </div>
-        <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>Cancelar</button>{tab==="profile"&&<button style={s.btnPrimary} onClick={save}>Guardar Cambios</button>}</div>
+        <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cancelar":"Cancel"}</button>{tab==="profile"&&<button style={s.btnPrimary} onClick={save}>Guardar Cambios</button>}</div>
       </div>
     </div>
   );
@@ -4721,6 +4723,7 @@ function VesselField({ editMode, label, value, onChange, placeholder }) {
 }
 
 function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, canDelete, onClose }) {
+  const { lang } = useLang();
   // ── CRITICAL: freeze vessel on mount so parent re-renders don't kill input focus
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
@@ -4856,10 +4859,10 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
         <div style={s.modalHeader}>
           <div>
             {editMode
-              ? <input value={gen.name||vessel.name} onChange={e=>setGen(g=>({...g,name:e.target.value}))} style={{...s.input,fontSize:16,fontWeight:700,padding:"4px 8px",width:240}} placeholder="Nombre del barco"/>
+              ? <input value={gen.name||vessel.name} onChange={e=>setGen(g=>({...g,name:e.target.value}))} style={{...s.input,fontSize:16,fontWeight:700,padding:"4px 8px",width:240}} placeholder={lang==="es"?"Nombre del barco":"Vessel name"}/>
               : <div style={{fontSize:16,fontWeight:700,color:"#0f172a"}}>⚓ {vessel.name}</div>
             }
-            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>Detalles de la Embarcación</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{lang==="es"?"Detalles de la Embarcación":"Vessel Details"}</div>
           </div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             <button onClick={()=>setEditMode(!editMode)} style={{...s.btnOutline,padding:"5px 12px",fontSize:12,borderColor:editMode?"#2563eb":"#e2e8f0",color:editMode?"#2563eb":"#475569"}}>
@@ -4949,7 +4952,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
           {/* TANQUES */}
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={s.secTitle}>Tanques de Combustible</div>
+              <div style={s.secTitle}>{lang==="es"?"Tanques de Combustible":"Fuel Tanks"}</div>
               {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° tanques:</span>
                 <select value={numFuelTanks} onChange={e=>{const n=parseInt(e.target.value);setNumFuelTanks(n);setFuelTanks(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Tanque ${arr.length+1}`,capacity:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
@@ -4961,7 +4964,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
               editMode
                 ? <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                     <div><label style={{...s.label,fontSize:11}}>Nombre tanque {i+1}</label><input value={tank.name} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
-                    <div><label style={{...s.label,fontSize:11}}>Capacidad</label><input value={tank.capacity} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,capacity:e.target.value}:x))} placeholder="Ej: 300 gal" style={s.input}/></div>
+                    <div><label style={{...s.label,fontSize:11}}>{lang==="es"?"Capacidad":"Capacity"}</label><input value={tank.capacity} onChange={e=>setFuelTanks(t=>t.map((x,j)=>j===i?{...x,capacity:e.target.value}:x))} placeholder="Ej: 300 gal" style={s.input}/></div>
                   </div>
                 : <div key={i} style={s.detailRow}><span style={s.detailKey}>{tank.name}</span><span style={s.detailVal}>{tank.capacity||"—"}</span></div>
             ))}
@@ -4991,7 +4994,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
           {/* MOTORES */}
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={s.secTitle}>Motores</div>
+              <div style={s.secTitle}>{lang==="es"?"Motores":"Engines"}</div>
               {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° motores:</span>
                 <select value={numMotors} onChange={e=>{const n=parseInt(e.target.value);setNumMotors(n);setMotors(t=>{const arr=[...t];const names=["Motor Estribor","Motor Babor","Motor Centro","Motor Centro Estribor","Motor Centro Babor","Motor Central"];while(arr.length<n)arr.push({name:names[arr.length]||`Motor ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:60,padding:"4px 8px"}}>
@@ -5005,8 +5008,8 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
                     <div style={{fontWeight:600,fontSize:12,color:"#2563eb",marginBottom:8}}>{m.name}</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                       <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={m.name} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
-                      <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={m.make} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
-                      <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={m.model} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>{lang==="es"?"Marca":"Brand"}</label><input value={m.make} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>{lang==="es"?"Modelo":"Model"}</label><input value={m.model} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
                       <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={m.serial} onChange={e=>setMotors(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} style={s.input}/></div>
                     </div>
                   </div>
@@ -5022,7 +5025,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
           {/* GENERADORES */}
           <div style={{marginBottom:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={s.secTitle}>Generadores</div>
+              <div style={s.secTitle}>{lang==="es"?"Generadores":"Generators"}</div>
               {editMode&&<div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:11,color:"#64748b"}}>N° generadores:</span>
                 <select value={numGens} onChange={e=>{const n=parseInt(e.target.value);setNumGens(n);setGens(t=>{const arr=[...t];while(arr.length<n)arr.push({name:`Generador ${arr.length+1}`,make:"",model:"",serial:""});return arr.slice(0,n);});}} style={{...s.input,width:70,padding:"4px 8px"}}>
@@ -5036,8 +5039,8 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
                     <div style={{fontWeight:600,fontSize:12,color:"#7c3aed",marginBottom:8}}>{g.name}</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                       <div><label style={{...s.label,fontSize:11}}>Nombre</label><input value={g.name} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={s.input}/></div>
-                      <div><label style={{...s.label,fontSize:11}}>Marca</label><input value={g.make} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
-                      <div><label style={{...s.label,fontSize:11}}>Modelo</label><input value={g.model} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>{lang==="es"?"Marca":"Brand"}</label><input value={g.make} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,make:e.target.value}:x))} style={s.input}/></div>
+                      <div><label style={{...s.label,fontSize:11}}>{lang==="es"?"Modelo":"Model"}</label><input value={g.model} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,model:e.target.value}:x))} style={s.input}/></div>
                       <div><label style={{...s.label,fontSize:11}}>Serial</label><input value={g.serial} onChange={e=>setGens(t=>t.map((x,j)=>j===i?{...x,serial:e.target.value}:x))} style={s.input}/></div>
                     </div>
                   </div>
@@ -5107,7 +5110,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
             ))}
             {editMode && (<>
               <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
-                <input value={newCrew} onChange={e=>setNewCrew(e.target.value)} placeholder="Nombre" style={{flex:2,minWidth:120,fontSize:12,padding:"8px 10px",borderRadius:7,border:"1px solid #e2e8f0"}}/>
+                <input value={newCrew} onChange={e=>setNewCrew(e.target.value)} placeholder={lang==="es"?"Nombre":"Name"} style={{flex:2,minWidth:120,fontSize:12,padding:"8px 10px",borderRadius:7,border:"1px solid #e2e8f0"}}/>
                 <select value={newRole} onChange={e=>setNewRole(e.target.value)} style={{fontSize:12,padding:"8px 6px",borderRadius:7,border:"1px solid #e2e8f0",background:"#fff"}}>
                   {["Capitán","Primer Oficial","Jefe de Máquinas","Mecánico","Marinero","Cocinero","Camarero","Otro"].map(r=><option key={r} value={r}>{r}</option>)}
                 </select>
@@ -5138,7 +5141,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
 
         </div>
         <div style={s.modalFooter}>
-          <button style={s.btnOutline} onClick={onClose}>Cerrar</button>
+          <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cerrar":"Close"}</button>
           {editMode&&<button style={s.btnPrimary} onClick={saveAll}>💾 Guardar Cambios</button>}
         </div>
       </div>
@@ -5147,6 +5150,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
 }
 
 function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
+  const { lang } = useLang();
   const [providers,setProviders] = useState(vessel.providers||[]);
   const [showAdd,setShowAdd]     = useState(false);
   const [editingId,setEditingId] = useState(null);
@@ -5178,7 +5182,7 @@ function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
   const inner = (
     <>
         <div style={asPage?{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}:s.modalHeader}>
-          <div><div style={{fontSize:asPage?20:16,fontWeight:asPage?800:700,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>Proveedores</div><div style={{fontSize:asPage?13:12,color:"#64748b",marginTop:2}}>{(vessels||[]).length>1 ? "Directorio compartido por toda tu flota" : `Directorio de proveedores y técnicos de ${vessel.name}`}</div></div>
+          <div><div style={{fontSize:asPage?20:16,fontWeight:asPage?800:700,color:"#0f172a",fontFamily:asPage?"'Sora',system-ui,sans-serif":"inherit"}}>{lang==="es"?"Proveedores":"Providers"}</div><div style={{fontSize:asPage?13:12,color:"#64748b",marginTop:2}}>{(vessels||[]).length>1 ? "Directorio compartido por toda tu flota" : `Directorio de proveedores y técnicos de ${vessel.name}`}</div></div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}><button style={s.btnPrimary} onClick={()=>setShowAdd(!showAdd)}>＋ Agregar</button>{!asPage&&<button onClick={onClose} style={s.modalClose}>✕</button>}</div>
         </div>
         <ProvidersBody {...{providers,showAdd,setShowAdd,form,set,addProvider,remove,asPage,onClose}} />
@@ -5197,6 +5201,7 @@ function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
 
 // Cuerpo de proveedores (lista + form) — reusado en página y modal
 function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider, remove, asPage, onClose }) {
+  const { lang } = useLang();
   return (
     <div style={{flex:1,overflowY:asPage?"visible":"auto",padding:asPage?0:"16px 24px"}}>
           {showAdd&&(
@@ -5207,17 +5212,17 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
                   <div key={k}><label style={s.label}>{lbl}</label><input value={form[k]} onChange={e=>set(k,e.target.value)} style={s.input}/></div>
                 ))}
                 <div>
-                  <label style={s.label}>Especialidad</label>
+                  <label style={s.label}>{lang==="es"?"Especialidad":"Specialty"}</label>
                   <select value={SEGMENTS.slice(0,-1).includes(form.segment)?form.segment:"Otro"} onChange={e=>{if(e.target.value!=="Otro")set("segment",e.target.value);else set("segment","");}} style={s.input}>
                     <option value="">Seleccionar...</option>
                     {SEGMENTS.map(sg=><option key={sg} value={sg}>{sg}</option>)}
                   </select>
                   {(!SEGMENTS.slice(0,-1).includes(form.segment)||form.segment==="")&&<input value={form.segment} onChange={e=>set("segment",e.target.value)} placeholder="Escribe la especialidad y se guardará..." style={{...s.input,marginTop:6}}/>}
                 </div>
-                <div style={{gridColumn:"span 2"}}><label style={s.label}>Notas</label><input value={form.notes} onChange={e=>set("notes",e.target.value)} style={s.input}/></div>
+                <div style={{gridColumn:"span 2"}}><label style={s.label}>{lang==="es"?"Notas":"Notes"}</label><input value={form.notes} onChange={e=>set("notes",e.target.value)} style={s.input}/></div>
               </div>
               <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
-                <button style={s.btnOutline} onClick={()=>{setShowAdd(false);setEditingId(null);setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});}}>Cancelar</button>
+                <button style={s.btnOutline} onClick={()=>{setShowAdd(false);setEditingId(null);setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});}}>{lang==="es"?"Cancelar":"Cancel"}</button>
                 <button style={s.btnPrimary} onClick={editingId?saveEdit:addProvider}>{editingId?"Guardar cambios":"Guardar"}</button>
               </div>
             </div>
@@ -5243,7 +5248,7 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
               ))}
             </tbody>
           </table>
-          {!asPage && <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>Cerrar</button></div>}
+          {!asPage && <div style={s.modalFooter}><button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cerrar":"Close"}</button></div>}
     </div>
   );
 }
@@ -5314,6 +5319,7 @@ const s = {
 };
 // ── CAPTAIN MANAGER MODAL ─────────────────────────────────────────────────────
 function CaptainManagerModal({ vessel, user, onClose }) {
+  const { lang } = useLang();
   const [captains, setCaptains]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [adding, setAdding]       = useState(false);
@@ -5430,11 +5436,11 @@ function CaptainManagerModal({ vessel, user, onClose }) {
           {/* Formulario agregar */}
           {adding ? (
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:16}}>
-              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Agregar capitán / tripulante</div>
+              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>{lang==="es"?"Agregar capitán / tripulante":"Add captain / crew"}</div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   <div>
-                    <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Nombre completo *</label>
+                    <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>{lang==="es"?"Nombre completo *":"Full name *"}</label>
                     <input value={form.full_name} onChange={e=>setForm(f=>({...f,full_name:e.target.value}))} placeholder="Carlos Mendoza" style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
                   </div>
                   <div>
@@ -5452,13 +5458,13 @@ function CaptainManagerModal({ vessel, user, onClose }) {
                   <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="capitan@email.com" style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
                 </div>
                 <div>
-                  <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>Teléfono</label>
+                  <label style={{display:"block",fontSize:11,fontWeight:600,color:"#374151",marginBottom:4}}>{lang==="es"?"Teléfono":"Phone"}</label>
                   <input value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="+58412..." style={{width:"100%",padding:"8px 10px",border:"1.5px solid #e2e8f0",borderRadius:7,fontSize:13,boxSizing:"border-box"}}/>
                 </div>
               </div>
               {msg && <div style={{marginTop:10,padding:"8px 12px",background:msg.startsWith("✅")?"#f0fdf4":"#fff7ed",border:`1px solid ${msg.startsWith("✅")?"#bbf7d0":"#fed7aa"}`,borderRadius:7,fontSize:12,color:msg.startsWith("✅")?"#16a34a":"#c2410c"}}>{msg}</div>}
               <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
-                <button onClick={()=>{setAdding(false);setMsg("");}} style={{padding:"8px 16px",border:"1.5px solid #e2e8f0",borderRadius:7,background:"#fff",cursor:"pointer",fontSize:13}}>Cancelar</button>
+                <button onClick={()=>{setAdding(false);setMsg("");}} style={{padding:"8px 16px",border:"1.5px solid #e2e8f0",borderRadius:7,background:"#fff",cursor:"pointer",fontSize:13}}>{lang==="es"?"Cancelar":"Cancel"}</button>
                 <button onClick={handleInvite} disabled={saving} style={{padding:"8px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:7,color:"#fff",fontWeight:700,cursor:"pointer",fontSize:13,opacity:saving?0.6:1}}>
                   {saving?"⏳ Guardando...":"✓ Agregar"}
                 </button>
