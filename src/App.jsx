@@ -5149,6 +5149,7 @@ function VesselDetailsModal({ vessel: vesselProp, updateVessel, deleteVessel, ca
 function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
   const [providers,setProviders] = useState(vessel.providers||[]);
   const [showAdd,setShowAdd]     = useState(false);
+  const [editingId,setEditingId] = useState(null);
   const [form,setForm]           = useState({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const addProvider=()=>{
@@ -5157,7 +5158,21 @@ function ProvidersModal({ vessel, vessels, updateProviders, onClose, asPage }) {
     setProviders(u);updateProviders(vessel.owner_id, u);
     setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});setShowAdd(false);
   };
-  const remove=(id)=>{const u=providers.filter(p=>p.id!==id);setProviders(u);updateProviders(vessel.owner_id, u);};
+  const remove=(id)=>{
+    const p=providers.find(x=>x.id===id);
+    if(!confirm(`¿Eliminar a ${p?.company||p?.firstName||"este proveedor"}?`)) return;
+    const u=providers.filter(x=>x.id!==id);setProviders(u);updateProviders(vessel.owner_id, u);
+  };
+
+  // Edición: se reutiliza el mismo formulario del alta
+  const startEdit=(p)=>{ setForm({...p}); setEditingId(p.id); setShowAdd(true); };
+  const saveEdit=()=>{
+    if(!form.firstName||!form.company) return;
+    const u=providers.map(x=>x.id===editingId?{...form,id:editingId}:x);
+    setProviders(u);updateProviders(vessel.owner_id, u);
+    setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});
+    setEditingId(null);setShowAdd(false);
+  };
 
   // Contenido interno (compartido entre modo página y modo modal)
   const inner = (
@@ -5186,7 +5201,7 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
     <div style={{flex:1,overflowY:asPage?"visible":"auto",padding:asPage?0:"16px 24px"}}>
           {showAdd&&(
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:10,padding:16,marginBottom:16}}>
-              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>Nuevo Proveedor</div>
+              <div style={{fontWeight:700,fontSize:13,color:"#0369a1",marginBottom:12}}>{editingId?"Editar Proveedor":"Nuevo Proveedor"}</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 {[["firstName","Nombre *"],["lastName","Apellido"],["company","Empresa *"],["phone","Teléfono"],["email","Email"],["referredBy","Referido por"]].map(([k,lbl])=>(
                   <div key={k}><label style={s.label}>{lbl}</label><input value={form[k]} onChange={e=>set(k,e.target.value)} style={s.input}/></div>
@@ -5201,7 +5216,10 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
                 </div>
                 <div style={{gridColumn:"span 2"}}><label style={s.label}>Notas</label><input value={form.notes} onChange={e=>set("notes",e.target.value)} style={s.input}/></div>
               </div>
-              <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}><button style={s.btnOutline} onClick={()=>setShowAdd(false)}>Cancelar</button><button style={s.btnPrimary} onClick={addProvider}>Guardar</button></div>
+              <div style={{display:"flex",gap:8,marginTop:12,justifyContent:"flex-end"}}>
+                <button style={s.btnOutline} onClick={()=>{setShowAdd(false);setEditingId(null);setForm({firstName:"",lastName:"",company:"",phone:"",email:"",segment:"",notes:"",referredBy:""});}}>Cancelar</button>
+                <button style={s.btnPrimary} onClick={editingId?saveEdit:addProvider}>{editingId?"Guardar cambios":"Guardar"}</button>
+              </div>
             </div>
           )}
           <table style={s.table}>
@@ -5217,7 +5235,10 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
                   <td style={s.td}><span style={{background:"#e0f2fe",color:"#0369a1",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}}>{p.segment||"—"}</span></td>
                   <td style={{...s.td,color:"#64748b"}}>{p.referredBy||"—"}</td>
                   <td style={{...s.td,color:"#94a3b8",fontSize:11}}>{p.notes||"—"}</td>
-                  <td style={s.td}><button onClick={()=>remove(p.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626"}}>✕</button></td>
+                  <td style={s.td}>
+                    <button onClick={()=>startEdit(p)} title="Editar" style={{background:"none",border:"none",cursor:"pointer",color:"#64748b",fontSize:13,marginRight:6}}>✎</button>
+                    <button onClick={()=>remove(p.id)} title="Eliminar" style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626"}}>✕</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
