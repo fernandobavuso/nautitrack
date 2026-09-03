@@ -903,12 +903,27 @@ export default function App() {
     setVesselsLoading(false);
   }, []);
 
-  const checkIfPartner = useCallback(async (uid) => {
-    const { data } = await supabase.from("vessel_partners")
+  const checkIfPartner = useCallback(async (uid, email) => {
+    // Se busca por id y también por CORREO: si el gestor lo agregó antes de que
+    // existiera la cuenta, el vínculo quedó sin partner_id y hay que reclamarlo al
+    // primer login. Sin esto la persona entraba como dueño sin barcos.
+    const em = String(email || "").trim().toLowerCase();
+    const { data: byId } = await supabase.from("vessel_partners")
       .select("id").eq("partner_id", uid).eq("status","active").limit(1);
-    const isPartner = !!(data && data.length);
-    setPartnerMode(isPartner);
-    return isPartner;
+    if (byId && byId.length) { setPartnerMode(true); return true; }
+
+    if (em) {
+      const { data: byMail } = await supabase.from("vessel_partners")
+        .select("id").ilike("partner_email", em).is("partner_id", null).limit(20);
+      if (byMail && byMail.length) {
+        await supabase.from("vessel_partners")
+          .update({ partner_id: uid, status: "active" })
+          .ilike("partner_email", em).is("partner_id", null);
+        setPartnerMode(true); return true;
+      }
+    }
+    setPartnerMode(false);
+    return false;
   }, []);
 
   const checkIfCaptain = useCallback(async (uid, knownRole) => {
@@ -977,8 +992,11 @@ export default function App() {
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         window.__setUserFullName = (name) => setUser(prev => ({...prev, full_name: name}));
-        const isCrew = await checkIfCaptain(u.id, u.role);
-        if (!isCrew) await fetchVessels(u.id);
+        const isPartner = await checkIfPartner(u.id, u.email);
+        if (!isPartner) {
+          const isCrew = await checkIfCaptain(u.id, u.role);
+          if (!isCrew) await fetchVessels(u.id);
+        }
         setCheckingRole(false);
       } else {
         Object.keys(localStorage).filter(k=>k.startsWith("nautitrack_role_")).forEach(k=>localStorage.removeItem(k));
@@ -1069,7 +1087,7 @@ export default function App() {
       setPendingInvite(null);
       window.history.replaceState({}, "", "/"); // limpiar el ?invite= de la URL
     }
-    setUser(u); setCheckingRole(true); const isPartner = await checkIfPartner(u.id); if (!isPartner) { const isCrew = await checkIfCaptain(u.id, u.role); if (!isCrew) fetchVessels(u.id); } setCheckingRole(false);
+    setUser(u); setCheckingRole(true); const isPartner = await checkIfPartner(u.id, u.email); if (!isPartner) { const isCrew = await checkIfCaptain(u.id, u.role); if (!isCrew) fetchVessels(u.id); } setCheckingRole(false);
   }} />;
 
   // Si el usuario es SOCIO (solo lectura) → vista de socio
