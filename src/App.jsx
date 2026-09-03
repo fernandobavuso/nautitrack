@@ -1368,7 +1368,6 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                 {accountHasFleet(vessels) && (
                   <button onClick={()=>{setPage("company");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="company"?"#eff6ff":"transparent",color:page==="company"?"#0ea5e9":"#1e293b",fontWeight:page==="company"?700:500,fontSize:14}}>{t("nav.company")}</button>
                 )}
-                <button onClick={()=>{setPage("home");setMobileMenuOpen(false);}} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",border:"none",borderRadius:8,cursor:"pointer",background:page==="home"?"#eff6ff":"transparent",color:page==="home"?"#0ea5e9":"#1e293b",fontWeight:page==="home"?700:500,fontSize:14}}>Inicio</button>
                 {NAV_GROUPS.filter(g=>g.single).map(g=>(
                   <button key={g.key} onClick={()=>{setPage(g.key);setMobileMenuOpen(false);}}
                     style={{display:"block",width:"100%",textAlign:"left",padding:"10px 12px",background:page===g.key?"#f0f9ff":"none",border:"none",borderRadius:8,fontSize:14,fontWeight:page===g.key?700:500,color:page===g.key?"#0369a1":"#334155",cursor:"pointer"}}>
