@@ -12,6 +12,7 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const [partners, setPartners]   = useState([]);
+  const [pendingInv, setPendingInv] = useState([]);
   const [pEmail, setPEmail]       = useState("");
   const [pVessels, setPVessels]   = useState([]);
   const [pAdding, setPAdding]     = useState(false);
@@ -20,12 +21,18 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
   const [adding, setAdding] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
 
-  useEffect(() => { load(); loadPartners(); }, []);
-
   const loadPartners = async () => {
-    const { data } = await supabase.from("vessel_partners")
+    const { data, error } = await supabase.from("vessel_partners")
       .select("*").eq("owner_id", user.id).order("partner_email");
-    setPartners(data||[]);
+    if (error) { console.error("[Carive] socios:", error.message); flash("Error: "+error.message); }
+    setPartners(data || []);
+
+    // Socios invitados por link que aún no aceptan: no existen todavía en
+    // vessel_partners, pero deben verse como "invitación enviada".
+    const { data: inv } = await supabase.from("invitations")
+      .select("invited_email, status, role_detail")
+      .eq("inviter_id", user.id).eq("kind", "partner").eq("status", "pending");
+    setPendingInv(inv || []);
   };
 
   const load = async () => {
@@ -35,6 +42,8 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
     setManagers(data || []);
     setLoading(false);
   };
+
+  useEffect(() => { load(); loadPartners(); }, []);
 
   const flash = (t) => { setMsg(t); setTimeout(()=>setMsg(""), 4000); };
 
@@ -203,6 +212,23 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
                 <input readOnly value={pInviteLink} style={{...inp,flex:1,fontSize:11}}/>
                 <button onClick={()=>{navigator.clipboard?.writeText(pInviteLink);flash(L("Link copiado","Link copied"));}} style={{...btnPrimary,padding:"8px 12px",fontSize:12}}>{L("Copiar","Copy")}</button>
               </div>
+            </div>
+          )}
+
+          {pendingInv.length>0 && (
+            <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
+              {pendingInv.map(iv=>{
+                let ids=[]; try { ids=JSON.parse(iv.role_detail||"[]"); } catch { ids=[]; }
+                const names=ids.map(id=>vessels.find(v=>v.id===id)?.name).filter(Boolean).join(", ");
+                return (
+                  <div key={iv.invited_email} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:9}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:"#92400e"}}>{iv.invited_email}</div>
+                      <div style={{fontSize:11,color:"#b45309"}}>{names||"—"} · {L("invitación enviada, aún no acepta","invite sent, not accepted yet")}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
