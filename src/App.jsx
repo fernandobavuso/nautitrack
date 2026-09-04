@@ -1508,7 +1508,7 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
     <div style={s.home}>
       <FounderBanner />
       <div style={rowStyle}>
-        <FleetCard vessels={vessels} vessel={vessel} updateVessel={updateVessel} />
+        <UpcomingCard vessels={vessels} setPage={setPage} />
         <AlertsCard vessel={vessel} setPage={setPage} />
         <IndicatorsCard vessel={vessel} />
       </div>
@@ -1521,47 +1521,91 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
   );
 }
 
-function FleetCard({ vessels, vessel, updateVessel }) {
-  const { t: tr } = useLang();
-  const [editingId, setEditingId] = useState(null);
-  const [editName, setEditName]   = useState("");
+function UpcomingCard({ vessels, setPage }) {
+  const { lang } = useLang();
+  const L = (es,en)=>lang==="en"?en:es;
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const startEdit = (v, e) => { e.stopPropagation(); setEditingId(v.id); setEditName(v.name); };
-  const saveEdit  = async (v) => {
-    if (editName.trim() && editName !== v.name) {
-      await updateVessel({...v, name: editName.trim()});
-    }
-    setEditingId(null);
+  useEffect(() => {
+    if (!vessels?.length) { setLoading(false); return; }
+    const ids = vessels.map(v=>v.id);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const lim = new Date(today.getTime() + 30*86400000);
+    const iso = (d)=>d.toISOString().slice(0,10);
+    const inWin = (d)=>{ const x=String(d||"").slice(0,10); return x >= iso(today) && x <= iso(lim); };
+
+    (async () => {
+      const [{ data: tks }, { data: shs }, { data: trips }] = await Promise.all([
+        supabase.from("tasks").select("id,vessel_id,name,next_due,status,assigned").in("vessel_id", ids),
+        supabase.from("work_shifts").select("id,vessel_name,person_name,works,description,shift_date,work_status").in("manager_id", vessels.map(v=>v.owner_id)),
+        supabase.from("day_trips").select("id,vessel_id,trip_date,client_name").in("vessel_id", ids),
+      ]);
+      const out = [];
+      (tks||[]).filter(t=>t.status!=="done" && inWin(t.next_due)).forEach(t=>out.push({
+        date:t.next_due, kind:"task", color:"#2563eb",
+        title:t.name, sub:[vessels.find(v=>v.id===t.vessel_id)?.name, t.assigned].filter(Boolean).join(" · "),
+      }));
+      (shs||[]).filter(sh=>sh.work_status!=="Completado" && inWin(sh.shift_date)).forEach(sh=>out.push({
+        date:sh.shift_date, kind:"shift", color:"#16a34a",
+        title:(Array.isArray(sh.works)&&sh.works.length ? sh.works.join(", ") : String(sh.description||"").split(" + ")[0]) || L("Servicio","Service"),
+        sub:[sh.vessel_name, sh.person_name].filter(Boolean).join(" · "),
+      }));
+      (trips||[]).filter(tp=>inWin(tp.trip_date)).forEach(tp=>out.push({
+        date:tp.trip_date, kind:"trip", color:"#0891b2",
+        title:L("Day trip","Day trip"), sub:[vessels.find(v=>v.id===tp.vessel_id)?.name, tp.client_name].filter(Boolean).join(" · "),
+      }));
+      // Servicios por horas con objetivo de FECHA
+      vessels.forEach(v=>{
+        const t = v.details?.service_targets || v.serviceTargets || {};
+        Object.entries(t).forEach(([k,raw])=>{
+          const o = typeof raw==="number" ? {} : (raw||{});
+          if (o.date && inWin(o.date)) out.push({ date:o.date, kind:"svc", color:"#d97706",
+            title:L(`Servicio: ${k}`,`Service: ${k}`), sub:v.name });
+        });
+      });
+      out.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+      setRows(out); setLoading(false);
+    })();
+  }, [vessels]);
+
+  const dLabel = (d) => {
+    const x = new Date(d+"T00:00:00"); const t = new Date(); t.setHours(0,0,0,0);
+    const days = Math.round((x-t)/86400000);
+    if (days===0) return L("Hoy","Today");
+    if (days===1) return L("Mañana","Tomorrow");
+    return x.toLocaleDateString(lang==="es"?"es-ES":"en-US",{weekday:"short",day:"numeric",month:"short"}).replace(".","");
   };
 
   return (
-    <div style={{...s.card,flex:1.2}}>
-      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconBoat size={17} color="#2563eb"/> {tr("dash.fleetStatus")}</span><span style={s.cardSub}>{vessels.length} {tr("dash.vessels")}</span></div>
-      {vessels.map(v => {
-        const od=v.tasks.filter(t=>t.status==="overdue").length, du=v.tasks.filter(t=>t.status==="due").length;
-        return (
-          <div key={v.id} style={{...s.fleetRow,background:v.id===vessel.id?"#f0f9ff":"#f8fafc",borderColor:v.id===vessel.id?"#bae6fd":"#e2e8f0"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,flex:1}}>
-              <div style={{...s.statusBall,background:STATUS_CFG[v.status].dot,boxShadow:`0 0 8px ${STATUS_CFG[v.status].dot}66`}} />
-              <div style={{flex:1}}>
-                {editingId===v.id
-                  ? <input value={editName} onChange={e=>setEditName(e.target.value)} onBlur={()=>saveEdit(v)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(v);if(e.key==="Escape")setEditingId(null);}} autoFocus style={{...s.input,padding:"3px 7px",fontSize:13,width:"100%"}}/>
-                  : <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{v.name}</div>
-                      <button onClick={(e)=>startEdit(v,e)} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:11,padding:"1px 4px",borderRadius:4}} title="Editar nombre">✎</button>
-                    </div>
-                }
-                <div style={{fontSize:11,color:"#94a3b8"}}>{v.marina} · Cap. {(v.captain||"").split(" ")[0]}</div>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:5}}>
-              {od>0&&<span style={{...s.miniTag,background:"#fee2e2",color:"#dc2626"}}>⚠ {od}v</span>}
-              {du>0&&<span style={{...s.miniTag,background:"#fef3c7",color:"#d97706"}}>{du}p</span>}
-              {od===0&&du===0&&<span style={{...s.miniTag,background:"#dcfce7",color:"#16a34a"}}>✓</span>}
-            </div>
-          </div>
-        );
-      })}
+    <div style={s.card}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+        <IconCalendar size={19} color="#2563eb"/>
+        <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Próximos 30 días","Next 30 days")}</div>
+        <button onClick={()=>setPage("calendar")} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:12,fontWeight:700}}>
+          {L("Ver →","View →")}
+        </button>
+      </div>
+      {loading
+        ? <div style={{padding:"24px 0",textAlign:"center",color:"#94a3b8",fontSize:12}}>{L("Cargando...","Loading...")}</div>
+        : rows.length===0
+          ? <div style={{padding:"24px 0",textAlign:"center",color:"#94a3b8",fontSize:13}}>{L("Nada programado en los próximos 30 días.","Nothing scheduled in the next 30 days.")}</div>
+          : <div style={{display:"flex",flexDirection:"column",gap:7}}>
+              {rows.slice(0,7).map((r,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"#f8fafc",borderRadius:9,borderLeft:`3px solid ${r.color}`}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.title}</div>
+                    <div style={{fontSize:11,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.sub}</div>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#64748b",whiteSpace:"nowrap"}}>{dLabel(r.date)}</div>
+                </div>
+              ))}
+              {rows.length>7 && (
+                <button onClick={()=>setPage("calendar")} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:700,padding:"4px 0",textAlign:"left"}}>
+                  +{rows.length-7} {L("más en el calendario","more in the calendar")}
+                </button>
+              )}
+            </div>}
     </div>
   );
 }
