@@ -180,7 +180,7 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
           <>
             <button onClick={()=>setStep("choose")} style={backBtn}>← Volver</button>
             <div style={{fontSize:12,color:"#0369a1",background:"#f0f9ff",padding:"8px 12px",borderRadius:8,marginBottom:14,lineHeight:1.4}}>{L("Este gasto se registra directo en Finanzas. Úsalo para gastos fijos o administrativos del barco.","This expense goes straight to Finance. Use it for fixed or administrative boat costs.")}</div>
-            <label style={lbl}>Tipo de gasto</label>
+            <label style={lbl}>{L("Tipo de gasto","Expense type")}</label>
             <select value={adm.category} onChange={e=>setAdm({...adm,category:e.target.value})} style={inp}>
               <option>Seguro</option><option>Marina</option><option>Sueldos</option><option>Matrícula</option><option>Impuestos</option><option>Administrativo</option><option>Otro</option>
             </select>

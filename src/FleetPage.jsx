@@ -150,7 +150,7 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
         <td style="padding:8px 10px;font-size:11px;color:${r.svc?r.svc.color:"#94a3b8"};">${r.svc?r.svc.text.replace("⚠ ",""):L("Sin objetivos","No targets")}</td>
       </tr>`;
 
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Flota</title><style>
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>{L("Reporte de Flota","Fleet Report")}</title><style>
         *{margin:0;padding:0;box-sizing:border-box;}
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;background:#fff;font-size:13px;line-height:1.5;padding:36px;}
         table{width:100%;border-collapse:collapse;margin-bottom:26px;}
@@ -159,7 +159,7 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
         @media print{.no-print{display:none!important;}@page{margin:12mm;}body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
       </style></head><body>
         <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px;">
-          <div style="font-size:22px;font-weight:800;color:#0a2540;">Reporte de Flota</div>
+          <div style="font-size:22px;font-weight:800;color:#0a2540;">{L("Reporte de Flota","Fleet Report")}</div>
           <div style="font-size:13px;color:#64748b;">The Boating Zone · ${vessels.length} ${L("embarcaciones","vessels")}</div>
         </div>
         <div style="font-size:12px;color:#94a3b8;margin-bottom:22px;">${L("Período","Period")}: ${fmtD2(frFrom)} — ${fmtD2(frTo)} · ${L("generado","generated")} ${new Date().toLocaleDateString("en-US")}</div>
