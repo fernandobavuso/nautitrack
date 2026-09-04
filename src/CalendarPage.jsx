@@ -193,10 +193,10 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
 
       {/* Grilla */}
       <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid #e2e8f0",background:"#f8fafc"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",borderBottom:"1px solid #e2e8f0",background:"#f8fafc"}}>
           {DIAS.map(d=><div key={d} style={{padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,color:"#94a3b8"}}>{isMobile?d.slice(0,1):d}</div>)}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))"}}>
           {cells.map((d,i)=>{
             const key = d ? fmtKey(d) : null;
             const dayEvents = key ? (byDay[key] || []) : [];

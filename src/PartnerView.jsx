@@ -23,9 +23,9 @@ export default function PartnerView({ user, onLogout }) {
   const [vessels, setVessels] = useState([]);
   const [vid, setVid]         = useState(null);
   const [tab, setTab]         = useState("resumen");
-  const [range, setRange]     = useState("90");     // 30 | 90 | 365 | todo
+  const [from, setFrom]       = useState("");        // rango por calendario
+  const [to, setTo]           = useState("");
   const [typeF, setTypeF]     = useState("");        // filtro por tipo de entrada
-  const [personF, setPersonF] = useState("");
   const [q, setQ]             = useState("");        // buscador
   const [taskF, setTaskF]     = useState("pend");    // pend | all | done
   const [catF, setCatF]       = useState("");
@@ -60,24 +60,24 @@ export default function PartnerView({ user, onLogout }) {
   const vessel = vessels.find(v=>v.id===vid);
 
   // ── Filtrado compartido ────────────────────────────────────────────────────
-  const cutoff = (() => {
-    if (range === "todo") return null;
-    const d = new Date(); d.setDate(d.getDate() - Number(range));
-    return d.toISOString().slice(0,10);
-  })();
-  const inRange = (d) => !cutoff || String(d||"") >= cutoff;
+  const inRange = (d) => {
+    const x = String(d||"").slice(0,10);
+    if (from && x < from) return false;
+    if (to   && x > to)   return false;
+    return true;
+  };
 
   const logF = log.filter(e =>
     inRange(e.date) &&
     (!typeF   || e.type === typeF) &&
-    (!personF || e.performed_by === personF) &&
     (!q || [e.description, e.item, e.dest, e.equipment, e.performed_by]
             .filter(Boolean).join(" ").toLowerCase().includes(q.toLowerCase()))
   );
   const expF = expenses.filter(e => inRange(e.expense_date) && (!catF || e.category === catF));
-  const tasksF = tasks.filter(t => taskF==="all" ? true : taskF==="done" ? t.status==="done" : t.status!=="done");
+  const tasksF = tasks.filter(t =>
+    (taskF==="all" ? true : taskF==="done" ? t.status==="done" : t.status!=="done") &&
+    (!t.next_due || inRange(t.next_due)));
   const logTypes = [...new Set(log.map(e=>e.type).filter(Boolean))];
-  const people   = [...new Set(log.map(e=>e.performed_by).filter(Boolean))].sort();
   const cats     = [...new Set(expenses.map(e=>e.category).filter(Boolean))].sort();
 
   // ── Resumen ────────────────────────────────────────────────────────────────
@@ -182,7 +182,7 @@ export default function PartnerView({ user, onLogout }) {
       </div>
 
       {/* Selector de barcos */}
-      <div style={{padding:"12px 18px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
+      <div style={{padding:"12px 18px 0",display:"flex",gap:8,flexWrap:"wrap",maxWidth:900,margin:"0 auto"}}>
         {vessels.map(v=>(
           <button key={v.id} onClick={()=>setVid(v.id)}
             style={{padding:"8px 16px",borderRadius:20,border:`1.5px solid ${vid===v.id?"#0ea5e9":"#e2e8f0"}`,background:vid===v.id?"#eff6ff":"#fff",color:vid===v.id?"#0369a1":"#475569",fontSize:13,fontWeight:vid===v.id?700:500,cursor:"pointer"}}>
@@ -192,7 +192,7 @@ export default function PartnerView({ user, onLogout }) {
       </div>
 
       {/* Pestañas */}
-      <div style={{display:"flex",gap:2,padding:"8px 18px 0",borderBottom:"1px solid #e2e8f0",overflowX:"auto"}}>
+      <div style={{display:"flex",gap:2,padding:"8px 18px 0",borderBottom:"1px solid #e2e8f0",overflowX:"auto",maxWidth:900,margin:"0 auto"}}>
         {tabBtn("resumen", L("Resumen","Overview"))}
         {tabBtn("log", L("Bitácora","Logbook"))}
         {tabBtn("tasks", L("Tareas","Tasks"))}
@@ -200,7 +200,7 @@ export default function PartnerView({ user, onLogout }) {
         {tabBtn("costs", L("Gastos","Expenses"))}
       </div>
 
-      <div style={{padding:"16px 18px",maxWidth:900}}>
+      <div style={{padding:"16px 18px",maxWidth:900,margin:"0 auto"}}>
 
         {/* RESUMEN */}
         {tab==="resumen" && (
@@ -275,40 +275,43 @@ export default function PartnerView({ user, onLogout }) {
         )}
 
         {/* Filtros */}
-        {(tab==="log"||tab==="costs") && (
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
-            {[{k:"30",l:L("30 días","30 days")},{k:"90",l:L("90 días","90 days")},{k:"365",l:L("1 año","1 year")},{k:"todo",l:L("Todo","All")}].map(r=>(
-              <button key={r.k} onClick={()=>setRange(r.k)} style={chip(range===r.k)}>{r.l}</button>
-            ))}
+        {(tab==="log"||tab==="costs"||tab==="tasks") && (
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={sel} title={L("Desde","From")}/>
+              <span style={{fontSize:12,color:"#94a3b8"}}>→</span>
+              <input type="date" value={to} min={from||undefined} onChange={e=>setTo(e.target.value)} style={sel} title={L("Hasta","To")}/>
+              {(from||to) && (
+                <button onClick={()=>{setFrom("");setTo("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:700}}>
+                  {L("Todo","All")}
+                </button>
+              )}
+            </div>
+
             {tab==="log" && (
               <>
                 <select value={typeF} onChange={e=>setTypeF(e.target.value)} style={sel}>
                   <option value="">{L("Todo tipo","All types")}</option>
                   {logTypes.map(t=><option key={t} value={t}>{t}</option>)}
                 </select>
-                <select value={personF} onChange={e=>setPersonF(e.target.value)} style={sel}>
-                  <option value="">{L("Toda persona","Anyone")}</option>
-                  {people.map(pn=><option key={pn} value={pn}>{pn}</option>)}
-                </select>
                 <input value={q} onChange={e=>setQ(e.target.value)} placeholder={L("Buscar...","Search...")} style={{...sel,minWidth:130}}/>
               </>
             )}
+            {tab==="tasks" && [{k:"pend",l:L("Pendientes","Open")},{k:"done",l:L("Completadas","Done")},{k:"all",l:L("Todas","All")}].map(o=>(
+              <button key={o.k} onClick={()=>setTaskF(o.k)} style={chip(taskF===o.k)}>{o.l}</button>
+            ))}
             {tab==="costs" && (
               <select value={catF} onChange={e=>setCatF(e.target.value)} style={sel}>
                 <option value="">{L("Toda categoría","All categories")}</option>
                 {cats.map(c=><option key={c} value={c}>{c}</option>)}
               </select>
             )}
+
             <span style={{fontSize:11,color:"#94a3b8",marginLeft:"auto"}}>
-              {tab==="log" ? `${logF.length} ${L("entradas","entries")}` : `${expF.length} · ${money(expF.reduce((a,e)=>a+Number(e.amount||0),0))}`}
+              {tab==="log"   ? `${logF.length} ${L("entradas","entries")}`
+               : tab==="tasks" ? `${tasksF.length} ${L("tareas","tasks")}`
+               : `${expF.length} · ${money(expF.reduce((a,e)=>a+Number(e.amount||0),0))}`}
             </span>
-          </div>
-        )}
-        {tab==="tasks" && (
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
-            {[{k:"pend",l:L("Pendientes","Open")},{k:"done",l:L("Completadas","Done")},{k:"all",l:L("Todas","All")}].map(o=>(
-              <button key={o.k} onClick={()=>setTaskF(o.k)} style={chip(taskF===o.k)}>{o.l}</button>
-            ))}
           </div>
         )}
 
@@ -378,7 +381,7 @@ export default function PartnerView({ user, onLogout }) {
 
         {/* CALENDARIO (reutiliza el de la app en modo un-barco) */}
         {tab==="cal" && vesselForCal && (
-          <div style={{margin:"-16px -18px"}}>
+          <div>
             <CalendarPage vessel={vesselForCal} vessels={[vesselForCal]} isMobile={false}/>
           </div>
         )}
