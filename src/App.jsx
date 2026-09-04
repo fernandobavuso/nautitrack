@@ -1508,7 +1508,6 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
     <div style={s.home}>
       <FounderBanner />
       <div style={rowStyle}>
-        <UpcomingCard vessel={vessel} setPage={setPage} />
         <AlertsCard vessel={vessel} setPage={setPage} />
         <IndicatorsCard vessel={vessel} />
       </div>
@@ -1521,130 +1520,6 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
   );
 }
 
-function UpcomingCard({ vessel, setPage }) {
-  const { lang } = useLang();
-  const L = (es,en)=>lang==="en"?en:es;
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [month, setMonth] = useState(() => { const d=new Date(); d.setDate(1); return d; });
-
-  useEffect(() => {
-    if (!vessel?.id || vessel.id==="__empty__") { setRows([]); setLoading(false); return; }
-    (async () => {
-      setLoading(true);
-      const [{ data: shs }, { data: trips }] = await Promise.all([
-        supabase.from("work_shifts").select("id,vessel_name,person_name,works,description,shift_date,work_status").eq("vessel_name", vessel.name),
-        supabase.from("day_trips").select("id,trip_date,client_name").eq("vessel_id", vessel.id),
-      ]);
-      const out = [];
-      (vessel.tasks||[]).filter(t=>t.status!=="done" && t.nextDue).forEach(t=>out.push({
-        date:String(t.nextDue).slice(0,10), color:"#2563eb", title:t.name,
-        sub:[t.system, t.assigned].filter(Boolean).join(" · "),
-      }));
-      (shs||[]).filter(sh=>sh.work_status!=="Completado").forEach(sh=>out.push({
-        date:sh.shift_date, color:"#16a34a",
-        title:(Array.isArray(sh.works)&&sh.works.length ? sh.works.join(", ") : String(sh.description||"").split(" + ")[0]) || L("Servicio","Service"),
-        sub:sh.person_name || "",
-      }));
-      (trips||[]).forEach(tp=>out.push({ date:tp.trip_date, color:"#0891b2",
-        title:"Day trip", sub:tp.client_name||"" }));
-      const t = vessel.details?.service_targets || vessel.serviceTargets || {};
-      Object.entries(t).forEach(([k,raw])=>{
-        const o = typeof raw==="number" ? {} : (raw||{});
-        if (o.date) out.push({ date:o.date, color:"#d97706", title:L(`Servicio: ${k}`,`Service: ${k}`), sub:"" });
-      });
-      out.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-      setRows(out); setLoading(false);
-    })();
-  }, [vessel?.id, vessel?.tasks]);
-
-  // ── Mini calendario del mes ────────────────────────────────────────────────
-  const y = month.getFullYear(), m = month.getMonth();
-  const first = new Date(y, m, 1);
-  const offset = (first.getDay()+6)%7;                       // lunes = 0
-  const daysIn = new Date(y, m+1, 0).getDate();
-  const cells = [...Array(offset).fill(null), ...Array.from({length:daysIn},(_,i)=>i+1)];
-  const iso = (d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  const todayISO = new Date().toISOString().slice(0,10);
-  const byDay = {};
-  rows.forEach(r => { (byDay[r.date] = byDay[r.date] || []).push(r); });
-  const dows = lang==="es" ? ["L","M","M","J","V","S","D"] : ["M","T","W","T","F","S","S"];
-  const monthLbl = first.toLocaleDateString(lang==="es"?"es-ES":"en-US",{month:"long",year:"numeric"});
-
-  const today0 = new Date(); today0.setHours(0,0,0,0);
-  const next = rows.filter(r => new Date(r.date+"T00:00:00") >= today0).slice(0,4);
-  const dLabel = (d) => {
-    const x = new Date(d+"T00:00:00");
-    const days = Math.round((x-today0)/86400000);
-    if (days===0) return L("Hoy","Today");
-    if (days===1) return L("Mañana","Tomorrow");
-    return x.toLocaleDateString(lang==="es"?"es-ES":"en-US",{day:"numeric",month:"short"}).replace(".","");
-  };
-
-  return (
-    <div style={s.card}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-        <IconCalendar size={19} color="#2563eb"/>
-        <div style={{flex:1,fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Agenda","Schedule")}</div>
-        <button onClick={()=>setPage("calendar")} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:12,fontWeight:700}}>
-          {L("Ver →","View →")}
-        </button>
-      </div>
-
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-        <button onClick={()=>setMonth(new Date(y,m-1,1))} style={miniNav}>‹</button>
-        <div style={{flex:1,textAlign:"center",fontSize:12,fontWeight:700,color:"#334155",textTransform:"capitalize"}}>{monthLbl}</div>
-        <button onClick={()=>setMonth(new Date(y,m+1,1))} style={miniNav}>›</button>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",gap:2,marginBottom:2}}>
-        {dows.map((d,i)=><div key={i} style={{textAlign:"center",fontSize:9,fontWeight:700,color:"#cbd5e1"}}>{d}</div>)}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",gap:2,marginBottom:12}}>
-        {cells.map((d,i)=>{
-          if (!d) return <div key={i}/>;
-          const evs = byDay[iso(d)] || [];
-          const isToday = iso(d)===todayISO;
-          return (
-            <button key={i} onClick={()=>setPage("calendar")} title={evs.map(e=>e.title).join(" · ")}
-              style={{aspectRatio:"1",border:"none",borderRadius:6,cursor:"pointer",padding:0,
-                background:isToday?"#2563eb":evs.length?"#eff6ff":"transparent",
-                color:isToday?"#fff":evs.length?"#1e40af":"#94a3b8",
-                fontSize:11,fontWeight:isToday||evs.length?700:400,
-                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
-              {d}
-              {evs.length>0 && !isToday && (
-                <div style={{display:"flex",gap:1}}>
-                  {[...new Set(evs.map(e=>e.color))].slice(0,3).map((c,ix)=>(
-                    <span key={ix} style={{width:3,height:3,borderRadius:"50%",background:c}}/>
-                  ))}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {loading
-        ? <div style={{padding:"12px 0",textAlign:"center",color:"#94a3b8",fontSize:12}}>{L("Cargando...","Loading...")}</div>
-        : next.length===0
-          ? <div style={{padding:"12px 0",textAlign:"center",color:"#94a3b8",fontSize:12}}>{L("Nada programado.","Nothing scheduled.")}</div>
-          : <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {next.map((r,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:9,padding:"7px 9px",background:"#f8fafc",borderRadius:8,borderLeft:`3px solid ${r.color}`}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:600,color:"#0f172a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.title}</div>
-                    {r.sub && <div style={{fontSize:10,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.sub}</div>}
-                  </div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#64748b",whiteSpace:"nowrap"}}>{dLabel(r.date)}</div>
-                </div>
-              ))}
-            </div>}
-    </div>
-  );
-}
-
-const miniNav = {background:"none",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",color:"#64748b",fontSize:12,padding:"2px 8px",lineHeight:1.4};
 
 function AlertsCard({ vessel, setPage }) {
   const { t: tr } = useLang();
@@ -1661,6 +1536,43 @@ function AlertsCard({ vessel, setPage }) {
           </div>
         ))
       }
+    </div>
+  );
+}
+
+function MonthStats({ vessel }) {
+  const { lang } = useLang();
+  const L = (es,en)=>lang==="en"?en:es;
+  const [exp, setExp] = useState([]);
+  useEffect(() => {
+    if (!vessel?.id || vessel.id==="__empty__") { setExp([]); return; }
+    supabase.from("expenses").select("amount,expense_date").eq("vessel_id", vessel.id)
+      .then(({data}) => setExp(data||[]));
+  }, [vessel?.id]);
+
+  const mKey = new Date().toISOString().slice(0,7);
+  const totMonth = exp.filter(e=>String(e.expense_date||"").slice(0,7)===mKey)
+                      .reduce((a,e)=>a+Number(e.amount||0),0);
+  const sal = (vessel.log||[]).filter(e=>e.type==="Salida" && String(e.date||"").slice(0,7)===mKey);
+  const hrs = sal.reduce((a,e)=>{ const o=Number(e.engineHrsOut), i=Number(e.engineHrsIn);
+    return (!isNaN(o)&&!isNaN(i)&&i>o) ? a+(i-o) : a; }, 0);
+  const cph = hrs>0 ? totMonth/hrs : null;
+  const money0 = (n)=>"$"+Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
+
+  return (
+    <div style={{display:"flex",gap:14,marginTop:12,paddingTop:11,borderTop:"1px solid #f1f5f9",flexWrap:"wrap"}}>
+      <div>
+        <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{L("Salidas del mes","Trips this month")}</div>
+        <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{sal.length}{hrs>0?` · ${Math.round(hrs*10)/10}h`:""}</div>
+      </div>
+      <div>
+        <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{L("Gastos del mes","Month expenses")}</div>
+        <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{money0(totMonth)}</div>
+      </div>
+      <div>
+        <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{L("Costo/hora","Cost/hour")}</div>
+        <div style={{fontSize:15,fontWeight:800,color:cph!=null?"#0f172a":"#cbd5e1"}}>{cph!=null?`$${cph.toFixed(0)}`:"—"}</div>
+      </div>
     </div>
   );
 }
@@ -1776,6 +1688,9 @@ function IndicatorsCard({ vessel }) {
         ))}
       </div>
 
+      {/* Números del mes: salidas, gastos y costo por hora */}
+      <MonthStats vessel={vessel} />
+
       {/* Configurar el próximo servicio por horas */}
       <button onClick={()=>{ 
         const d={};
@@ -1834,7 +1749,7 @@ function CalendarCard({ tasks, setPage }) {
   const { lang } = useLang();
   return (
     <div style={{...s.card,flex:1.3}}>
-      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconCalendar size={17} color="#2563eb"/> Próximos Servicios</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>{lang==="es"?"Ver todos →":"View all →"}</button></div>
+      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconCalendar size={17} color="#2563eb"/> {lang==="es"?"Próximas Tareas":"Upcoming Tasks"}</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>{lang==="es"?"Ver todos →":"View all →"}</button></div>
       {tasks.length===0 && <div style={s.empty}><div style={{color:"#94a3b8",fontSize:12}}>{lang==="es"?"Sin tareas pendientes":"No open tasks"}</div></div>}
       {tasks.map(t => {
         const nd=new Date(t.nextDue),today=new Date(),diff=Math.round((nd-today)/(1000*60*60*24));
@@ -2440,7 +2355,7 @@ function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initi
             </div>
           ) : (
             <div>
-              <label style={s.label}>Próximo Vencimiento <span style={{color:"#dc2626"}}>*</span></label>
+              <label style={s.label}>{lang==="es"?"Próximo Vencimiento":"Next Due"} <span style={{color:"#dc2626"}}>*</span></label>
               <input type="date" value={nextDue} onChange={e=>setNextDue(e.target.value)} style={{...s.input,borderColor:errors.nextDue?"#dc2626":"#e2e8f0"}}/>
               {errors.nextDue&&<div style={s.errMsg}>{errors.nextDue}</div>}
             </div>
