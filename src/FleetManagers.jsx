@@ -138,6 +138,25 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
     } catch (err) { flash("Error: " + err.message); }
   };
 
+  // Las invitaciones pendientes también se editan: sus barcos viven en role_detail
+  const saveInviteVessels = async (email, ids) => {
+    const { error } = await supabase.from("invitations")
+      .update({ role_detail: JSON.stringify(ids) })
+      .eq("inviter_id", user.id).eq("kind","partner").eq("status","pending").ilike("invited_email", email);
+    if (error) { flash("Error: "+error.message); return; }
+    setEditPartner(null); loadPartners();
+    flash(L("Invitación actualizada.","Invite updated."));
+  };
+
+  const cancelInvite = async (email) => {
+    if (!confirm(L(`¿Cancelar la invitación a ${email}?`,`Cancel the invite to ${email}?`))) return;
+    const { error } = await supabase.from("invitations")
+      .update({ status: "cancelled" })
+      .eq("inviter_id", user.id).eq("kind","partner").eq("status","pending").ilike("invited_email", email);
+    if (error) { flash("Error: "+error.message); return; }
+    loadPartners();
+  };
+
   const removePartnerAccess = async (email) => {
     if (!confirm(L(`¿Quitar el acceso de ${email}?`,`Remove ${email}'s access?`))) return;
     await supabase.from("vessel_partners").delete().eq("owner_id", user.id).eq("partner_email", email);
@@ -252,12 +271,45 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
               {pendingInv.map(iv=>{
                 let ids=[]; try { ids=JSON.parse(iv.role_detail||"[]"); } catch { ids=[]; }
                 const names=ids.map(id=>vessels.find(v=>v.id===id)?.name).filter(Boolean).join(", ");
+                const em = iv.invited_email;
+                const editing = editPartner?.email===em && editPartner?.isInvite;
                 return (
-                  <div key={iv.invited_email} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:9}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:600,color:"#92400e"}}>{iv.invited_email}</div>
-                      <div style={{fontSize:11,color:"#b45309"}}>{names||"—"} · {L("invitación enviada, aún no acepta","invite sent, not accepted yet")}</div>
+                  <div key={em}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:9,flexWrap:"wrap"}}>
+                      <div style={{flex:1,minWidth:150}}>
+                        <div style={{fontSize:13,fontWeight:600,color:"#92400e"}}>{em}</div>
+                        <div style={{fontSize:11,color:"#b45309"}}>{names||"—"} · {L("invitación enviada, aún no acepta","invite sent, not accepted yet")}</div>
+                      </div>
+                      <button onClick={()=>setEditPartner(editing?null:{email:em,vesselIds:ids,isInvite:true})}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:12,fontWeight:600}}>
+                        {editing ? L("Cerrar","Close") : L("Editar barcos","Edit vessels")}
+                      </button>
+                      <button onClick={()=>cancelInvite(em)}
+                        style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:12,fontWeight:600}}>
+                        {L("Cancelar","Cancel")}
+                      </button>
                     </div>
+                    {editing && (
+                      <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:9,padding:"11px 12px",marginTop:4}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#64748b",marginBottom:7}}>{L("¿A qué barcos podrá acceder?","Which vessels will they access?")}</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                          {vessels.map(v=>{
+                            const on = editPartner.vesselIds.includes(v.id);
+                            return (
+                              <button key={v.id} onClick={()=>setEditPartner(ep=>({...ep, vesselIds: on ? ep.vesselIds.filter(x=>x!==v.id) : [...ep.vesselIds, v.id]}))}
+                                style={{padding:"6px 12px",borderRadius:18,cursor:"pointer",fontSize:12,fontWeight:on?700:400,
+                                  border:`1.5px solid ${on?"#2563eb":"#e2e8f0"}`,background:on?"#eff6ff":"#fff",color:on?"#1e40af":"#475569"}}>
+                                {on?"✓ ":""}{v.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button onClick={()=>saveInviteVessels(em, editPartner.vesselIds)} disabled={!editPartner.vesselIds.length}
+                          style={{...btnPrimary,width:"100%",opacity:editPartner.vesselIds.length?1:0.5}}>
+                          {L("Guardar cambios","Save changes")}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
