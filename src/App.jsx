@@ -2142,7 +2142,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
 }
 
 function AddTaskModal({ vessel: vesselProp, updateVessel, onSave, onClose, initial }) {
-  const { t: tr } = useLang();
+  const { t: tr, lang } = useLang();
   const vesselRef = useRef(vesselProp);
   const vessel = vesselRef.current;
   const [fleetCrewNames,setFleetCrewNames] = useState([]);   // roster de Personal (flota)
@@ -3941,7 +3941,7 @@ function ReportModal({ vessel, onClose }) {
 }
 
 function DocsPage({ vessel, user }) {
-  const { t: tr } = useLang();
+  const { t: tr, lang } = useLang();
   const [activeTab, setActiveTab]     = useState("docs");
   const [links, setLinks]             = useState([]);
   const [docs, setDocs]               = useState([]);
