@@ -241,6 +241,12 @@ export default function FleetManagers({ user, vessels = [], onClose }) {
             </div>
           )}
 
+          {partners.length===0 && pendingInv.length===0 && (
+            <div style={{marginTop:12,padding:"12px 14px",border:"1px dashed #e2e8f0",borderRadius:9,fontSize:12,color:"#94a3b8",textAlign:"center"}}>
+              {L("Todavía no has dado acceso de solo lectura a nadie.","You haven't granted read-only access to anyone yet.")}
+            </div>
+          )}
+
           {pendingInv.length>0 && (
             <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
               {pendingInv.map(iv=>{
