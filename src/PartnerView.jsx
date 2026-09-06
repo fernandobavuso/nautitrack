@@ -7,6 +7,7 @@ import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import CalendarPage from "./CalendarPage.jsx";
 import { photoUrl } from "./PaymentFields.jsx";
+import { docExpiry } from "./docs.js";
 
 const fmtD = (d) => { if(!d) return "—"; const p=String(d).split("-"); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; };
 const chip = (on) => ({padding:"5px 11px",borderRadius:18,cursor:"pointer",fontSize:12,fontWeight:on?700:500,
@@ -32,6 +33,7 @@ export default function PartnerView({ user, onLogout }) {
   const [log, setLog]         = useState([]);
   const [tasks, setTasks]     = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [docs, setDocs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [openEntry, setOpenEntry] = useState(null);
 
@@ -49,12 +51,13 @@ export default function PartnerView({ user, onLogout }) {
 
   // Datos del barco elegido
   useEffect(()=>{ if(!vid) return; (async()=>{
-    const [{ data: lg }, { data: tk }, { data: ex }] = await Promise.all([
+    const [{ data: lg }, { data: tk }, { data: ex }, { data: dc }] = await Promise.all([
       supabase.from("log_entries").select("*").eq("vessel_id", vid).order("date",{ascending:false}),
       supabase.from("tasks").select("*").eq("vessel_id", vid).order("next_due"),
       supabase.from("expenses").select("*").eq("vessel_id", vid).order("expense_date",{ascending:false}),
+      supabase.from("manuals").select("*").eq("vessel_id", vid).order("expires_at",{ascending:true,nullsFirst:false}),
     ]);
-    setLog(lg||[]); setTasks(tk||[]); setExpenses(ex||[]);
+    setLog(lg||[]); setTasks(tk||[]); setExpenses(ex||[]); setDocs(dc||[]);
   })(); },[vid]);
 
   const vessel = vessels.find(v=>v.id===vid);
@@ -198,6 +201,7 @@ export default function PartnerView({ user, onLogout }) {
         {tabBtn("tasks", L("Tareas","Tasks"))}
         {tabBtn("cal", L("Calendario","Calendar"))}
         {tabBtn("costs", L("Gastos","Expenses"))}
+        {tabBtn("docs", L("Documentos","Documents"))}
       </div>
 
       <div style={{padding:"16px 18px",maxWidth:900,margin:"0 auto"}}>
@@ -384,6 +388,57 @@ export default function PartnerView({ user, onLogout }) {
           <div>
             <CalendarPage vessel={vesselForCal} vessels={[vesselForCal]} isMobile={false}/>
           </div>
+        )}
+
+        {/* DOCUMENTOS */}
+        {tab==="docs" && (
+          docs.length===0
+            ? <div style={{padding:40,textAlign:"center",color:"#94a3b8",fontSize:13}}>{L("Sin documentos cargados.","No documents uploaded.")}</div>
+            : (()=>{
+                const withExp = docs.filter(d=>d.expires_at);
+                const venc = withExp.filter(d=>docExpiry(d.expires_at,lang)?.days < 0).length;
+                const pron = withExp.filter(d=>{const x=docExpiry(d.expires_at,lang); return x && x.days>=0 && x.days<=30;}).length;
+                return (
+                  <>
+                    <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+                      <div style={{...card,flex:1,minWidth:120}}>
+                        <div style={cardLbl}>{L("Documentos","Documents")}</div>
+                        <div style={cardVal}>{docs.length}</div>
+                      </div>
+                      <div style={{...card,flex:1,minWidth:120}}>
+                        <div style={cardLbl}>{L("Por vencer (30d)","Expiring (30d)")}</div>
+                        <div style={{...cardVal,color:pron?"#b45309":"#0f172a"}}>{pron}</div>
+                      </div>
+                      <div style={{...card,flex:1,minWidth:120}}>
+                        <div style={cardLbl}>{L("Vencidos","Expired")}</div>
+                        <div style={{...cardVal,color:venc?"#dc2626":"#16a34a"}}>{venc}</div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {docs.map(d=>{
+                        const ex = docExpiry(d.expires_at, lang);
+                        return (
+                          <div key={d.id} style={{background:"#fff",border:"1px solid #f1f5f9",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                            <div style={{flex:1,minWidth:160}}>
+                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{d.name}</div>
+                              <div style={{fontSize:11,color:"#94a3b8"}}>{d.category||"—"}</div>
+                            </div>
+                            {ex
+                              ? <span style={{fontSize:11,fontWeight:700,background:ex.bg,color:ex.color,borderRadius:20,padding:"4px 11px",whiteSpace:"nowrap"}}>{ex.label}</span>
+                              : <span style={{fontSize:11,color:"#cbd5e1",whiteSpace:"nowrap"}}>{L("Sin vencimiento","No expiry")}</span>}
+                            {d.file_url && (
+                              <a href={d.file_url} target="_blank" rel="noreferrer"
+                                style={{fontSize:12,fontWeight:700,color:"#2563eb",textDecoration:"none",whiteSpace:"nowrap"}}>
+                                {L("Ver PDF →","View PDF →")}
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()
         )}
 
         {/* GASTOS */}

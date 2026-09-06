@@ -1,6 +1,18 @@
 {
   "rewrites": [
-    { "source": "/checkin", "destination": "/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/checkin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/doc-reminders",
+      "schedule": "0 13 * * *"
+    }
   ]
 }

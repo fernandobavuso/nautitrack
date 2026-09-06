@@ -12,6 +12,7 @@ import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 import PartnerView from "./PartnerView.jsx";
 import PurchaseMeta, { EXPENSE_CATEGORIES, paymentSummary } from "./PaymentFields.jsx";
+import { docExpiry } from "./docs.js";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
@@ -3953,6 +3954,8 @@ function DocsPage({ vessel, user }) {
   const [selectedCat, setSelectedCat] = useState("Todos");
   const [newManualCat, setNewManualCat] = useState("Mecánica / Motores");
   const [showUpload, setShowUpload]   = useState(false);
+  const [hasExpiry, setHasExpiry]     = useState(false);   // ¿el documento vence?
+  const [expiryDate, setExpiryDate]   = useState("");
 
   // AI state
   const [aiQuery, setAiQuery]         = useState("");
@@ -4015,11 +4018,12 @@ function DocsPage({ vessel, user }) {
         file_url:  urlData.publicUrl,
         file_path: filePath,
         file_size: file.size,
+        expires_at: hasExpiry && expiryDate ? expiryDate : null,
       }).select().single();
 
       if (manual) setManuals(m => [manual, ...m]);
       setUploadProgress("✓ Manual subido exitosamente");
-      setTimeout(() => { setUploadProgress(""); setShowUpload(false); }, 2000);
+      setTimeout(() => { setUploadProgress(""); setShowUpload(false); setHasExpiry(false); setExpiryDate(""); }, 2000);
     } catch(err) {
       setUploadProgress("❌ Error: " + err.message);
     }
@@ -4127,10 +4131,29 @@ function DocsPage({ vessel, user }) {
             {showUpload&&(
               <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:4}}>
                 <div>
-                  <label style={s.label}>Categoría</label>
+                  <label style={s.label}>{lang==="es"?"Categoría":"Category"}</label>
                   <select value={newManualCat} onChange={e=>setNewManualCat(e.target.value)} style={s.input}>
                     {MANUAL_CATS.map(c=><option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+                <div style={{background:"#f8fafc",borderRadius:10,padding:"11px 13px"}}>
+                  <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
+                    <input type="checkbox" checked={hasExpiry} onChange={e=>setHasExpiry(e.target.checked)} style={{width:15,height:15}}/>
+                    <span style={{fontSize:13,fontWeight:600,color:"#334155"}}>
+                      {lang==="es"?"Este documento tiene fecha de vencimiento":"This document has an expiry date"}
+                    </span>
+                  </label>
+                  {hasExpiry && (
+                    <div style={{marginTop:10}}>
+                      <label style={{...s.label,fontSize:11}}>{lang==="es"?"¿Cuándo vence?":"When does it expire?"}</label>
+                      <input type="date" value={expiryDate} onChange={e=>setExpiryDate(e.target.value)} style={s.input}/>
+                      <div style={{fontSize:11,color:"#64748b",marginTop:6,lineHeight:1.5}}>
+                        {lang==="es"
+                          ? "Te avisaremos por WhatsApp 1 mes, 2 semanas y 3 días antes."
+                          : "We'll remind you on WhatsApp 1 month, 2 weeks and 3 days before."}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={s.label}>Archivo PDF</label>
@@ -4173,6 +4196,11 @@ function DocsPage({ vessel, user }) {
                     <div style={{marginBottom:6,display:"flex"}}><SystemIcon id={CAT_TO_SYS[m.category]||"casco"} size={26} color="#2563eb"/></div>
                     <div style={{fontSize:12,opacity:.7,letterSpacing:"0.06em",marginBottom:2}}>{m.category?.toUpperCase()}</div>
                   </div>
+                  {(()=>{ const ex=docExpiry(m.expires_at, lang); return ex ? (
+                    <div style={{background:ex.bg,color:ex.color,fontSize:11,fontWeight:700,padding:"6px 14px",borderBottom:"1px solid #f1f5f9"}}>
+                      {ex.label}
+                    </div>
+                  ) : null; })()}
                   <div style={{padding:"14px 16px"}}>
                     <div style={{fontSize:13,fontWeight:700,color:"#0f172a",marginBottom:4,lineHeight:1.4}}>{m.name}</div>
                     <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>{m.file_size ? fmtSize(m.file_size) : ""} · {new Date(m.created_at).toLocaleDateString("en-US")}</div>
