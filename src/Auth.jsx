@@ -213,12 +213,6 @@ export default function Auth({ onLogin, invite }) {
                         </div>
                       ))}
                       <button type="button" onClick={()=>setOwnerContacts([...ownerContacts,{name:"",phone:""}])} style={{fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:"4px 0",marginBottom:10}}>＋ Agregar otro dueño</button>
-                      <label style={s.label}>{lang==="es"?"¿Cada cuánto envías reporte al dueño?":"How often do you report to the owner?"}</label>
-                      <select value={reportFreq} onChange={e=>setReportFreq(e.target.value)} style={s.input}>
-                        <option value="semanal">{lang==="es"?"Cada semana":"Weekly"}</option>
-                        <option value="quincenal">{lang==="es"?"Cada 15 días":"Every 2 weeks"}</option>
-                        <option value="mensual">{lang==="es"?"Una vez al mes":"Monthly"}</option>
-                      </select>
                     </div>
                   )}
                 </div>
