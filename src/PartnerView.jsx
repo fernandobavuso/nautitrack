@@ -60,6 +60,13 @@ export default function PartnerView({ user, onLogout }) {
     setLog(lg||[]); setTasks(tk||[]); setExpenses(ex||[]); setDocs(dc||[]);
   })(); },[vid]);
 
+  const openDoc = async (d) => {
+    if (d.kind === "link") { window.open(d.url, "_blank"); return; }
+    if (!d.file_path) return;
+    const { data } = await supabase.storage.from("documentos").createSignedUrl(d.file_path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
   const vessel = vessels.find(v=>v.id===vid);
 
   // ── Filtrado compartido ────────────────────────────────────────────────────
@@ -392,10 +399,11 @@ export default function PartnerView({ user, onLogout }) {
 
         {/* DOCUMENTOS */}
         {tab==="docs" && (
-          docs.length===0
+          docs.filter(d=>d.kind!=="folder").length===0
             ? <div style={{padding:40,textAlign:"center",color:"#94a3b8",fontSize:13}}>{L("Sin documentos cargados.","No documents uploaded.")}</div>
             : (()=>{
-                const withExp = docs.filter(d=>d.expires_at);
+                const files = docs.filter(d=>d.kind!=="folder");
+                const withExp = files.filter(d=>d.expires_at);
                 const venc = withExp.filter(d=>docExpiry(d.expires_at,lang)?.days < 0).length;
                 const pron = withExp.filter(d=>{const x=docExpiry(d.expires_at,lang); return x && x.days>=0 && x.days<=30;}).length;
                 return (
@@ -403,7 +411,7 @@ export default function PartnerView({ user, onLogout }) {
                     <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
                       <div style={{...card,flex:1,minWidth:120}}>
                         <div style={cardLbl}>{L("Documentos","Documents")}</div>
-                        <div style={cardVal}>{docs.length}</div>
+                        <div style={cardVal}>{files.length}</div>
                       </div>
                       <div style={{...card,flex:1,minWidth:120}}>
                         <div style={cardLbl}>{L("Por vencer (30d)","Expiring (30d)")}</div>
@@ -415,23 +423,21 @@ export default function PartnerView({ user, onLogout }) {
                       </div>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {docs.map(d=>{
+                      {files.map(d=>{
                         const ex = docExpiry(d.expires_at, lang);
                         return (
                           <div key={d.id} style={{background:"#fff",border:"1px solid #f1f5f9",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                             <div style={{flex:1,minWidth:160}}>
                               <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{d.title}</div>
-                              <div style={{fontSize:11,color:"#94a3b8"}}>{d.folder||"—"}</div>
+                              <div style={{fontSize:11,color:"#94a3b8"}}>{[d.folder, d.kind==="link"?L("Link externo","External link"):null].filter(Boolean).join(" · ")||"—"}</div>
                             </div>
                             {ex
                               ? <span style={{fontSize:11,fontWeight:700,background:ex.bg,color:ex.color,borderRadius:20,padding:"4px 11px",whiteSpace:"nowrap"}}>{ex.label}</span>
                               : <span style={{fontSize:11,color:"#cbd5e1",whiteSpace:"nowrap"}}>{L("Sin vencimiento","No expiry")}</span>}
-                            {d.file_url && (
-                              <a href={d.file_url} target="_blank" rel="noreferrer"
-                                style={{fontSize:12,fontWeight:700,color:"#2563eb",textDecoration:"none",whiteSpace:"nowrap"}}>
-                                {L("Ver PDF →","View PDF →")}
-                              </a>
-                            )}
+                            <button onClick={()=>openDoc(d)}
+                              style={{background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,color:"#2563eb",whiteSpace:"nowrap",padding:0}}>
+                              {d.kind==="link" ? L("Abrir →","Open →") : L("Ver documento →","View document →")}
+                            </button>
                           </div>
                         );
                       })}
