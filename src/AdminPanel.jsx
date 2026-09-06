@@ -20,6 +20,31 @@ export function isAdmin(user) {
 export default function AdminPanel({ user, onClose, asPage }) {
   const { t: T } = useLang();
   const [tab, setTab] = useState(asPage ? "resumen" : "pedidos");
+  const [codes, setCodes]     = useState([]);
+  const [newCode, setNewCode] = useState({ code:"", note:"", max_uses:"" });
+  const loadCodes = async () => {
+    const { data } = await supabase.from("beta_codes").select("*").order("created_at",{ascending:false});
+    setCodes(data||[]);
+  };
+  useEffect(()=>{ if (tab==="beta") loadCodes(); }, [tab]);
+
+  const addCode = async () => {
+    const c = newCode.code.trim().toUpperCase();
+    if (!c) return;
+    const { error } = await supabase.from("beta_codes").insert({
+      code: c, note: newCode.note.trim() || null,
+      max_uses: newCode.max_uses!=="" ? Number(newCode.max_uses) : null,
+      active: true, uses: 0,
+    });
+    if (error) { alert("Error: "+error.message); return; }
+    setNewCode({ code:"", note:"", max_uses:"" }); loadCodes();
+  };
+
+  const toggleCode = async (c) => {
+    await supabase.from("beta_codes").update({ active: !c.active }).eq("code", c.code);
+    loadCodes();
+  };
+
   const [sales, setSales] = useState([]);
   const [stores, setStores] = useState([]);
   const [vessels, setVessels] = useState([]);
@@ -205,31 +230,6 @@ export default function AdminPanel({ user, onClose, asPage }) {
     : <Overlay onClose={onClose}>{children}</Overlay>;
 
   if (loading) return wrap(<div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando panel...</div>);
-
-  const [codes, setCodes]     = useState([]);
-  const [newCode, setNewCode] = useState({ code:"", note:"", max_uses:"" });
-  const loadCodes = async () => {
-    const { data } = await supabase.from("beta_codes").select("*").order("created_at",{ascending:false});
-    setCodes(data||[]);
-  };
-  useEffect(()=>{ if (tab==="beta") loadCodes(); }, [tab]);
-
-  const addCode = async () => {
-    const c = newCode.code.trim().toUpperCase();
-    if (!c) return;
-    const { error } = await supabase.from("beta_codes").insert({
-      code: c, note: newCode.note.trim() || null,
-      max_uses: newCode.max_uses!=="" ? Number(newCode.max_uses) : null,
-      active: true, uses: 0,
-    });
-    if (error) { alert("Error: "+error.message); return; }
-    setNewCode({ code:"", note:"", max_uses:"" }); loadCodes();
-  };
-
-  const toggleCode = async (c) => {
-    await supabase.from("beta_codes").update({ active: !c.active }).eq("code", c.code);
-    loadCodes();
-  };
 
   const TABS = [
     {k:"resumen",l:T("adm.summary")},
