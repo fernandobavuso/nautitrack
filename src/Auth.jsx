@@ -246,7 +246,7 @@ export default function Auth({ onLogin, invite }) {
             <div>
               <label style={s.label}>{L("Código de invitación","Invite code")}</label>
               <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
-                placeholder={L("Ej: CARIVE2026","e.g. CARIVE2026")}
+                placeholder={L("Escribe tu código","Enter your code")}
                 style={{...s.input,letterSpacing:"0.08em",fontWeight:600}}
                 onKeyDown={e=>e.key==="Enter"&&handleRegister()}/>
               <div style={{fontSize:11,color:"#94a3b8",marginTop:5,lineHeight:1.5}}>
