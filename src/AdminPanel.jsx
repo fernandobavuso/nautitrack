@@ -206,6 +206,31 @@ export default function AdminPanel({ user, onClose, asPage }) {
 
   if (loading) return wrap(<div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>Cargando panel...</div>);
 
+  const [codes, setCodes]     = useState([]);
+  const [newCode, setNewCode] = useState({ code:"", note:"", max_uses:"" });
+  const loadCodes = async () => {
+    const { data } = await supabase.from("beta_codes").select("*").order("created_at",{ascending:false});
+    setCodes(data||[]);
+  };
+  useEffect(()=>{ if (tab==="beta") loadCodes(); }, [tab]);
+
+  const addCode = async () => {
+    const c = newCode.code.trim().toUpperCase();
+    if (!c) return;
+    const { error } = await supabase.from("beta_codes").insert({
+      code: c, note: newCode.note.trim() || null,
+      max_uses: newCode.max_uses!=="" ? Number(newCode.max_uses) : null,
+      active: true, uses: 0,
+    });
+    if (error) { alert("Error: "+error.message); return; }
+    setNewCode({ code:"", note:"", max_uses:"" }); loadCodes();
+  };
+
+  const toggleCode = async (c) => {
+    await supabase.from("beta_codes").update({ active: !c.active }).eq("code", c.code);
+    loadCodes();
+  };
+
   const TABS = [
     {k:"resumen",l:T("adm.summary")},
     {k:"usuarios",l:T("adm.accounts")},
@@ -214,6 +239,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
     {k:"ingresos",l:T("adm.revenue")},
     {k:"tiendas",l:T("adm.commissions")},
     {k:"planes",l:T("adm.plans")},
+    {k:"beta",l:"Beta"},
   ];
 
   // Prueba de envío de WhatsApp con la plantilla real
@@ -554,6 +580,59 @@ export default function AdminPanel({ user, onClose, asPage }) {
         )}
 
         {/* PLANES */}
+        {tab==="beta"&&(
+          <div style={{padding:asPage?"18px 0":"18px 22px"}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>Códigos de invitación</div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:2,marginBottom:14}}>
+              Durante la beta, crear una cuenta nueva exige un código. Quien llega por link de invitación (capitán, socio, co-gestor) no lo necesita.
+            </div>
+
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",background:"#f8fafc",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+              <div style={{flex:"1 1 140px"}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>Código</label>
+                <input value={newCode.code} onChange={e=>setNewCode({...newCode,code:e.target.value.toUpperCase()})}
+                  placeholder="CARIVE2026" style={{width:"100%",boxSizing:"border-box",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,letterSpacing:"0.08em",fontWeight:600}}/>
+              </div>
+              <div style={{flex:"2 1 180px"}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>Para quién (nota)</label>
+                <input value={newCode.note} onChange={e=>setNewCode({...newCode,note:e.target.value})}
+                  placeholder="Demo cliente americano" style={{width:"100%",boxSizing:"border-box",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13}}/>
+              </div>
+              <div style={{flex:"0 0 90px"}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>Máx. usos</label>
+                <input type="number" min="1" value={newCode.max_uses} onChange={e=>setNewCode({...newCode,max_uses:e.target.value})}
+                  placeholder="∞" style={{width:"100%",boxSizing:"border-box",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13}}/>
+              </div>
+              <button onClick={addCode} style={{padding:"9px 16px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                Crear
+              </button>
+            </div>
+
+            {codes.length===0
+              ? <div style={{padding:"30px 0",textAlign:"center",color:"#94a3b8",fontSize:13}}>Aún no hay códigos. Crea el primero arriba.</div>
+              : <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                  {codes.map(c=>(
+                    <div key={c.code} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 13px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10,flexWrap:"wrap"}}>
+                      <div style={{fontSize:14,fontWeight:800,color:"#0f172a",letterSpacing:"0.08em",minWidth:120}}>{c.code}</div>
+                      <div style={{flex:1,minWidth:140}}>
+                        <div style={{fontSize:12,color:"#64748b"}}>{c.note||"—"}</div>
+                        <div style={{fontSize:11,color:"#94a3b8"}}>
+                          {c.uses||0} {c.max_uses!=null?`/ ${c.max_uses}`:""} {(c.uses||0)===1?"uso":"usos"}
+                        </div>
+                      </div>
+                      <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:20,
+                        background:c.active?"#dcfce7":"#f1f5f9",color:c.active?"#166534":"#94a3b8"}}>
+                        {c.active?"Activo":"Inactivo"}
+                      </span>
+                      <button onClick={()=>toggleCode(c)} style={{background:"none",border:"none",cursor:"pointer",color:c.active?"#dc2626":"#16a34a",fontSize:12,fontWeight:700}}>
+                        {c.active?"Desactivar":"Activar"}
+                      </button>
+                    </div>
+                  ))}
+                </div>}
+          </div>
+        )}
+
         {tab==="planes"&&(
           <div>
             <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>Activa o cambia el plan de cada embarcación cuando un cliente te pague.</div>

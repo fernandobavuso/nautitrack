@@ -6,6 +6,9 @@ import { useLang } from "./i18n.jsx";
 
 export default function Auth({ onLogin, invite }) {
   const { t, lang, setLang } = useLang();
+  const L = (es,en)=>lang==="en"?en:es;
+  const [betaCode, setBetaCode] = useState("");
+  const inviteToken = !!invite;   // quien llega por link de invitación no necesita código
   const [mode, setMode]           = useState("login");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
@@ -53,8 +56,23 @@ export default function Auth({ onLogin, invite }) {
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPwd || !firstName || !lastName) { setError(t("auth.fillAll")); return; }
-    if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
-    if (password !== confirmPwd) { setError("Las contraseñas no coinciden"); return; }
+    if (password.length < 6) { setError(L("La contraseña debe tener al menos 6 caracteres","Password must be at least 6 characters")); return; }
+    if (password !== confirmPwd) { setError(L("Las contraseñas no coinciden","Passwords don't match")); return; }
+
+    // Beta cerrada: sin código de invitación no se crean cuentas nuevas. Quien
+    // llega por un link de invitación (capitán, socio, co-gestor) queda exento.
+    if (!inviteToken) {
+      const code = betaCode.trim().toUpperCase();
+      if (!code) { setError(L("Necesitas un código de invitación para crear una cuenta.","You need an invite code to create an account.")); return; }
+      const { data: bc, error: bcErr } = await supabase.from("beta_codes")
+        .select("code, active, max_uses, uses").ilike("code", code).maybeSingle();
+      if (bcErr) { setError(L("No se pudo validar el código: ","Couldn't validate the code: ")+bcErr.message); return; }
+      if (!bc || !bc.active) { setError(L("Código de invitación inválido.","Invalid invite code.")); return; }
+      if (bc.max_uses != null && Number(bc.uses||0) >= Number(bc.max_uses)) {
+        setError(L("Ese código ya alcanzó su límite de usos.","That code has reached its usage limit.")); return;
+      }
+    }
+
     setLoading(true); setError("");
     const { data, error: err } = await supabase.auth.signUp({ email, password });
     if (err) { setError(err.message); setLoading(false); return; }
@@ -69,6 +87,10 @@ export default function Auth({ onLogin, invite }) {
           profileData.managed_owners = ownerContacts.filter(o=>o.name.trim()||o.phone.trim());
           profileData.report_freq = reportFreq;
         }
+      }
+      if (!inviteToken && betaCode.trim()) {
+        profileData.beta_code = betaCode.trim().toUpperCase();
+        await supabase.rpc("bump_beta_code", { p_code: betaCode.trim().toUpperCase() }).then(()=>{}, ()=>{});
       }
       await supabase.from("profiles").upsert(profileData);
       // Si el dueño indicó un tripulante a vincular, lo guardamos como pendiente para enlazar luego
@@ -218,6 +240,18 @@ export default function Auth({ onLogin, invite }) {
               <label style={s.label}>{t("auth.confirmPwd")}</label>
               <input type="password" value={confirmPwd} onChange={e=>setConfirmPwd(e.target.value)} placeholder="••••••••" style={s.input}
                 onKeyDown={e=>e.key==="Enter"&&handleRegister()}/>
+            </div>
+          )}
+          {mode==="register" && !inviteToken && (
+            <div>
+              <label style={s.label}>{L("Código de invitación","Invite code")}</label>
+              <input value={betaCode} onChange={e=>setBetaCode(e.target.value.toUpperCase())}
+                placeholder={L("Ej: CARIVE2026","e.g. CARIVE2026")}
+                style={{...s.input,letterSpacing:"0.08em",fontWeight:600}}
+                onKeyDown={e=>e.key==="Enter"&&handleRegister()}/>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:5,lineHeight:1.5}}>
+                {L("Carive está en beta cerrada. Si no tienes un código, escríbenos a info@carive.co","Carive is in closed beta. If you don't have a code, email us at info@carive.co")}
+              </div>
             </div>
           )}
 
