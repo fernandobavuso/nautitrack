@@ -17,8 +17,6 @@ export default function Auth({ onLogin, invite }) {
   const [lastName, setLastName]   = useState("");
   const [userRole, setUserRole]   = useState("owner"); // 'owner' | 'crew' | 'store'
   const [boatRole, setBoatRole]   = useState("");      // '' | 'dueno' | 'gerente'
-  const [ownerContacts, setOwnerContacts] = useState([{ name:"", phone:"" }]); // dueños que reporta el gerente
-  const [reportFreq, setReportFreq] = useState("semanal"); // semanal / quincenal / mensual
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
   const [success, setSuccess]     = useState("");
@@ -82,8 +80,7 @@ export default function Auth({ onLogin, invite }) {
       if (userRole==="owner") {
         profileData.is_manager = isManager;
         if (isManager) {
-          profileData.managed_owners = ownerContacts.filter(o=>o.name.trim()||o.phone.trim());
-          profileData.report_freq = reportFreq;
+
         }
       }
       if (!inviteToken && betaCode.trim()) {
@@ -181,18 +178,6 @@ export default function Auth({ onLogin, invite }) {
                   {/* DUEÑO → ¿tiene tripulación? */}
 
                   {/* GERENTE → datos de los dueños + frecuencia de reporte */}
-                  {boatRole==="gerente"&&(
-                    <div>
-                      <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>{lang==="es"?"Como gerente, gestionas barcos de otros. Agrega los dueños a quienes les reportarás.":"As a manager, you manage other people's boats. Add the owners you'll report to."}</div>
-                      {ownerContacts.map((oc,i)=>(
-                        <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
-                          <input value={oc.name} onChange={e=>{const n=[...ownerContacts];n[i].name=e.target.value;setOwnerContacts(n);}} placeholder={lang==="es"?"Nombre del dueño":"Owner name"} style={{...s.input,flex:1}}/>
-                          <input value={oc.phone} onChange={e=>{const n=[...ownerContacts];n[i].phone=e.target.value;setOwnerContacts(n);}} placeholder={lang==="es"?"Teléfono":"Phone"} style={{...s.input,flex:1}}/>
-                        </div>
-                      ))}
-                      <button type="button" onClick={()=>setOwnerContacts([...ownerContacts,{name:"",phone:""}])} style={{fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:"4px 0",marginBottom:10}}>＋ Agregar otro dueño</button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
