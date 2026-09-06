@@ -17,8 +17,6 @@ export default function Auth({ onLogin, invite }) {
   const [lastName, setLastName]   = useState("");
   const [userRole, setUserRole]   = useState("owner"); // 'owner' | 'crew' | 'store'
   const [boatRole, setBoatRole]   = useState("");      // '' | 'dueno' | 'gerente'
-  const [hasCrew, setHasCrew]     = useState("");      // '' | 'si' | 'no'
-  const [linkContact, setLinkContact] = useState("");  // email o teléfono del tripulante a vincular
   const [ownerContacts, setOwnerContacts] = useState([{ name:"", phone:"" }]); // dueños que reporta el gerente
   const [reportFreq, setReportFreq] = useState("semanal"); // semanal / quincenal / mensual
   const [loading, setLoading]     = useState(false);
@@ -94,9 +92,7 @@ export default function Auth({ onLogin, invite }) {
       }
       await supabase.from("profiles").upsert(profileData);
       // Si el dueño indicó un tripulante a vincular, lo guardamos como pendiente para enlazar luego
-      if (userRole==="owner" && boatRole==="dueno" && hasCrew==="si" && linkContact.trim()) {
-        localStorage.setItem("nt_link_crew", linkContact.trim());
-      }
+
       console.log("[Carive] Cuenta creada con role:", userRole, "manager:", isManager);
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
       if (loginData?.user) { onLogin({...loginData.user, role: userRole, full_name: `${firstName} ${lastName}`.trim()}); return; }
@@ -183,24 +179,6 @@ export default function Auth({ onLogin, invite }) {
                   </div>
 
                   {/* DUEÑO → ¿tiene tripulación? */}
-                  {boatRole==="dueno"&&(
-                    <div>
-                      <label style={s.label}>{t("auth.crewLabel")}</label>
-                      <div style={{display:"flex",gap:8,marginBottom:hasCrew?12:0}}>
-                        <button type="button" onClick={()=>setHasCrew("si")} style={pill(hasCrew==="si")}>{t("auth.haveCrew")}</button>
-                        <button type="button" onClick={()=>setHasCrew("no")} style={pill(hasCrew==="no")}>{t("auth.noCrew")}</button>
-                      </div>
-                      {hasCrew==="si"&&(
-                        <div>
-                          <div style={{fontSize:11,color:"#64748b",marginBottom:6}}>{lang==="es"?"Vincula a tu tripulante por su email o teléfono. Si aún no tiene cuenta, podrás invitarlo después.":"Link your crew member by email or phone. If they don't have an account yet, you can invite them later."}</div>
-                          <input value={linkContact} onChange={e=>setLinkContact(e.target.value)} placeholder={lang==="es"?"Email o teléfono del tripulante":"Crew member email or phone"} style={s.input}/>
-                        </div>
-                      )}
-                      {hasCrew==="no"&&(
-                        <div style={{fontSize:11,color:"#2563eb",background:"#eff6ff",padding:"10px 12px",borderRadius:8}}>{lang==="es"?"Dentro de la app puedes conseguir tripulación: publica una búsqueda y te llegarán capitanes que califican en tu zona.":"Inside the app you can find crew: post a search and qualified captains in your area will reach out."}</div>
-                      )}
-                    </div>
-                  )}
 
                   {/* GERENTE → datos de los dueños + frecuencia de reporte */}
                   {boatRole==="gerente"&&(
