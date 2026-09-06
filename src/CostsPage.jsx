@@ -19,7 +19,9 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [period, setPeriod] = useState("month"); // month / year / all
+  const [period, setPeriod] = useState("month"); // month / year / all / range
+  const [rFrom, setRFrom]   = useState("");
+  const [rTo, setRTo]       = useState("");
   const [showHelp, setShowHelp] = useState(true);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({
@@ -173,6 +175,12 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
   // Filtrar por periodo
   const now = new Date();
   const filtered = expenses.filter(e => {
+    if (period==="range") {
+      const x = String(e.expense_date||"").slice(0,10);
+      if (rFrom && x < rFrom) return false;
+      if (rTo   && x > rTo)   return false;
+      return true;
+    }
     if (period==="all") return true;
     const d = new Date(e.expense_date);
     if (period==="month") return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
@@ -223,14 +231,29 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
       )}
 
       {/* Selector de periodo */}
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {[{k:"month",l:t("fin.thisMonth")},{k:"year",l:t("fin.thisYear")},{k:"all",l:t("tasks.all")}].map(p=>(
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+        {[{k:"month",l:t("fin.thisMonth")},{k:"year",l:t("fin.thisYear")},{k:"all",l:t("tasks.all")},{k:"range",l:L("Rango","Range")}].map(p=>(
           <button key={p.k} onClick={()=>setPeriod(p.k)} style={{
             padding:"6px 14px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",border:"1.5px solid",
             background:period===p.k?"#eff6ff":"#fff", borderColor:period===p.k?"#2563eb":"#e2e8f0",
             color:period===p.k?"#2563eb":"#64748b",
           }}>{p.l}</button>
         ))}
+        {period==="range" && (
+          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+            <input type="date" value={rFrom} onChange={e=>setRFrom(e.target.value)} title={L("Desde","From")}
+              style={{padding:"5px 9px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#334155"}}/>
+            <span style={{fontSize:12,color:"#94a3b8"}}>→</span>
+            <input type="date" value={rTo} min={rFrom||undefined} onChange={e=>setRTo(e.target.value)} title={L("Hasta","To")}
+              style={{padding:"5px 9px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#334155"}}/>
+            {(rFrom||rTo) && (
+              <button onClick={()=>{setRFrom("");setRTo("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:700}}>
+                {L("Limpiar","Clear")}
+              </button>
+            )}
+            <span style={{fontSize:11,color:"#94a3b8"}}>{filtered.length} {L("gastos","expenses")}</span>
+          </div>
+        )}
       </div>
 
       {/* Total */}
