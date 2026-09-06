@@ -55,7 +55,7 @@ export default function PartnerView({ user, onLogout }) {
       supabase.from("log_entries").select("*").eq("vessel_id", vid).order("date",{ascending:false}),
       supabase.from("tasks").select("*").eq("vessel_id", vid).order("next_due"),
       supabase.from("expenses").select("*").eq("vessel_id", vid).order("expense_date",{ascending:false}),
-      supabase.from("manuals").select("*").eq("vessel_id", vid).order("expires_at",{ascending:true,nullsFirst:false}),
+      supabase.from("vessel_documents").select("*").eq("vessel_id", vid).order("expires_at",{ascending:true,nullsFirst:false}),
     ]);
     setLog(lg||[]); setTasks(tk||[]); setExpenses(ex||[]); setDocs(dc||[]);
   })(); },[vid]);
@@ -420,8 +420,8 @@ export default function PartnerView({ user, onLogout }) {
                         return (
                           <div key={d.id} style={{background:"#fff",border:"1px solid #f1f5f9",borderRadius:10,padding:"11px 14px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                             <div style={{flex:1,minWidth:160}}>
-                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{d.name}</div>
-                              <div style={{fontSize:11,color:"#94a3b8"}}>{d.category||"—"}</div>
+                              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{d.title}</div>
+                              <div style={{fontSize:11,color:"#94a3b8"}}>{d.folder||"—"}</div>
                             </div>
                             {ex
                               ? <span style={{fontSize:11,fontWeight:700,background:ex.bg,color:ex.color,borderRadius:20,padding:"4px 11px",whiteSpace:"nowrap"}}>{ex.label}</span>

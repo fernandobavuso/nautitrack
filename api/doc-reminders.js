@@ -44,8 +44,8 @@ export default async function handler(req, res) {
   // Documentos con vencimiento en los próximos 30 días (o ya vencidos hoy)
   const limit = new Date(t0.getTime() + 30 * 86400000).toISOString().slice(0, 10);
   const { data: docs, error } = await supabase
-    .from('manuals')
-    .select('id, name, category, expires_at, vessel_id, owner_id, reminders_sent')
+    .from('vessel_documents')
+    .select('id, title, folder, expires_at, vessel_id, owner_id, reminders_sent')
     .not('expires_at', 'is', null)
     .lte('expires_at', limit)
     .gte('expires_at', today);
@@ -75,15 +75,15 @@ export default async function handler(req, res) {
     const fecha = new Date(d.expires_at + 'T00:00:00').toLocaleDateString('en-US');
     const body =
       `*Documento por vencer*\n\n` +
-      `${d.name}${d.category ? ` (${d.category})` : ''} de *${vessel?.name || 'tu embarcación'}* vence ${cuando}: ${fecha}.\n\n` +
+      `${d.title}${d.folder ? ` (${d.folder})` : ''} de *${vessel?.name || 'tu embarcación'}* vence ${cuando}: ${fecha}.\n\n` +
       `Renuévalo antes de esa fecha para mantener el barco en regla.`;
 
     const r = await sendWA(phone, body);
     if (r.ok) {
-      await supabase.from('manuals')
+      await supabase.from('vessel_documents')
         .update({ reminders_sent: [...already, hito] })
         .eq('id', d.id);
-      sent.push({ doc: d.name, days, vessel: vessel?.name });
+      sent.push({ doc: d.title, days, vessel: vessel?.name });
     }
   }
 

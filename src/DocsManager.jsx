@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { docExpiry } from "./docs.js";
 
 // Mini "drive" de documentos por embarcación: carpetas + subir archivos reales
 // o guardar links. Persiste en la tabla vessel_documents + Storage bucket "documentos".
@@ -18,6 +19,9 @@ export default function DocsManager({ vessel, user }) {
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newFolder, setNewFolder] = useState("");
+  const [hasExpiry, setHasExpiry] = useState(false);
+  const [expiryDate, setExpiryDate] = useState("");
+  const [pendingFile, setPendingFile] = useState(null);   // archivo elegido, a la espera de confirmar
 
   useEffect(() => { if (vessel?.id) load(); }, [vessel?.id]);
 
@@ -40,7 +44,16 @@ export default function DocsManager({ vessel, user }) {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) { flash("El archivo supera 50MB"); return; }
+    if (file.size > 50 * 1024 * 1024) { flash(L("El archivo supera 50MB","File exceeds 50MB")); return; }
+    // Antes de subir se pregunta por el vencimiento (seguros, registros, etc.)
+    setPendingFile(file); setNewTitle(file.name.replace(/\.[^.]+$/, ""));
+    setHasExpiry(false); setExpiryDate("");
+    e.target.value = "";
+  };
+
+  const confirmUpload = async () => {
+    const file = pendingFile;
+    if (!file) return;
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
@@ -51,10 +64,11 @@ export default function DocsManager({ vessel, user }) {
         vessel_id: vessel.id, owner_id: vessel.owner_id || user?.id, folder: currentFolder,
         title: newTitle.trim() || file.name, kind: "file",
         file_path: path, file_size: file.size, mime_type: file.type,
+        expires_at: hasExpiry && expiryDate ? expiryDate : null,
       });
       if (insErr) throw insErr;
       flash("Documento cargado");
-      setMode(null); setNewTitle("");
+      setMode(null); setNewTitle(""); setHasExpiry(false); setExpiryDate(""); setPendingFile(null);
       load();
     } catch (err) {
       flash("Error: " + err.message);
@@ -138,6 +152,50 @@ export default function DocsManager({ vessel, user }) {
         </div>
       </div>
 
+      {/* Confirmar subida: título y vencimiento */}
+      {pendingFile && (
+        <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:12,padding:"14px 16px",marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:800,color:"#0369a1",marginBottom:2}}>{L("Subir documento","Upload document")}</div>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {pendingFile.name} · {(pendingFile.size/1024/1024).toFixed(1)} MB
+          </div>
+
+          <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Título","Title")}</label>
+          <input value={newTitle} onChange={e=>setNewTitle(e.target.value)}
+            style={{width:"100%",boxSizing:"border-box",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,marginBottom:12}}/>
+
+          <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",background:"#fff",borderRadius:9,padding:"10px 12px"}}>
+            <input type="checkbox" checked={hasExpiry} onChange={e=>setHasExpiry(e.target.checked)} style={{width:15,height:15}}/>
+            <span style={{fontSize:13,fontWeight:600,color:"#334155"}}>
+              {L("¿Este documento tiene fecha de vencimiento?","Does this document have an expiry date?")}
+            </span>
+          </label>
+
+          {hasExpiry && (
+            <div style={{marginTop:10,background:"#fff",borderRadius:9,padding:"11px 12px"}}>
+              <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("¿Cuándo vence?","When does it expire?")}</label>
+              <input type="date" value={expiryDate} onChange={e=>setExpiryDate(e.target.value)}
+                style={{width:"100%",boxSizing:"border-box",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13}}/>
+              <div style={{fontSize:11,color:"#64748b",marginTop:7,lineHeight:1.5}}>
+                {L("Te avisaremos por WhatsApp 1 mes, 2 semanas y 3 días antes del vencimiento.",
+                   "We'll remind you on WhatsApp 1 month, 2 weeks and 3 days before it expires.")}
+              </div>
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:8,marginTop:12}}>
+            <button onClick={()=>{setPendingFile(null);setNewTitle("");setHasExpiry(false);setExpiryDate("");}}
+              style={{flex:1,padding:"10px",border:"1.5px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#334155",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+              {L("Cancelar","Cancel")}
+            </button>
+            <button onClick={confirmUpload} disabled={uploading || (hasExpiry && !expiryDate)}
+              style={{flex:1,padding:"10px",border:"none",borderRadius:9,background:(uploading||(hasExpiry&&!expiryDate))?"#cbd5e1":"linear-gradient(120deg,#2563eb,#0ea5e9)",color:"#fff",fontSize:13,fontWeight:700,cursor:uploading?"default":"pointer"}}>
+              {uploading ? L("Subiendo...","Uploading...") : L("Subir","Upload")}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Panel nueva carpeta */}
       {mode==="folder" && (
         <div style={panel}>
@@ -192,7 +250,12 @@ export default function DocsManager({ vessel, user }) {
           <div key={doc.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:"#fff",border:"1px solid #e2e8f0",borderRadius:10}}>
             <span style={{flexShrink:0,color:doc.kind==="link"?"#0ea5e9":"#2563eb"}}>{doc.kind==="link"?<LinkIcon/>:<FileIcon/>}</span>
             <div style={{flex:1,minWidth:0}}>
-              <button onClick={()=>openDoc(doc)} style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left"}}>{doc.title}</button>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>openDoc(doc)} style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left"}}>{doc.title}</button>
+                {(()=>{ const ex=docExpiry(doc.expires_at, lang); return ex ? (
+                  <span style={{fontSize:10,fontWeight:700,background:ex.bg,color:ex.color,borderRadius:20,padding:"2px 9px",whiteSpace:"nowrap"}}>{ex.label}</span>
+                ) : null; })()}
+              </div>
               <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{doc.kind==="link"?"Link externo":formatSize(doc.file_size)}{doc.created_at?` · ${new Date(doc.created_at).toLocaleDateString("en-US")}`:""}</div>
             </div>
             <button onClick={()=>openDoc(doc)} style={{...btnOutline,padding:"5px 12px",fontSize:11}}>{L("Abrir","Open")}</button>
