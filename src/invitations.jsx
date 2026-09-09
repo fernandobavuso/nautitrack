@@ -7,13 +7,22 @@ function genToken() {
 
 // Crea una invitación y devuelve el link para compartir.
 // kind: 'manager' | 'captain' | 'crew'
-export async function createInvitation({ kind, inviter, vessel, invitedEmail, invitedName, roleDetail }) {
+export async function createInvitation({
+  // El nombre puede no venir cargado en el objeto de sesión: se busca en el perfil.
+  let nameOf = inviter?.full_name || inviter?.first_name || null;
+  if (!nameOf && inviter?.id) {
+    const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", inviter.id).maybeSingle();
+    nameOf = prof?.full_name || null;
+  }
+  if (nameOf && nameOf.includes("@")) nameOf = null;   // nunca un correo
+ kind, inviter, vessel, invitedEmail, invitedName, roleDetail }) {
   const token = genToken();
   const { error } = await supabase.from("invitations").insert({
     token,
     kind,
     inviter_id: inviter.id,
-    inviter_name: inviter.full_name || inviter.email,
+    // Nunca el correo: es dato personal y la invitación puede reenviarse a cualquiera.
+    inviter_name: nameOf,
     vessel_id: vessel?.id || null,
     vessel_name: vessel?.name || null,
     invited_email: (invitedEmail || "").trim().toLowerCase() || null,
@@ -93,7 +102,9 @@ export async function acceptInvitation(inv, newUser) {
 export function invitationCopy(inv, lang = "es") {
   const en = lang === "en";
   if (!inv) return { title: "", body: "" };
-  const who = inv.inviter_name || (en ? "Someone" : "Alguien");
+  // Invitaciones viejas pueden traer un correo guardado como nombre: no se muestra.
+  const raw = inv.inviter_name || "";
+  const who = (!raw || raw.includes("@")) ? (en ? "Someone" : "Alguien") : raw;
   const boat = inv.vessel_name || (en ? "a vessel" : "una embarcación");
 
   if (inv.kind === "manager") {
