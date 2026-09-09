@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { logTypeL } from "./App.jsx";
+import { systemL } from "./docs.js";
 import { accountHasFleet } from "./plans.jsx";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DIAS = ["DOM","LUN","MAR","MIÉ","JUE","VIE","SÁB"];
+const DAYS_EN = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
 const STATUS_COLOR = {
   overdue: "#ef4444", due: "#f59e0b", ok: "#22c55e", done: "#64748b",
@@ -76,8 +80,8 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       if (shiftTaskIds.has(String(t.id))) return; // ya se muestra como turno
       events.push({
         kind: "task", date: t.nextDue.slice(0, 10),
-        title: t.name || "Tarea",
-        sub: [fleetMode ? vName : null, t.system, t.equipment].filter(Boolean).join(" · "),
+        title: t.name || L("Tarea","Task"),
+        sub: [fleetMode ? vName : null, systemL(t.system, lang), t.equipment].filter(Boolean).join(" · "),
         vesselName: vName,
         color: fleetMode ? vesselColor(vName) : (STATUS_COLOR[t.status] || "#2563eb"),
         dot: STATUS_COLOR[t.status] || "#2563eb", raw: t,
@@ -106,7 +110,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       const pending = le.type==="Salida" && !le.arr_time;
       events.push({
         kind: "log", date: String(le.date).slice(0, 10),
-        title: `${le.type}${pending ? " ⏳" : ""}`,
+        title: `${logTypeL(le.type, lang)}${pending ? (lang==="en"?" · open":" · pendiente") : ""}`,
         sub: [fleetMode ? vName : null, le.type==="Salida" ? le.dest : (le.item || (le.description||"").slice(0,40)), le.performed_by].filter(Boolean).join(" · "),
         vesselName: vName,
         color: fleetMode ? vesselColor(vName) : (LOG_COLOR[le.type] || "#64748b"),
@@ -120,7 +124,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       const cancelled = tp.status === "cancelled";
       events.push({
         kind: "trip", date: tp.trip_date.slice(0, 10),
-        title: `Day trip${cancelled ? " (cancelado)" : ""}`,
+        title: `Day trip${cancelled ? (lang==="en"?" (cancelled)":" (cancelado)") : ""}`,
         sub: [fleetMode ? ((vessels||[]).find(v=>v.id===tp.vessel_id)?.name) : null, tp.trip_type, tp.crew_role].filter(Boolean).join(" · "),
         color: cancelled ? "#94a3b8" : (fleetMode ? vesselColor((vessels||[]).find(v=>v.id===tp.vessel_id)?.name) : "#0ea5e9"),
         dot: cancelled ? "#94a3b8" : "#0ea5e9", raw: tp,
@@ -159,7 +163,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <button onClick={goToday} style={btnGhost}>{L("Hoy","Today")}</button>
           <button onClick={prevMonth} style={btnIcon}>←</button>
-          <div style={{fontSize:15,fontWeight:700,color:"#0f172a",minWidth:130,textAlign:"center"}}>{MESES[month]} {year}</div>
+          <div style={{fontSize:15,fontWeight:700,color:"#0f172a",minWidth:130,textAlign:"center"}}>{(lang==="en"?MONTHS_EN:MESES)[month]} {year}</div>
           <button onClick={nextMonth} style={btnIcon}>→</button>
         </div>
       </div>
@@ -186,7 +190,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
 
       {/* Filtro */}
       <div style={{display:"flex",gap:8,marginBottom:14}}>
-        {[{k:"todo",l:L("Todo","All")},{k:"tareas",l:L("Tareas","Tasks")},{k:"bitacora",l:L("Bitácora","Logbook")},{k:"turnos",l:L("Turnos","Shifts")},{k:"viajes",l:"Day trips"}].map(f=>(
+        {[{k:"todo",l:L("Todo","All")},{k:"tareas",l:L("Tareas","Tasks")},{k:"bitacora",l:L("Bitácora","Logbook")},{k:"turnos",l:L("Turnos","Shifts")},{k:"viajes",l:L("Day trips","Day trips")}].map(f=>(
           <button key={f.k} onClick={()=>setFilter(f.k)} style={{padding:"7px 16px",borderRadius:20,border:"none",cursor:"pointer",fontSize:13,fontWeight:filter===f.k?700:500,background:filter===f.k?"linear-gradient(120deg,#2563eb,#0ea5e9)":"#f1f5f9",color:filter===f.k?"#fff":"#64748b"}}>{f.l}</button>
         ))}
       </div>
@@ -194,7 +198,7 @@ export default function CalendarPage({ vessel, vessels, isMobile }) {
       {/* Grilla */}
       <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,overflow:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",borderBottom:"1px solid #e2e8f0",background:"#f8fafc"}}>
-          {DIAS.map(d=><div key={d} style={{padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,color:"#94a3b8"}}>{isMobile?d.slice(0,1):d}</div>)}
+          {(lang==="en"?DAYS_EN:DIAS).map(d=><div key={d} style={{padding:"8px 4px",textAlign:"center",fontSize:10,fontWeight:700,color:"#94a3b8"}}>{isMobile?d.slice(0,1):d}</div>)}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))"}}>
           {cells.map((d,i)=>{
