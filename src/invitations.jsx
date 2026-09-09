@@ -90,26 +90,49 @@ export async function acceptInvitation(inv, newUser) {
 }
 
 // Texto explicativo según el tipo de invitación (para mostrar al que la recibe)
-export function invitationCopy(inv) {
+export function invitationCopy(inv, lang = "es") {
+  const en = lang === "en";
   if (!inv) return { title: "", body: "" };
-  const who = inv.inviter_name || "Alguien";
+  const who = inv.inviter_name || (en ? "Someone" : "Alguien");
+  const boat = inv.vessel_name || (en ? "a vessel" : "una embarcación");
+
   if (inv.kind === "manager") {
-    return {
+    return en ? {
+      title: `${who} invited you to manage their fleet`,
+      body: `Once you create your account, you'll be able to manage ${who}'s boats in Carive: tasks, logbook, costs and more.`,
+    } : {
       title: `${who} te invitó a gestionar su flota`,
       body: `Al crear tu cuenta, tendrás acceso para gestionar los barcos de ${who} en Carive: tareas, bitácora, costos y más.`,
     };
   }
   if (inv.kind === "captain") {
-    return {
+    return en ? {
+      title: `${who} invited you as captain`,
+      body: `${who} assigned you as captain of ${boat}. Create your account to start operating the vessel.`,
+    } : {
       title: `${who} te invitó como capitán`,
-      body: `${who} te asignó como capitán de ${inv.vessel_name || "una embarcación"}. Crea tu cuenta para empezar a operar el barco.`,
+      body: `${who} te asignó como capitán de ${boat}. Crea tu cuenta para empezar a operar el barco.`,
     };
   }
   if (inv.kind === "crew") {
-    return {
+    return en ? {
+      title: `${who} invited you as crew`,
+      body: `${who} invited you to join the crew of ${boat}${inv.role_detail?` as ${inv.role_detail}`:""}. Create your account to accept.`,
+    } : {
       title: `${who} te invitó como tripulante`,
-      body: `${who} te invitó a unirte a la tripulación de ${inv.vessel_name || "una embarcación"}${inv.role_detail?` como ${inv.role_detail}`:""}. Crea tu cuenta para aceptar.`,
+      body: `${who} te invitó a unirte a la tripulación de ${boat}${inv.role_detail?` como ${inv.role_detail}`:""}. Crea tu cuenta para aceptar.`,
     };
   }
-  return { title: "Invitación a Carive", body: "Crea tu cuenta para continuar." };
+  if (inv.kind === "partner") {
+    return en ? {
+      title: `${who} shared their vessels with you`,
+      body: `You'll have read-only access to follow the activity, tasks, expenses and documents. Create your account to continue.`,
+    } : {
+      title: `${who} compartió sus barcos contigo`,
+      body: `Tendrás acceso de solo lectura para seguir la actividad, tareas, gastos y documentos. Crea tu cuenta para continuar.`,
+    };
+  }
+  return en
+    ? { title: "Carive invitation", body: "Create your account to continue." }
+    : { title: "Invitación a Carive", body: "Crea tu cuenta para continuar." };
 }

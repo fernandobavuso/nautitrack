@@ -93,7 +93,7 @@ export default function Auth({ onLogin, invite }) {
       console.log("[Carive] Cuenta creada con role:", userRole, "manager:", isManager);
       const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
       if (loginData?.user) { onLogin({...loginData.user, role: userRole, full_name: `${firstName} ${lastName}`.trim()}); return; }
-      setSuccess("¡Cuenta creada! Ya puedes iniciar sesión.");
+      setSuccess(L("¡Cuenta creada! Ya puedes iniciar sesión.","Account created! You can sign in now."));
     }
     setLoading(false);
   };
@@ -112,7 +112,7 @@ export default function Auth({ onLogin, invite }) {
         <div style={s.logoWrap}>
           <CariveLogo size={56} />
           <div style={s.brand}>Carive</div>
-          {invite && (() => { const c = invitationCopy(invite); return (
+          {invite && (() => { const c = invitationCopy(invite, lang); return (
             <div style={{background:"#eff6ff",border:"1px solid #bae6fd",borderRadius:12,padding:"14px 16px",marginTop:16,textAlign:"left"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#0369a1",marginBottom:4}}>{c.title}</div>
               <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>{c.body}</div>
@@ -222,10 +222,10 @@ export default function Auth({ onLogin, invite }) {
 
           {mode==="login"&&(
             <button style={s.forgotBtn} onClick={async()=>{
-              if(!email){setError("Escribe tu email primero");return;}
+              if(!email){setError(L("Escribe tu email primero","Enter your email first"));return;}
               const { error: rErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
               if (rErr) { setError(lang==="es"?"No se pudo enviar: ":"Could not send: " + rErr.message); return; }
-              setSuccess("Te enviamos un link para restablecer tu contraseña.");
+              setSuccess(L("Te enviamos un link para restablecer tu contraseña.","We sent you a link to reset your password."));
             }}>{t("auth.forgot")}</button>
           )}
         </div>
