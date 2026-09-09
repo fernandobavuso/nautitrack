@@ -6,8 +6,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import CalendarPage from "./CalendarPage.jsx";
-import { photoUrl } from "./PaymentFields.jsx";
-import { docExpiry } from "./docs.js";
+import { photoUrl, catL } from "./PaymentFields.jsx";
+import { docExpiry, systemL } from "./docs.js";
+import { logTypeL, visitTypeL } from "./App.jsx";
 
 const fmtD = (d) => { if(!d) return "—"; const p=String(d).split("-"); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; };
 const chip = (on) => ({padding:"5px 11px",borderRadius:18,cursor:"pointer",fontSize:12,fontWeight:on?700:500,
@@ -155,7 +156,8 @@ export default function PartnerView({ user, onLogout }) {
     return { l:L("Al día","On track"), bg:"#dcfce7", c:"#166534" };
   };
 
-  const logTypeIcon = { Salida:"⛵", Compra:"🧾", Combustible:"⛽", Servicio:"🔧", Visita:"👋", Incidente:"⚠️" };
+  // Marca de color por tipo (sin emojis: no combinan con el resto de la interfaz)
+  const logTypeColor = { Salida:"#0891b2", Compra:"#7c3aed", Combustible:"#0ea5e9", Servicio:"#2563eb", Visita:"#16a34a", Incidente:"#f59e0b" };
 
   // Vessel con tareas embebidas para que CalendarPage funcione en modo lectura
   const vesselForCal = vessel ? { ...vessel, tasks: tasks.map(t=>({ ...t, nextDue:t.next_due, name:t.name })) } : null;
@@ -276,7 +278,7 @@ export default function PartnerView({ user, onLogout }) {
                     <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderBottom:i<4?"1px solid #f8fafc":"none"}}>
                       <div style={{width:3,alignSelf:"stretch",background:{Salida:"#0891b2",Compra:"#7c3aed",Combustible:"#0ea5e9",Servicio:"#2563eb",Visita:"#16a34a"}[e.type]||"#94a3b8"}}/>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{e.type}{Array.isArray(e.visit_types)&&e.visit_types.length?` · ${e.visit_types.join(", ")}`:""}</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{logTypeL(e.type,lang)}{Array.isArray(e.visit_types)&&e.visit_types.length?` · ${e.visit_types.map(v=>visitTypeL(v,lang)).join(", ")}`:""}</div>
                         <div style={{fontSize:11,color:"#94a3b8"}}>{[e.performed_by, fmtD(e.date)].filter(Boolean).join(" · ")}</div>
                       </div>
                     </div>
@@ -303,7 +305,7 @@ export default function PartnerView({ user, onLogout }) {
               <>
                 <select value={typeF} onChange={e=>setTypeF(e.target.value)} style={sel}>
                   <option value="">{L("Todo tipo","All types")}</option>
-                  {logTypes.map(t=><option key={t} value={t}>{t}</option>)}
+                  {logTypes.map(t=><option key={t} value={t}>{logTypeL(t,lang)}</option>)}
                 </select>
                 <input value={q} onChange={e=>setQ(e.target.value)} placeholder={L("Buscar...","Search...")} style={{...sel,minWidth:130}}/>
               </>
@@ -314,7 +316,7 @@ export default function PartnerView({ user, onLogout }) {
             {tab==="costs" && (
               <select value={catF} onChange={e=>setCatF(e.target.value)} style={sel}>
                 <option value="">{L("Toda categoría","All categories")}</option>
-                {cats.map(c=><option key={c} value={c}>{c}</option>)}
+                {cats.map(c=><option key={c} value={c}>{catL(c,lang)}</option>)}
               </select>
             )}
 
@@ -334,8 +336,8 @@ export default function PartnerView({ user, onLogout }) {
                 {logF.map(e=>(
                   <div key={e.id} style={{background:"#fff",border:"1px solid #f1f5f9",borderRadius:10,padding:"11px 14px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                      <span style={{fontSize:14}}>{logTypeIcon[e.type]||"📋"}</span>
-                      <span style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{e.type}</span>
+                      <span style={{width:8,height:8,borderRadius:"50%",background:logTypeColor[e.type]||"#94a3b8",flexShrink:0}}/>
+                      <span style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{logTypeL(e.type,lang)}</span>
                       <span style={{fontSize:12,color:"#94a3b8"}}>{fmtD(e.date)}</span>
                       {e.performed_by && <span style={{fontSize:11,background:"#f1f5f9",color:"#64748b",borderRadius:20,padding:"2px 9px"}}>{e.performed_by}</span>}
                     </div>
@@ -379,7 +381,7 @@ export default function PartnerView({ user, onLogout }) {
                       <div style={{flex:1,minWidth:180}}>
                         <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.name}</div>
                         <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>
-                          {[t.system, t.equipment, t.assigned].filter(Boolean).join(" · ")}
+                          {[systemL(t.system,lang), t.equipment, t.assigned].filter(Boolean).join(" · ")}
                         </div>
                       </div>
                       <div style={{fontSize:12,color:"#64748b",whiteSpace:"nowrap"}}>{t.next_due?fmtD(t.next_due):"—"}</div>
@@ -466,7 +468,7 @@ export default function PartnerView({ user, onLogout }) {
                   {expF.map(e=>(
                     <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#fff",border:"1px solid #f1f5f9",borderRadius:9}}>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{e.category}</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{catL(e.category,lang)}</div>
                         <div style={{fontSize:11,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {[e.description, fmtD(e.expense_date)].filter(Boolean).join(" · ")}
                         </div>

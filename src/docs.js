@@ -10,3 +10,14 @@ export function docExpiry(expiresAt, lang="es") {
   return { days, label: lang==="en" ? `Valid until ${f}` : `Vigente hasta ${f}`, bg:"#f0fdf4", color:"#15803d", date:f };
 }
 
+
+// Sistemas del barco: se guardan en español, se muestran traducidos
+export const SYSTEM_EN = {
+  "Motores":"Engines", "Generador":"Generator", "Generadores":"Generators",
+  "Casco":"Hull", "Cubierta y Exterior":"Deck & Exterior",
+  "Navegación y Electrónica":"Navigation & Electronics", "Eléctrico":"Electrical",
+  "Aire Acondicionado":"Air Conditioning", "Seguridad":"Safety",
+  "Plomería":"Plumbing", "Interior":"Interior", "Seakeeper":"Seakeeper",
+  "Timón y Gobierno":"Steering", "Otros":"Other",
+};
+export const systemL = (x, lang) => (lang === "en" ? (SYSTEM_EN[x] || x) : x);

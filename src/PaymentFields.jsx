@@ -11,6 +11,19 @@ export const CARD_OWNERS = [
   { v: "other",    es: "Otra",             en: "Other" },
 ];
 export const CARD_BRANDS = ["Visa", "Mastercard", "Amex", "Discover", "Otra"];
+// Las categorías se GUARDAN en español (son el valor en la base). Esta tabla las
+// traduce solo al mostrarlas, sin tocar los datos ni romper filtros.
+export const EXPENSE_CAT_EN = {
+  "Combustible":"Fuel", "Consumibles":"Consumables", "Mantenimiento":"Maintenance",
+  "Reparación":"Repair", "Repuestos":"Parts", "Sueldos":"Payroll", "Marina":"Marina",
+  "Transporte y parking":"Transport & parking", "Seguro":"Insurance",
+  "Impuestos":"Taxes", "Otro":"Other",
+  "Materiales y suministros":"Materials & supplies", "Limpiezas":"Cleaning",
+  "Transporte y gasolina":"Transport & fuel", "Comidas y representación":"Meals & entertainment",
+  "Oficina":"Office", "Marketing":"Marketing",
+};
+export const catL = (c, lang) => (lang === "en" ? (EXPENSE_CAT_EN[c] || c) : c);
+
 export const EXPENSE_CATEGORIES = ["Combustible","Consumibles","Mantenimiento","Reparación","Repuestos","Sueldos","Marina","Transporte y parking","Seguro","Impuestos","Otro"];
 
 export const cardOwnerLabel = (v, lang) => {
