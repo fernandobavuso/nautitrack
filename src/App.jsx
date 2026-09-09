@@ -349,7 +349,7 @@ function getEquipmentList(vessel, systemId) {
   return [...base, "Otro"];
 }
 export default function App() {
-  const { isMobile } = useResponsive();
+  const { isMobile, width } = useResponsive();
   const { t, lang, setLang } = useLang();
   const [user, setUser]               = useState(null);
   const [inviteToken] = useState(() => new URLSearchParams(window.location.search).get("invite"));
@@ -1161,7 +1161,7 @@ export default function App() {
         setShowCrewMarket={setShowCrewMarket}
         page={page} setPage={setPage}
         onLogout={async () => { await supabase.auth.signOut(); setUser(null); setVessels([]); setVesselsLoading(false); setCaptainProfile(null); setCaptainVessel(null); setCrewProfile(null); }}
-      />
+       wide={width>=1280} />
       <div style={{...s.body, padding:isMobile?"14px 12px":"20px 24px"}}>
         {page==="home" && noVessels && (
           <div style={{maxWidth:1100,margin:"0 auto 18px",background:"linear-gradient(120deg,#eff6ff,#e0f2fe)",border:"1px solid #bae6fd",borderRadius:16,padding:"22px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
@@ -1272,13 +1272,13 @@ function NavGroups({ page, setPage, showFleet, showCompany, isAdminUser }) {
         if (g.single) {
           const active = page === g.key;
           return (
-            <button key={g.key} onClick={()=>{setPage(g.key);setOpen(null);}} style={{...s.navLink,color:active?"#0ea5e9":"#64748b",borderBottom:active?"2px solid #0ea5e9":"2px solid transparent",fontWeight:active?600:400}}>{g.label}</button>
+            <button key={g.key} onClick={()=>{setPage(g.key);setOpen(null);}} style={{...s.navLink,color:active?"#0369a1":"#64748b",background:active?"#eff6ff":"transparent",fontWeight:active?700:500}}>{g.label}</button>
           );
         }
         const groupActive = g.items.some(it => it.key === page);
         return (
           <div key={g.key} style={{position:"relative"}} onMouseEnter={()=>openNow(g.key)}>
-            <button onClick={()=>setOpen(open===g.key?null:g.key)} style={{...s.navLink,display:"flex",alignItems:"center",gap:4,color:groupActive?"#0ea5e9":"#64748b",borderBottom:groupActive?"2px solid #0ea5e9":"2px solid transparent",fontWeight:groupActive?600:400}}>
+            <button onClick={()=>setOpen(open===g.key?null:g.key)} style={{...s.navLink,display:"flex",alignItems:"center",gap:4,color:groupActive?"#0369a1":"#64748b",background:groupActive?"#eff6ff":"transparent",fontWeight:groupActive?600:400}}>
               {g.label}<span style={{fontSize:9,color:"#94a3b8"}}>▾</span>
             </button>
             {open===g.key && (
@@ -1302,7 +1302,7 @@ function NavGroups({ page, setPage, showFleet, showCompany, isAdminUser }) {
 
 const iconBtn = { width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer" };
 
-function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,setShowFleetCrew,setShowSchedule,canManageFleet,page,setPage,onLogout }) {
+function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isAdminUser,setVesselId,showVesselMenu,setShowVesselMenu,showUserMenu,setShowUserMenu,setShowVesselDetails,setShowProviders,setShowProfile,setShowNotifications,setShowNotifPanel,unreadCount,setShowQRPanel,setShowCaptainManager,setShowCrewMarket,setShowFleetManagers,setShowFleetCrew,setShowSchedule,canManageFleet,page,setPage,onLogout , wide}) {
   const { t, lang, setLang } = useLang();
   const { isMobile, isTablet } = useResponsive();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1428,7 +1428,7 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
         <NavGroups page={page} setPage={setPage} showFleet={vessels.length>1} showCompany={accountHasFleet(vessels)} isAdminUser={isAdminUser} />
       </div>
       <div style={s.navRight}>
-        <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>{lang==="es"?"Tripulación":"Crew"}</button>
+        {wide && <button style={s.provBtn} onClick={() => setShowCrewMarket(true)}>{lang==="es"?"Tripulación":"Crew"}</button>}
         <div style={{position:"relative"}}>
           <button style={s.vesselSelector} onClick={() => { setShowVesselMenu(!showVesselMenu); setShowUserMenu(false); }}>
             <span style={{...s.dot,background:STATUS_CFG[vessel.status].dot}} />
@@ -5281,12 +5281,12 @@ function ProvidersBody({ providers, showAdd, setShowAdd, form, set, addProvider,
 }
 const s = {
   root:       { minHeight:"100vh", background:"linear-gradient(180deg,#f4f9ff 0%,#eaf2fb 100%)", fontFamily:"'Inter','Segoe UI',system-ui,sans-serif", color:"#1e293b", fontSize:13 },
-  nav:        { display:"flex", alignItems:"flex-end", justifyContent:"space-between", padding:"0 20px 8px", paddingTop:"env(safe-area-inset-top, 0px)", height:"calc(56px + env(safe-area-inset-top, 0px))", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box" },
+  nav:        { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", paddingTop:"env(safe-area-inset-top, 0px)", height:"calc(56px + env(safe-area-inset-top, 0px))", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid #e2e8f0", boxShadow:"0 1px 4px rgba(10,37,64,0.06)", position:"sticky", top:0, zIndex:20, gap:12, width:"100%", maxWidth:"100vw", boxSizing:"border-box" },
   navLogo:    { display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 },
   navBrand:   { fontSize:19, fontWeight:800, color:"#0a2540", letterSpacing:"-0.6px", fontFamily:"'Sora',system-ui,sans-serif" },
-  navLinks:   { display:"flex", gap:0, flex:1, justifyContent:"center", minWidth:0 },
-  navLink:    { padding:"18px 8px", background:"none", border:"none", cursor:"pointer", fontSize:12, transition:"all 0.15s", whiteSpace:"nowrap" },
-  navRight:   { display:"flex", alignItems:"center", gap:10, flexShrink:0, paddingRight:4 },
+  navLinks:   { display:"flex", gap:1, flex:"1 1 auto", justifyContent:"center", minWidth:0, flexWrap:"nowrap" },
+  navLink:    { padding:"7px 9px", background:"none", border:"none", cursor:"pointer", fontSize:12.5, transition:"all 0.15s", whiteSpace:"nowrap", borderRadius:8 },
+  navRight:   { display:"flex", alignItems:"center", gap:7, flexShrink:0, paddingRight:0 },
   provBtn:    { padding:"5px 11px", border:"1.5px solid #e2e8f0", borderRadius:6, background:"#f8fafc", cursor:"pointer", fontSize:12, fontWeight:500, color:"#1e293b", whiteSpace:"nowrap" },
   vesselSelector: { display:"flex", alignItems:"center", gap:7, padding:"5px 10px", border:"1.5px solid #e2e8f0", borderRadius:8, background:"#f8fafc", cursor:"pointer", fontSize:12, maxWidth:180 },
   dot:        { width:8, height:8, borderRadius:"50%", flexShrink:0 },
