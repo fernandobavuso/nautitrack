@@ -253,7 +253,7 @@ export const DICT = {
   "log.inspection":  { es: "Inspección",     en: "Inspection" },
   "log.service":     { es: "Servicio",       en: "Service" },
   "log.fuel":        { es: "Combustible",    en: "Fuel" },
-  "log.departure":   { es: "Salida",         en: "Departure" },
+  "log.departure":   { es: "Salida",         en: "Trip" },
   "log.purchase":    { es: "Compra",         en: "Purchase" },
   "log.item":        { es: "Artículo",       en: "Item" },
   "log.cost":        { es: "Costo",          en: "Cost" },

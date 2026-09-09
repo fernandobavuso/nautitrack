@@ -180,7 +180,7 @@ const VISIT_TYPES = [
 ];
 
 const LOG_TYPES_EN = {
-  "Combustible":"Fuel", "Compra":"Purchase", "Salida":"Departure",
+  "Combustible":"Fuel", "Compra":"Purchase", "Salida":"Trip",
   "Servicio":"Service", "Visita":"Visit",
 };
 
