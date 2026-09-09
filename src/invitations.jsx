@@ -7,7 +7,7 @@ function genToken() {
 
 // Crea una invitación y devuelve el link para compartir.
 // kind: 'manager' | 'captain' | 'crew'
-export async function createInvitation({
+export async function createInvitation({ kind, inviter, vessel, invitedEmail, invitedName, roleDetail }) {
   // El nombre puede no venir cargado en el objeto de sesión: se busca en el perfil.
   let nameOf = inviter?.full_name || inviter?.first_name || null;
   if (!nameOf && inviter?.id) {
@@ -15,7 +15,6 @@ export async function createInvitation({
     nameOf = prof?.full_name || null;
   }
   if (nameOf && nameOf.includes("@")) nameOf = null;   // nunca un correo
- kind, inviter, vessel, invitedEmail, invitedName, roleDetail }) {
   const token = genToken();
   const { error } = await supabase.from("invitations").insert({
     token,
