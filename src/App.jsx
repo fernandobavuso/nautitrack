@@ -1509,7 +1509,6 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
     <div style={s.home}>
       <FounderBanner />
       <div style={rowStyle}>
-        <AlertsCard vessel={vessel} setPage={setPage} />
         <IndicatorsCard vessel={vessel} />
       </div>
       <div style={rowStyle}>
@@ -1521,25 +1520,6 @@ function HomePage({ vessel, setPage, vessels, updateVessel }) {
   );
 }
 
-
-function AlertsCard({ vessel, setPage }) {
-  const { t: tr } = useLang();
-  const od = (vessel.tasks||[]).filter(t => t.status==="overdue");
-  return (
-    <div style={{...s.card,flex:1}}>
-      <div style={s.cardHdr}><span style={{...s.cardTitle,display:"flex",alignItems:"center",gap:7}}><IconAlert size={17} color="#dc2626"/> {tr("dash.alerts")}</span><button onClick={() => setPage("tasks")} style={s.linkBtn}>{tr("dash.see")} →</button></div>
-      {od.length===0
-        ? <div style={s.empty}><div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><IconCheckCircle size={32} color="#16a34a"/></div><div style={{color:"#16a34a",fontWeight:600,fontSize:13}}>{tr("dash.noAlerts")}</div></div>
-        : od.map(t => (
-          <div key={t.id} style={s.alertRow}>
-            <div style={s.alertDot} />
-            <div><div style={{fontWeight:600,fontSize:12,color:"#0f172a"}}>{t.name}</div><div style={{fontSize:11,color:"#dc2626"}}>{t.equipment}</div></div>
-          </div>
-        ))
-      }
-    </div>
-  );
-}
 
 function MonthStats({ vessel }) {
   const { lang } = useLang();
@@ -1561,18 +1541,18 @@ function MonthStats({ vessel }) {
   const money0 = (n)=>"$"+Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
 
   return (
-    <div style={{display:"flex",gap:14,marginTop:12,paddingTop:11,borderTop:"1px solid #f1f5f9",flexWrap:"wrap"}}>
-      <div>
-        <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{L("Salidas del mes","Trips this month")}</div>
-        <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{sal.length}{hrs>0?` · ${Math.round(hrs*10)/10}h`:""}</div>
+    <div style={{display:"flex",gap:0,marginTop:14,paddingTop:13,borderTop:"1px solid #f1f5f9",flexWrap:"wrap"}}>
+      <div style={{flex:1,minWidth:110}}>
+        <div style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>{L("Salidas del mes","Trips this month")}</div>
+        <div style={{fontSize:17,fontWeight:800,color:"#0f172a",marginTop:2}}>{sal.length}{hrs>0?` · ${Math.round(hrs*10)/10}h`:""}</div>
       </div>
-      <div>
-        <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{L("Gastos del mes","Month expenses")}</div>
-        <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{money0(totMonth)}</div>
+      <div style={{flex:1,minWidth:110,borderLeft:"1px solid #f1f5f9",paddingLeft:14}}>
+        <div style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>{L("Gastos del mes","Month expenses")}</div>
+        <div style={{fontSize:17,fontWeight:800,color:"#0f172a",marginTop:2}}>{money0(totMonth)}</div>
       </div>
-      <div>
-        <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{L("Costo/hora","Cost/hour")}</div>
-        <div style={{fontSize:15,fontWeight:800,color:cph!=null?"#0f172a":"#cbd5e1"}}>{cph!=null?`$${cph.toFixed(0)}`:"—"}</div>
+      <div style={{flex:1,minWidth:110,borderLeft:"1px solid #f1f5f9",paddingLeft:14}}>
+        <div style={{fontSize:11,color:"#94a3b8",fontWeight:600}}>{L("Costo/hora","Cost/hour")}</div>
+        <div style={{fontSize:17,fontWeight:800,marginTop:2,color:cph!=null?"#0f172a":"#cbd5e1"}}>{cph!=null?`$${cph.toFixed(0)}`:"—"}</div>
       </div>
     </div>
   );
@@ -1669,7 +1649,7 @@ function IndicatorsCard({ vessel }) {
   return (
     <div style={{...s.card,flex:1}}>
       <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}}>
         {[
           {Icon:IconFuel,
             val: isPctUnit ? `${fuelVal}%` : (tankCap>0 ? `${fuelVal}/${tankCap} ${fuelUnit}` : `${fuelVal} ${fuelUnit}`),
@@ -1679,11 +1659,11 @@ function IndicatorsCard({ vessel }) {
           {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false,note:genNote},
           {Icon:IconGyro,val:seakeeperHours!=null?`${seakeeperHours}h`:"—",lbl:"Seakeeper",color:"#0d9488",bar:false,note:skNote},
         ].map(ind => (
-          <div key={ind.lbl} style={s.indBox}>
-            <div style={{marginBottom:6,display:"flex"}}><ind.Icon size={22} color={ind.color}/></div>
-            <div style={{fontSize:17,fontWeight:700,color:ind.color}}>{ind.val}</div>
-            <div style={{fontSize:10,color:"#94a3b8",marginTop:2}}>{ind.lbl}</div>
-            {ind.note && <div style={{fontSize:10,fontWeight:ind.note.color==="#94a3b8"?500:700,color:ind.note.color,marginTop:3}}>{ind.note.text}</div>}
+          <div key={ind.lbl} style={{...s.indBox,padding:"15px 16px"}}>
+            <div style={{marginBottom:8,display:"flex"}}><ind.Icon size={24} color={ind.color}/></div>
+            <div style={{fontSize:23,fontWeight:800,color:ind.color,lineHeight:1.15,letterSpacing:"-0.5px"}}>{ind.val}</div>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:3,fontWeight:600}}>{ind.lbl}</div>
+            {ind.note && <div style={{fontSize:11,fontWeight:ind.note.color==="#94a3b8"?500:700,color:ind.note.color,marginTop:5}}>{ind.note.text}</div>}
             {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${fuelPct!=null?fuelPct:0}%`,background:ind.color}} /></div>}
           </div>
         ))}
