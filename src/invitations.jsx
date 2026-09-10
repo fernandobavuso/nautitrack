@@ -49,14 +49,14 @@ export async function acceptInvitation(inv, newUser) {
     let vesselIds = [];
     try { vesselIds = JSON.parse(inv.role_detail || "[]"); } catch { vesselIds = []; }
     if (vesselIds.length) {
-      await supabase.from("vessel_partners").upsert(
-        vesselIds.map(vid => ({
-          owner_id: inv.inviter_id, partner_id: newUser.id,
-          partner_email: (inv.invited_email||newUser.email||"").toLowerCase(),
-          vessel_id: vid, status: "active",
-        })),
-        { onConflict: "partner_id,vessel_id" }
-      );
+      // Vía RPC: la política de vessel_partners solo deja escribir al dueño, y quien
+      // acepta es el invitado. La función corre con permisos elevados y valida el
+      // token, así que nadie puede darse acceso a sí mismo sin invitación válida.
+      const { error: rpcErr } = await supabase.rpc("accept_partner_invite", {
+        p_token: inv.token, p_user: newUser.id,
+        p_email: (inv.invited_email || newUser.email || "").toLowerCase(),
+      });
+      if (rpcErr) console.error("[Carive] no se pudo vincular al socio:", rpcErr.message);
     }
     await supabase.from("invitations").update({ status:"accepted", accepted_by:newUser.id }).eq("token", inv.token);
     return;
