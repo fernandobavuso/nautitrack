@@ -1359,6 +1359,10 @@ function TopNav({ vessel,vessels,user,tryAddVessel,setShowPlans,setShowAdmin,isA
                     <div><div style={{fontWeight:600,fontSize:13,color:"#0f172a"}}>{v.name}</div><div style={{fontSize:10,color:"#94a3b8"}}>{v.type} · {v.marina}</div></div>
                   </button>
                 ))}
+                <button onClick={()=>{setMobileMenuOpen(false);tryAddVessel&&tryAddVessel();}}
+                  style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"10px",border:"none",borderRadius:8,cursor:"pointer",background:"transparent",color:"#2563eb",fontWeight:700,fontSize:13,textAlign:"left",marginTop:2,borderTop:"1px solid #f1f5f9"}}>
+                  <span style={{fontSize:15,lineHeight:1}}>+</span> {lang==="es"?"Agregar embarcación":"Add vessel"}
+                </button>
               </div>
 
               {/* Navegación agrupada */}
