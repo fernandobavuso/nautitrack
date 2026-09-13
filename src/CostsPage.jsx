@@ -75,7 +75,11 @@ export default function CostsPage({ vessel, vessels, user, setShowProfile, onReg
     setUploading(true);
     const urls = [...(editExp.receipt_urls||[])];
     for (const file of files) {
-      const path = `facturas/${user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}_${file.name}`;
+      // Misma estructura que la bitácora ({usuario}/...): la política del balde
+      // permite escribir en la carpeta del propio usuario, y una subcarpeta al
+      // inicio ("facturas/...") la incumple y bloquea la subida.
+      const safe = file.name.replace(/[^\w.\-]/g, "_");
+      const path = `${user.id}/facturas/${Date.now()}_${Math.random().toString(36).slice(2,7)}_${safe}`;
       const { error } = await supabase.storage.from("bitacora-fotos").upload(path, file);
       if (!error) {
         const { data: u } = supabase.storage.from("bitacora-fotos").getPublicUrl(path);
