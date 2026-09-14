@@ -32,7 +32,25 @@ export default function Auth({ onLogin, invite }) {
     if (!email || !password) { setError(t("auth.fillAll")); return; }
     setLoading(true); setError("");
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) { setError(t("auth.wrongCreds")); setLoading(false); return; }
+    if (err) {
+      // El mensaje genérico ocultaba causas muy distintas (límite de intentos,
+      // correo sin confirmar, servicio caído). Se distinguen las más comunes.
+      const m = String(err.message || "").toLowerCase();
+      console.error("[Carive] login falló:", err.message);
+      if (m.includes("rate") || m.includes("too many") || m.includes("limit")) {
+        setError(L("Demasiados intentos seguidos. Espera unos minutos y vuelve a intentar.",
+                   "Too many attempts. Wait a few minutes and try again."));
+      } else if (m.includes("confirm")) {
+        setError(L("Tu correo aún no está confirmado. Revisa tu bandeja de entrada.",
+                   "Your email isn't confirmed yet. Check your inbox."));
+      } else if (m.includes("fetch") || m.includes("network")) {
+        setError(L("No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.",
+                   "No connection to the server. Check your internet and try again."));
+      } else {
+        setError(t("auth.wrongCreds"));
+      }
+      setLoading(false); return;
+    }
     // Chequear si la cuenta está deshabilitada o eliminada
     const { data: prof } = await supabase.from("profiles").select("disabled,deleted_at").eq("id", data.user.id).maybeSingle();
     if (prof?.deleted_at) {
