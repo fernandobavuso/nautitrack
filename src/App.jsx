@@ -909,21 +909,28 @@ export default function App() {
   const checkIfPartner = useCallback(async (uid, email) => {
     // Se busca por id y también por CORREO: si el gestor lo agregó antes de que
     // existiera la cuenta, el vínculo quedó sin partner_id y hay que reclamarlo al
-    // primer login. Sin esto la persona entraba como dueño sin barcos.
-    const em = String(email || "").trim().toLowerCase();
-    const { data: byId } = await supabase.from("vessel_partners")
-      .select("id").eq("partner_id", uid).eq("status","active").limit(1);
-    if (byId && byId.length) { setPartnerMode(true); return true; }
+    // primer login. Envuelto en try/catch y con límite de tiempo: un fallo aquí
+    // dejaría la app colgada en la pantalla de carga.
+    try {
+      const em = String(email || "").trim().toLowerCase();
+      const guard = (p) => Promise.race([p, new Promise(r => setTimeout(() => r({ data: null }), 6000))]);
 
-    if (em) {
-      const { data: byMail } = await supabase.from("vessel_partners")
-        .select("id").ilike("partner_email", em).is("partner_id", null).limit(20);
-      if (byMail && byMail.length) {
-        await supabase.from("vessel_partners")
-          .update({ partner_id: uid, status: "active" })
-          .ilike("partner_email", em).is("partner_id", null);
-        setPartnerMode(true); return true;
+      const { data: byId } = await guard(supabase.from("vessel_partners")
+        .select("id").eq("partner_id", uid).eq("status","active").limit(1));
+      if (byId && byId.length) { setPartnerMode(true); return true; }
+
+      if (em) {
+        const { data: byMail } = await guard(supabase.from("vessel_partners")
+          .select("id").ilike("partner_email", em).is("partner_id", null).limit(20));
+        if (byMail && byMail.length) {
+          await guard(supabase.from("vessel_partners")
+            .update({ partner_id: uid, status: "active" })
+            .ilike("partner_email", em).is("partner_id", null));
+          setPartnerMode(true); return true;
+        }
       }
+    } catch (err) {
+      console.error("[Carive] checkIfPartner falló:", err?.message || err);
     }
     setPartnerMode(false);
     return false;
@@ -987,6 +994,15 @@ export default function App() {
     }
   }, [inviteToken]);
 
+  // Salvavidas: si por cualquier motivo (red lenta, consulta colgada) el arranque no
+  // termina, a los 12 segundos se apagan las banderas de carga y la app entra igual.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setAuthLoading(false); setCheckingRole(false); setVesselsLoading(false);
+    }, 12000);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null;
@@ -995,18 +1011,27 @@ export default function App() {
         supabase.from("profiles").select("full_name").eq("id", u.id).single()
           .then(({ data }) => { if (data?.full_name) setUser(prev => ({...prev, full_name: data.full_name})); });
         window.__setUserFullName = (name) => setUser(prev => ({...prev, full_name: name}));
-        const isPartner = await checkIfPartner(u.id, u.email);
-        if (!isPartner) {
-          const isCrew = await checkIfCaptain(u.id, u.role);
-          if (!isCrew) await fetchVessels(u.id);
+        try {
+          const isPartner = await checkIfPartner(u.id, u.email);
+          if (!isPartner) {
+            const isCrew = await checkIfCaptain(u.id, u.role);
+            if (!isCrew) await fetchVessels(u.id);
+          }
+        } catch (err) {
+          // Un fallo aquí no puede dejar la app en la pantalla de carga
+          console.error("[Carive] arranque:", err?.message || err);
         }
         setCheckingRole(false);
+        setVesselsLoading(false);
       } else {
         Object.keys(localStorage).filter(k=>k.startsWith("nautitrack_role_")).forEach(k=>localStorage.removeItem(k));
         setVesselsLoading(false);
         setCheckingRole(false);
       }
       setAuthLoading(false);
+    }).catch(err => {
+      console.error("[Carive] no se pudo leer la sesión:", err?.message || err);
+      setAuthLoading(false); setCheckingRole(false); setVesselsLoading(false);
     });
   }, []);
 
