@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
 import { accountHasFleet } from "./plans.jsx";
@@ -7,7 +7,7 @@ import PurchaseMeta, { EXPENSE_CATEGORIES } from "./PaymentFields.jsx";
 // Modal "Registrar gasto": hace UNA pregunta simple (¿compra del día o gasto fijo?)
 // y enruta al lugar correcto. El usuario no tiene que saber la teoría de
 // Bitácora vs Costos — solo responde qué tipo de gasto es.
-export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPurchase, onDirectExpense }) {
+export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPurchase, onDirectExpense, prefill }) {
   const { lang } = useLang();
   const L = (es, en) => (lang === "en" ? en : es);
   const isFleetManager = accountHasFleet(vessels);
@@ -18,6 +18,14 @@ export default function ExpenseRouter({ vessel, vessels, user, onClose, onLogPur
 
   // Formulario compra operacional (va a bitácora)
   const [op, setOp] = useState({ item:"", amount:"", currency:"USD", payment:"Zelle", date:new Date().toISOString().slice(0,10), by:"", reimbursable:false, isPart:false, brand:"", model2:"", partNum:"", cat:"Repuestos" });
+  // Si viene de la lista de compras, el formulario abre ya lleno con el artículo
+  useEffect(() => {
+    if (!prefill) return;
+    setStep("operational");
+    setOp(o => ({ ...o, item: prefill.item || o.item, cat: prefill.category || o.cat }));
+    if (prefill.vendor) setOpMeta(m => ({ ...m, vendor: prefill.vendor }));
+  }, [prefill]);
+
   const [opMeta, setOpMeta]       = useState({});
   const [admMeta, setAdmMeta]     = useState({});
   const [opPhotos, setOpPhotos]   = useState([]);

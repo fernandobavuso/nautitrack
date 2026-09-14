@@ -17,6 +17,7 @@ import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
 import CompanyPage from "./CompanyPage.jsx";
+import ShoppingPage from "./ShoppingPage.jsx";
 import InventoryPage from "./InventoryPage";
 import DocsManager from "./DocsManager";
 import FleetCrew from "./FleetCrew.jsx";
@@ -378,6 +379,7 @@ export default function App() {
   const [showPlans, setShowPlans] = useState(false);
   const [showFleetManagers, setShowFleetManagers] = useState(false);
   const [showExpenseRouter, setShowExpenseRouter] = useState(false);
+  const [expensePrefill, setExpensePrefill] = useState(null);   // datos que vienen de la lista de compras
   const [showFleetCrew, setShowFleetCrew] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -1205,6 +1207,7 @@ export default function App() {
         {page==="costs"   && <CostsPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
         {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
         {page==="company" && <CompanyPage user={user} vessels={vessels} />}
+        {page==="shopping" && <ShoppingPage vessel={vessel} vessels={vessels} user={user} onRegisterExpense={(pre)=>{setExpensePrefill(pre);setShowExpenseRouter(true);}} />}
         {page==="inventory" && <InventoryPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} deleteVessel={deleteVessel} canDelete={vessels.length>0} onClose={() => setShowVesselDetails(false)} />}
@@ -1218,7 +1221,7 @@ export default function App() {
       {showFleetManagers && <FleetManagers user={user} vessels={vessels} onClose={()=>setShowFleetManagers(false)} />}
       {showFleetCrew && <FleetCrew user={user} onClose={()=>setShowFleetCrew(false)} />}
       {showSchedule && <Schedule user={user} vessels={vessels} onClose={()=>setShowSchedule(false)} />}
-      {showExpenseRouter && <ExpenseRouter vessel={vessel} vessels={vessels} user={user} onClose={()=>setShowExpenseRouter(false)} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}
+      {showExpenseRouter && <ExpenseRouter vessel={vessel} vessels={vessels} user={user} prefill={expensePrefill} onClose={()=>{setShowExpenseRouter(false);setExpensePrefill(null);}} onLogPurchase={(e)=>addLogEntry(vessel.id,user.id,e)} onDirectExpense={()=>{}} />}
       {showAdmin && <AdminPanel user={user} onClose={()=>setShowAdmin(false)} />}
       {showProfile && <ProfileModal vessel={vessel} updateVessel={updateVessel} user={user} onClose={() => setShowProfile(false)} />}
     </div>
@@ -1238,6 +1241,7 @@ const NAV_GROUPS = [
   { key:"fin", label:"Finanzas", items:[
     { key:"costs", label:"Resumen de gastos" },
     { key:"inventory", label:"Repuestos" },
+    { key:"shopping", label:"Lista de compras" },
   ]},
   { key:"reg", label:"Registros", items:[
     { key:"records", label:"Records" },
