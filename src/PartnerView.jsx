@@ -347,8 +347,8 @@ export default function PartnerView({ user, onLogout }) {
                         : e.type==="Compra"
                           ? `${e.item||""} · ${money(e.cost_usd)}`
                           : (openEntry===e.id || (e.description||"").length<=140)
-                            ? (e.description||"—")
-                            : <>{(e.description||"").slice(0,140)}…{" "}
+                            ? <span style={{whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{e.description||"—"}</span>
+                            : <><span style={{whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{(e.description||"").slice(0,140)}…</span>{" "}
                                 <button onClick={()=>setOpenEntry(e.id)} style={{background:"none",border:"none",color:"#2563eb",fontSize:12,cursor:"pointer",padding:0}}>{L("ver todo","show all")}</button>
                               </>}
                       {openEntry===e.id && (e.description||"").length>140 &&

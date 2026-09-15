@@ -2051,7 +2051,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                       </>}
                 </td>
                     <td style={s.td}><span style={{...s.statusPill,background:p.bg,color:p.c}}>{p.l}</span></td>
-                    <td style={{...s.td,color:"#94a3b8",fontSize:12,maxWidth:180}}>{task.notes||"—"}</td>
+                    <td style={{...s.td,color:"#94a3b8",fontSize:12,maxWidth:180,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{task.notes||"—"}</td>
                   </tr>
                   {expanded===task.id && (
                     <tr key={`e${task.id}`}>
@@ -2060,7 +2060,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                           {[{l:"Sistema",v:task.system},{l:"Equipo",v:task.equipment},{l:"Intervalo",v:task.interval},{l:"Próx. Venc.",v:task.nextDue},{l:"Asignado",v:task.assigned},{l:"Estado",v:p.l},{l:"Notas",v:task.notes||"—"},{l:"Fotos",v:(task.photos||[]).length>0?`${task.photos.length} foto(s)`:"Sin fotos"},{l:"Creada por",v:task.createdByName?`${task.createdByName}${task.createdByRole==="captain"?" (Capitán)":""}`:"—"}].map((c,i) => (
                             <div key={i} style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 14px"}}>
                               <div style={{fontSize:10,color:"#94a3b8",fontWeight:600,marginBottom:3}}>{c.l}</div>
-                              <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{c.v}</div>
+                              <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}><span style={{whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{c.v}</span></div>
                             </div>
                           ))}
                         </div>
@@ -2392,10 +2392,13 @@ function LongCell({ text, limit = 90 }) {
   const { lang } = useLang();
   const [open, setOpen] = useState(false);
   const str = String(text ?? "");
-  if (str.length <= limit) return <>{str}</>;
+  // preserveNL: el navegador colapsa los saltos de línea por defecto, así que un
+  // texto escrito con guiones y renglones se veía todo corrido al guardarlo.
+  const preserveNL = { whiteSpace: "pre-wrap", wordBreak: "break-word" };
+  if (str.length <= limit) return <span style={preserveNL}>{str}</span>;
   return (
     <>
-      {open ? str : str.slice(0, limit).trimEnd() + "…"}{" "}
+      <span style={preserveNL}>{open ? str : str.slice(0, limit).trimEnd() + "…"}</span>{" "}
       <button onClick={() => setOpen(o => !o)}
         style={{background:"none",border:"none",padding:0,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
         {open ? (lang==="es"?"ver menos":"show less") : (lang==="es"?"ver todo":"show all")}
@@ -3274,6 +3277,9 @@ function RecordTable({ rows }) {
   );
 }
 
+// En HTML los saltos de línea se colapsan: se convierten a <br> para el reporte
+const nl2br = (x) => String(x ?? "").replace(/\n/g, "<br>");
+
 function ReportModal({ vessel, onClose }) {
   const { lang } = useLang();
   const [sel,setSel]   = useState([]);
@@ -3509,7 +3515,7 @@ function ReportModal({ vessel, onClose }) {
             <td class="td-date">${fmtD(e.date)}</td>
             <td class="td-bold" style="font-size:15px;">${e.fuelQty||"—"}</td>
             <td>${e.fuelUnit||"—"}</td>
-            <td style="color:#64748b;">${e.desc||"—"}</td>
+            <td style="color:#64748b;">${nl2br(e.desc)||"—"}</td>
           </tr>`).join("")}
           <tr style="background:#fff7ed;border-top:2px solid #f59e0b;">
             <td style="font-weight:700;color:#d97706;padding:12px 16px;">TOTAL</td>
@@ -3536,7 +3542,7 @@ function ReportModal({ vessel, onClose }) {
             <td class="td-date">${fmtD(e.date)}</td>
             <td><span class="badge ${e.serviceType==="Preventivo"?"badge-green":e.serviceType==="Reactivo"?"badge-yellow":"badge-red"}">${e.serviceType||"—"}</span></td>
             <td class="td-bold">${e.equipment||"—"}</td>
-            <td style="max-width:280px;">${e.desc||"—"}</td>
+            <td style="max-width:280px;">${nl2br(e.desc)||"—"}</td>
             <td style="color:#64748b;">${e.performedBy||"—"}</td>
           </tr>`).join("")}
         </tbody>
@@ -3552,7 +3558,7 @@ function ReportModal({ vessel, onClose }) {
           ${inspections.map((e,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
             <td class="td-date">${fmtD(e.date)}</td>
             <td class="td-bold">${e.equipment||"—"}</td>
-            <td>${e.desc||"—"}</td>
+            <td>${nl2br(e.desc)||"—"}</td>
             <td style="color:#64748b;">${e.performedBy||"—"}</td>
           </tr>`).join("")}
         </tbody>
