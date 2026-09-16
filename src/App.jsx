@@ -1232,7 +1232,7 @@ export default function App() {
         {page==="costs"   && <CostsPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} onRegisterExpense={()=>setShowExpenseRouter(true)} />}
         {page==="fleet"   && <FleetPage vessels={vessels} vessel={vessel} user={user} setVesselId={setVesselId} setPage={setPage} setShowProfile={()=>setShowPlans(true)} />}
         {page==="company" && <CompanyPage user={user} vessels={vessels} />}
-        {page==="shopping" && <ShoppingPage vessel={vessel} vessels={vessels} user={user} onRegisterExpense={(pre)=>{setExpensePrefill(pre);setShowExpenseRouter(true);}} />}
+        {page==="shopping" && <ShoppingPage vessel={vessel} vessels={vessels} user={user} />}
         {page==="inventory" && <InventoryPage vessel={vessel} vessels={vessels} user={user} setShowProfile={()=>setShowPlans(true)} />}
       </div>
       {showVesselDetails && <VesselDetailsModal vessel={vessel} updateVessel={updateVessel} deleteVessel={deleteVessel} canDelete={vessels.length>0} onClose={() => setShowVesselDetails(false)} />}

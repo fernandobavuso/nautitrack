@@ -15,7 +15,7 @@ const PRIOS = [
 const prioOf = (p) => PRIOS.find(x => x.k === p) || PRIOS[1];
 const money = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-export default function ShoppingPage({ vessel, vessels, user, onRegisterExpense }) {
+export default function ShoppingPage({ vessel, vessels, user }) {
   const { lang } = useLang();
   const L = (es, en) => (lang === "en" ? en : es);
   const isFleet = accountHasFleet(vessels);
@@ -26,6 +26,7 @@ export default function ShoppingPage({ vessel, vessels, user, onRegisterExpense 
   const [msg, setMsg]       = useState("");
   const [showDone, setShowDone] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [buying, setBuying] = useState(null);   // ítem que se está marcando comprado
   const [form, setForm]     = useState({ name:"", qty:"1", system:"", category:"Repuestos", priority:"normal", vendor:"", notes:"" });
   const [effOwner, setEffOwner] = useState(null);
 
@@ -82,20 +83,18 @@ export default function ShoppingPage({ vessel, vessels, user, onRegisterExpense 
     setItems(l => l.filter(x => x.id !== it.id));
   };
 
-  // Marcar comprado: se cierra el ítem y se abre el registro de gasto pre-llenado
-  const buy = async (it) => {
+  // Marcar comprado: solo cierra el ítem y guarda quién lo compró. El gasto se
+  // registra aparte porque una sola factura suele cubrir varios ítems de la lista.
+  const buy = async (it, who) => {
     const { data, error } = await supabase.from("shopping_items")
-      .update({ status: "done", done_at: new Date().toISOString() }).eq("id", it.id).select();
-    if (error || !data?.length) { setMsg("Error: " + (error?.message || L("no se pudo marcar", "couldn't update"))); setTimeout(() => setMsg(""), 4000); return; }
-    setItems(l => l.map(x => x.id === it.id ? { ...x, status: "done" } : x));
-    if (onRegisterExpense) {
-      onRegisterExpense({
-        item: it.qty > 1 ? `${it.name} (x${it.qty})` : it.name,
-        category: it.category || "Repuestos",
-        vendor: it.vendor || "",
-        system: it.system || "",
-      });
+      .update({ status:"done", done_at:new Date().toISOString(), bought_by: who || null })
+      .eq("id", it.id).select();
+    if (error || !data?.length) {
+      setMsg("Error: " + (error?.message || L("no se pudo marcar","couldn't update")));
+      setTimeout(()=>setMsg(""), 4000); return;
     }
+    setItems(l => l.map(x => x.id===it.id ? { ...x, status:"done", bought_by: who||null } : x));
+    setBuying(null);
   };
 
   const undo = async (it) => {
@@ -187,7 +186,7 @@ export default function ShoppingPage({ vessel, vessels, user, onRegisterExpense 
                         {lang === "en" ? p.en : p.es}
                       </span>
                     )}
-                    <button onClick={() => buy(it)}
+                    <button onClick={() => setBuying({ item: it, who: user.full_name || "" })}
                       style={{ padding:"7px 14px", background:"#16a34a", border:"none", borderRadius:8, color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
                       ✓ {L("Comprado", "Bought")}
                     </button>
@@ -213,7 +212,7 @@ export default function ShoppingPage({ vessel, vessels, user, onRegisterExpense 
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, color:"#64748b", textDecoration:"line-through" }}>{it.name}{it.qty > 1 ? ` ×${it.qty}` : ""}</div>
                         <div style={{ fontSize:10, color:"#cbd5e1" }}>
-                          {it.done_at ? new Date(it.done_at).toLocaleDateString("en-US") : ""}
+                          {[it.bought_by, it.done_at ? new Date(it.done_at).toLocaleDateString("en-US") : null].filter(Boolean).join(" · ")}
                         </div>
                       </div>
                       <button onClick={() => undo(it)} style={{ background:"none", border:"none", cursor:"pointer", color:"#94a3b8", fontSize:11, fontWeight:600 }}>
@@ -227,6 +226,43 @@ export default function ShoppingPage({ vessel, vessels, user, onRegisterExpense 
             </>
           )}
         </>
+      )}
+
+      {/* Marcar comprado */}
+      {buying && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:14}}>
+          <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:380,width:"100%"}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",marginBottom:2}}>{L("Marcar como comprado","Mark as bought")}</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {buying.item.name}{buying.item.qty>1?` ×${buying.item.qty}`:""}
+            </div>
+
+            <label style={lbl}>{L("¿Quién lo compró?","Who bought it?")}</label>
+            <input list="sl-buyers" value={buying.who} autoFocus
+              onChange={e=>setBuying(b=>({...b, who:e.target.value}))}
+              placeholder={L("Nombre de la persona","Person's name")} style={inp}
+              onKeyDown={e=>{ if(e.key==="Enter") buy(buying.item, buying.who.trim()); }}/>
+            <datalist id="sl-buyers">
+              {[...new Set(items.map(i=>i.bought_by).filter(Boolean).concat([user.full_name].filter(Boolean)))].map(n=><option key={n} value={n}/>)}
+            </datalist>
+
+            <div style={{fontSize:11,color:"#64748b",marginTop:10,lineHeight:1.5,background:"#f8fafc",borderRadius:8,padding:"9px 11px"}}>
+              {L("El gasto se registra aparte en Finanzas. Así una sola factura con varios ítems se anota una sola vez.",
+                 "The expense is logged separately in Finances, so one invoice covering several items is entered only once.")}
+            </div>
+
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button onClick={()=>setBuying(null)}
+                style={{flex:1,padding:"10px",border:"1.5px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#334155",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                {L("Cancelar","Cancel")}
+              </button>
+              <button onClick={()=>buy(buying.item, buying.who.trim())}
+                style={{flex:1,padding:"10px",border:"none",borderRadius:9,background:"#16a34a",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                ✓ {L("Comprado","Bought")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Alta */}
