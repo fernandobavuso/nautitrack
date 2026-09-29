@@ -11,6 +11,12 @@
 // SUPABASE_URL, SUPABASE_SERVICE_KEY
 
 import { createClient } from '@supabase/supabase-js';
+import {
+  WA_SYSTEMS, waText, waButtons, waPhotoToStorage, findCrew, crewVessels,
+  getLogSession, setLogSession, clearLogSession,
+  startLogFlow, askVessel, askSystem, askEquipment, askDescription,
+  askHoursOrPhoto, askPhoto, saveLogEntry,
+} from './wa-logbook.js';
 
 const SUPA_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://shwdahlvrjgcnzmlygaa.supabase.co';
 const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -95,6 +101,123 @@ async function createResponse({ requestId, storeId, type, price, message }) {
   return true;
 }
 
+
+// ── Conversación de bitácora con el personal de flota ────────────────────────
+// Replica el formulario de la app: barco → sistema → equipo → qué encontraste →
+// horas (solo si el sistema las lleva) → foto opcional.
+async function handleCrewMessage(sdb, from, crew, msg) {
+  const sess = await getLogSession(sdb, from);
+
+  // Identificar la respuesta: texto, botón o selección de lista
+  const txt = (msg.text?.body || '').trim();
+  const pick = msg.interactive?.list_reply?.id || msg.interactive?.button_reply?.id || msg.button?.payload || '';
+  const lower = txt.toLowerCase();
+
+  // Cancelar en cualquier momento
+  if (lower === 'cancelar' || pick === 'log_cancel') {
+    await clearLogSession(sdb, from);
+    await waText(from, 'Listo, cancelado. Escribe "hola" cuando quieras anotar algo.');
+    return;
+  }
+
+  // Sin conversación abierta: saludar y ofrecer el menú
+  if (!sess) { await startLogFlow(sdb, from, crew); return; }
+
+  // 1) Menú
+  if (sess.step === 'menu') {
+    if (pick === 'log_start') {
+      const vessels = await crewVessels(sdb, crew.manager_id);
+      if (!vessels.length) {
+        await clearLogSession(sdb, from);
+        await waText(from, 'No encontré barcos asignados a tu cuenta. Avísale al gestor de la flota.');
+        return;
+      }
+      await setLogSession(sdb, from, { ...sess, data: { vessels: vessels.map(v => ({ id: v.id, name: v.name })) } });
+      await askVessel(sdb, from, vessels, { ...sess, data: { ...(sess.data || {}) } });
+      return;
+    }
+    await startLogFlow(sdb, from, crew);
+    return;
+  }
+
+  // 2) Barco
+  if (sess.step === 'barco') {
+    if (!pick.startsWith('v:')) { await waText(from, 'Toca uno de los barcos de la lista, por favor.'); return; }
+    const vesselId = pick.slice(2);
+    const data = { ...(sess.data || {}), vesselId };
+    await askSystem(sdb, from, { ...sess, data });
+    return;
+  }
+
+  // 3) Sistema
+  if (sess.step === 'sistema') {
+    if (!pick.startsWith('s:')) { await waText(from, 'Toca uno de los sistemas de la lista, por favor.'); return; }
+    await askEquipment(sdb, from, sess, pick.slice(2));
+    return;
+  }
+
+  // 4) Equipo
+  if (sess.step === 'equipo') {
+    if (!pick.startsWith('e:')) { await waText(from, 'Toca uno de los equipos de la lista, por favor.'); return; }
+    const sys = WA_SYSTEMS.find(x => x.id === sess.data?.systemId);
+    const equipment = sys?.equipment[Number(pick.slice(2))] || 'Otro';
+    await askDescription(sdb, from, sess, equipment);
+    return;
+  }
+
+  // 5) Qué encontró
+  if (sess.step === 'descripcion') {
+    if (!txt) { await waText(from, 'Escríbeme en un mensaje qué encontraste.'); return; }
+    const data = { ...(sess.data || {}), description: txt };
+    await askHoursOrPhoto(sdb, from, { ...sess, data });
+    return;
+  }
+
+  // 6) Horas (solo motores, generador o Seakeeper)
+  if (sess.step === 'horas') {
+    const sys = WA_SYSTEMS.find(x => x.id === sess.data?.systemId);
+    const data = { ...(sess.data || {}) };
+    if (lower !== 'omitir') {
+      const n = Number(String(txt).replace(',', '.').replace(/[^\d.]/g, ''));
+      if (isNaN(n) || n <= 0) { await waText(from, 'No entendí el número. Escribe solo las horas (ejemplo: 1867) o "omitir".'); return; }
+      if (sys?.hours === 'motor')      data.motorHours = n;
+      else if (sys?.hours === 'generador') data.genHours = n;
+      else if (sys?.hours === 'seakeeper') data.skHours = n;
+    }
+    await askPhoto(sdb, from, { ...sess, data });
+    return;
+  }
+
+  // 7) Foto y cierre
+  if (sess.step === 'foto') {
+    let photoUrl = null;
+    if (msg.type === 'image' && msg.image?.id) {
+      photoUrl = await waPhotoToStorage(sdb, msg.image.id, sess.data?.vesselId);
+      if (!photoUrl) await waText(from, 'No pude guardar la foto, pero sigo con la anotación.');
+    } else if (pick !== 'log_skipphoto' && lower !== 'omitir') {
+      await waText(from, 'Mándame la foto o toca "Omitir".');
+      return;
+    }
+
+    const r = await saveLogEntry(sdb, from, sess, photoUrl);
+    await clearLogSession(sdb, from);
+    if (!r.ok) { await waText(from, 'No se pudo guardar la anotación. Inténtalo desde la app o avísale al gestor.'); return; }
+
+    const d = sess.data || {};
+    const hrs = d.motorHours ?? d.genHours ?? d.skHours;
+    await waText(from,
+      `✅ *Anotado en ${r.vesselName}*\n\n` +
+      `Visita · Inspección\n${d.system} — ${d.equipment}\n` +
+      `"${String(d.description || '').slice(0, 120)}${(d.description || '').length > 120 ? '…' : ''}"\n` +
+      (hrs ? `${hrs}h · ` : '') + (photoUrl ? '1 foto · ' : '') + `${sess.crew_name}\n\n` +
+      `Ya está en la app. Escribe "hola" para anotar otra.`);
+    return;
+  }
+
+  // Estado desconocido: reiniciar
+  await startLogFlow(sdb, from, crew);
+}
+
 export default async function handler(req, res) {
   // 1) Verificación del webhook (Meta hace un GET al configurarlo)
   if (req.method === 'GET') {
@@ -119,6 +242,13 @@ export default async function handler(req, res) {
     if (!msg) return;   // acuse de recibo / estado de entrega: ignorar
 
     const from = String(msg.from || '').replace(/\D/g, '');
+
+    // ── Personal de flota: flujo guiado de bitácora ─────────────────────────
+    // Se atiende antes que el flujo de tiendas: quien está en Personal usa el
+    // número para anotar inspecciones, no para cotizar repuestos.
+    const crew = await findCrew(db(), from);
+    if (crew) { await handleCrewMessage(db(), from, crew, msg); return; }
+
     const store = await findStore(from);
     if (!store) {
       await sendText(from, 'Hola. Este número atiende a tiendas registradas en Carive. Si quieres registrar tu tienda, entra a app.carive.co');
