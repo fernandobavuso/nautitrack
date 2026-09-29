@@ -83,7 +83,10 @@ export async function waPhotoToStorage(db, mediaId, vesselId) {
 
 // ¿Quién escribe? Solo personal registrado con teléfono en Personal.
 export async function findCrew(db, fromDigits) {
-  const { data } = await db.from('fleet_crew').select('id, name, phone, manager_id').not('phone', 'is', null);
+  const { data, error } = await db.from('fleet_crew').select('id, name, phone, manager_id').not('phone', 'is', null);
+  if (error) console.error('[wa-log] no se pudo leer Personal:', error.message);
+  console.log('[wa-log] buscando', fromDigits, 'entre', (data || []).length, 'personas con teléfono:',
+    (data || []).map(c => `${c.name}=${String(c.phone || '').replace(/\D/g, '')}`).join(', '));
   const last10 = fromDigits.slice(-10);
   return (data || []).find(c => {
     const d = String(c.phone || '').replace(/\D/g, '');

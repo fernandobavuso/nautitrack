@@ -247,6 +247,7 @@ export default async function handler(req, res) {
     // Se atiende antes que el flujo de tiendas: quien está en Personal usa el
     // número para anotar inspecciones, no para cotizar repuestos.
     const crew = await findCrew(db(), from);
+    console.log('[wa] mensaje de', from, '| tipo:', msg.type, '| personal:', crew ? crew.name : 'NO ENCONTRADO');
     if (crew) { await handleCrewMessage(db(), from, crew, msg); return; }
 
     const store = await findStore(from);
