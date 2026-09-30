@@ -36,6 +36,7 @@ export default function CompanyPage({ user, vessels }) {
     card_brand:"", card_last4:"", card_owner:"", receipt_urls:[],
   });
   const [uploading, setUploading] = useState(false);
+  const [q, setQ] = useState("");   // búsqueda en los movimientos
   // Joana y Fernando comparten la MISMA empresa: si el usuario es co-gestor de una
   // flota ajena, los gastos de empresa viven bajo el dueño de esa flota.
   const [effOwner, setEffOwner] = useState(null);
@@ -74,16 +75,17 @@ export default function CompanyPage({ user, vessels }) {
     inMonth.forEach(r=>{ byCat[r.category]=(byCat[r.category]||0)+Number(r.amount||0); });
     const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
 
-    const byPayee = {};
-    inMonth.filter(r=>r.payee).forEach(r=>{
-      const k=r.payee.trim();
-      byPayee[k]=byPayee[k]||{total:0,count:0,cats:new Set()};
-      byPayee[k].total+=Number(r.amount||0); byPayee[k].count++; byPayee[k].cats.add(r.category);
-    });
-    const payees = Object.entries(byPayee).sort((a,b)=>b[1].total-a[1].total);
 
-    return { inMonth, total, thirdParty, delta, cats, payees };
+    return { inMonth, total, thirdParty, delta, cats };
   },[rows, month]);
+
+  // Movimientos que se muestran: los del mes, filtrados por la búsqueda
+  const shown = calc.inMonth.filter(r => {
+    if (!q.trim()) return true;
+    const t = q.trim().toLowerCase();
+    return [r.payee, r.description, r.category, r.purchased_by, r.invoice_number]
+      .filter(Boolean).join(" ").toLowerCase().includes(t);
+  });
 
   // Sugerencias de beneficiario: proveedores de la flota + ya usados
   const payeeSuggestions = useMemo(()=>{
@@ -273,36 +275,39 @@ export default function CompanyPage({ user, vessels }) {
         </div>
       )}
 
-      {/* A quién le pagué */}
-      {calc.payees.length>0 && (
-        <div style={{marginBottom:18}}>
-          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>{L("A quién le pagué","Who I paid")}</div>
-          <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>
-            {calc.payees.map(([name,info],i)=>(
-              <div key={name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderBottom:i<calc.payees.length-1?"1px solid #f1f5f9":"none"}}>
-                <div style={{width:30,height:30,borderRadius:"50%",background:"#eff6ff",color:"#1e40af",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
-                  {name.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase()}
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,color:"#0f172a",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                  <div style={{fontSize:11,color:"#94a3b8"}}>{info.count} {info.count===1?L("pago","payment"):L("pagos","payments")} · {[...info.cats].join(", ")}</div>
-                </div>
-                <div style={{fontSize:13,fontWeight:700,color:"#0f172a",whiteSpace:"nowrap"}}>{money(info.total)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Movimientos del mes */}
       <div>
-        <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:8}}>{L("Movimientos","Transactions")} · {calc.inMonth.length}</div>
-        {calc.inMonth.length===0
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>
+            {L("Movimientos","Transactions")} · {shown.length}{q?` / ${calc.inMonth.length}`:""}
+          </div>
+          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+            <input value={q} onChange={e=>setQ(e.target.value)}
+              placeholder={L("Buscar por proveedor, concepto...","Search by payee, concept...")}
+              list="ce-payees"
+              style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#334155",minWidth:190}}/>
+            <datalist id="ce-payees">
+              {[...new Set(rows.map(r=>r.payee).filter(Boolean))].sort().map(p=><option key={p} value={p}/>)}
+            </datalist>
+            {q && (
+              <button onClick={()=>setQ("")} style={{background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:700}}>
+                {L("Limpiar","Clear")}
+              </button>
+            )}
+          </div>
+        </div>
+        {q && shown.length>0 && (
+          <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>
+            {L("Total de la búsqueda","Search total")}: <strong style={{color:"#0f172a"}}>{money(shown.reduce((a,r)=>a+Number(r.amount||0),0))}</strong>
+          </div>
+        )}
+        {shown.length===0
           ? <div style={{padding:"30px 12px",textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px dashed #e2e8f0",borderRadius:10}}>
-              {L("Sin gastos de empresa este mes. Usa “+ Gasto de empresa” para registrar el primero.","No company expenses this month. Use “+ Company expense” to add the first one.")}
+              {q ? L("Ningún movimiento coincide con la búsqueda.","No transactions match your search.")
+                 : L("Sin gastos de empresa este mes. Usa “+ Gasto de empresa” para registrar el primero.","No company expenses this month. Use “+ Company expense” to add the first one.")}
             </div>
           : <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {calc.inMonth.map(r=>(
+              {shown.map(r=>(
                 <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#fff",border:"1px solid #f1f5f9",borderRadius:9}}>
                   <div style={{width:4,alignSelf:"stretch",borderRadius:2,background:CAT_COLORS[CATEGORIES.indexOf(r.category)]||"#94a3b8"}}/>
                   <div style={{flex:1,minWidth:0}}>
