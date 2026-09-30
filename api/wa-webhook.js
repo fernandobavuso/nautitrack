@@ -232,14 +232,14 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Responder rápido a Meta (si tarda, reintenta y duplica)
-  res.status(200).json({ received: true });
-
+  // En Vercel la función se congela al responder: si se contesta antes de
+  // procesar, el trabajo posterior nunca corre. Se procesa primero y se responde
+  // al final; Meta espera hasta 20s, de sobra para este flujo.
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const value = body?.entry?.[0]?.changes?.[0]?.value;
     const msg = value?.messages?.[0];
-    if (!msg) return;   // acuse de recibo / estado de entrega: ignorar
+    if (!msg) return res.status(200).json({ ok: true });   // acuse/estado: ignorar
 
     const from = String(msg.from || '').replace(/\D/g, '');
 
@@ -248,12 +248,12 @@ export default async function handler(req, res) {
     // número para anotar inspecciones, no para cotizar repuestos.
     const crew = await findCrew(db(), from);
     console.log('[wa] mensaje de', from, '| tipo:', msg.type, '| personal:', crew ? crew.name : 'NO ENCONTRADO');
-    if (crew) { await handleCrewMessage(db(), from, crew, msg); return; }
+    if (crew) { await handleCrewMessage(db(), from, crew, msg); return res.status(200).json({ ok: true }); }
 
     const store = await findStore(from);
     if (!store) {
       await sendText(from, 'Hola. Este número atiende a tiendas registradas en Carive. Si quieres registrar tu tienda, entra a app.carive.co');
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     const session = await getSession(store.id);
@@ -267,7 +267,7 @@ export default async function handler(req, res) {
 
       if (!requestId) {
         await sendText(from, 'No encontré a qué pedido corresponde. Abre app.carive.co para responderlo.');
-        return;
+        return res.status(200).json({ ok: true });
       }
 
       const { data: reqRow } = await db().from('part_requests')
@@ -275,24 +275,24 @@ export default async function handler(req, res) {
       if (reqRow?.status && reqRow.status !== 'open') {
         await sendText(from, `Ese pedido ya se cerró (${reqRow.item_name}). Te avisamos cuando llegue otro.`);
         await setSession(store.id, { request_id: null, state: null });
-        return;
+        return res.status(200).json({ ok: true });
       }
 
       if (p.includes('no tengo') || p.includes('dont') || p.includes('no_tengo')) {
         await createResponse({ requestId, storeId: store.id, type: 'dont_have' });
         await setSession(store.id, { request_id: null, state: null });
         await sendText(from, 'Listo, marcamos que no tienes este repuesto. Gracias por responder.');
-        return;
+        return res.status(200).json({ ok: true });
       }
       if (p.includes('pregunt') || p.includes('question')) {
         await setSession(store.id, { request_id: requestId, state: 'awaiting_question' });
         await sendText(from, `¿Qué necesitas saber sobre "${reqRow?.item_name || 'el pedido'}"? Escríbelo y se lo hacemos llegar al cliente.`);
-        return;
+        return res.status(200).json({ ok: true });
       }
       // Por defecto: tiene el repuesto -> pedir precio
       await setSession(store.id, { request_id: requestId, state: 'awaiting_price' });
       await sendText(from, `Perfecto. ¿En cuánto lo cotizas? Escribe solo el monto en dólares (ejemplo: 45)\n\nPuedes agregar una nota después del precio, ejemplo: 45 entrega mañana`);
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     // ── B) La tienda escribió un texto ──────────────────────────────────────
@@ -304,24 +304,24 @@ export default async function handler(req, res) {
       if (['pausa', 'pausar', 'stop', 'baja'].includes(low)) {
         await db().from('profiles').update({ store_paused: true }).eq('id', store.id);
         await sendText(from, 'Tu tienda quedó en pausa: no recibirás pedidos nuevos. Escribe ACTIVAR cuando quieras volver.');
-        return;
+        return res.status(200).json({ ok: true });
       }
       if (['activar', 'activa', 'volver'].includes(low)) {
         await db().from('profiles').update({ store_paused: false }).eq('id', store.id);
         await sendText(from, 'Tu tienda está activa otra vez. Ya puedes recibir pedidos.');
-        return;
+        return res.status(200).json({ ok: true });
       }
 
       if (!session?.request_id || !session?.state) {
         await sendText(from, 'Hola. Cuando llegue un pedido para tu tienda te escribimos por aquí y puedes responder al momento.\n\nComandos: PAUSA para dejar de recibir pedidos, ACTIVAR para volver.');
-        return;
+        return res.status(200).json({ ok: true });
       }
 
       if (session.state === 'awaiting_question') {
         await createResponse({ requestId: session.request_id, storeId: store.id, type: 'have_questions', message: text });
         await setSession(store.id, { request_id: null, state: null });
         await sendText(from, 'Enviamos tu pregunta al cliente. Te avisamos cuando responda.');
-        return;
+        return res.status(200).json({ ok: true });
       }
 
       if (session.state === 'awaiting_price') {
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
         const m = text.replace(',', '.').match(/\d+(\.\d+)?/);
         if (!m) {
           await sendText(from, 'No entendí el monto. Escribe solo el número, por ejemplo: 45');
-          return;
+          return res.status(200).json({ ok: true });
         }
         const price = parseFloat(m[0]);
         const note = text.replace(m[0], '').replace(/^[\s$.,-]+/, '').trim();
@@ -341,10 +341,13 @@ export default async function handler(req, res) {
         await sendText(from, ok
           ? `Cotización enviada: $${price}${note ? ` (${note})` : ''}. Si el cliente te elige, te pasamos su contacto por aquí.`
           : 'No pudimos registrar la cotización. Intenta desde app.carive.co');
-        return;
+        return res.status(200).json({ ok: true });
       }
     }
   } catch (e) {
     console.error('[wa-webhook] error:', e.message);
   }
+  // Cualquier camino no cubierto arriba: confirmar recepción para que Meta no
+  // reintente el mismo mensaje.
+  if (!res.headersSent) return res.status(200).json({ ok: true });
 }
