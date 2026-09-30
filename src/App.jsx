@@ -2981,6 +2981,11 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
                 {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
                 <option value="Otro">Otro</option>
               </select>
+              {performedBy==="Otro" && (
+                <input value={otherPerformed} onChange={e=>setOtherPerformed(e.target.value)}
+                  placeholder={lang==="es"?"Escribe quién lo hizo":"Type who did it"}
+                  style={{...s.input, marginTop:8}} autoFocus/>
+              )}
             </div>
             <PhotoFld photos={photos} setPhotos={setPhotos} err={errors.photos} userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
@@ -2994,7 +2999,20 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
               </div>
             </div>
             <div><label style={s.label}>Comentarios</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Proveedor, tipo de combustible..." rows={2} style={{...s.input,resize:"vertical"}}/></div>
-            <div><label style={s.label}>{lang==="es"?"Realizado por":"Performed by"}</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option>{allPerformed.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
+            <div>
+              <label style={s.label}>{lang==="es"?"Realizado por":"Performed by"}</label>
+              <select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}>
+                <option value="">{lang==="es"?"Seleccionar...":"Select..."}</option>
+                {allPerformed.map(p=><option key={p} value={p}>{p}</option>)}
+                <option value="Otro">{lang==="es"?"Otro":"Other"}</option>
+              </select>
+              {performedBy==="Otro" && (
+                <input value={otherPerformed} onChange={e=>setOtherPerformed(e.target.value)}
+                  placeholder={lang==="es"?"Escribe quién lo hizo":"Type who did it"}
+                  style={{...s.input, marginTop:8}} autoFocus/>
+              )}
+            </div>
+            <PhotoFld photos={photos} setPhotos={setPhotos} err={errors.photos} userId={vessel.owner_id} vesselId={vessel.id}/>
           </>)}
 
           {type==="Salida"&&(<>
@@ -3116,7 +3134,12 @@ function LogEntryModal({ vessel: vesselProp, vessels, initial, onSave, onClose }
                 <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>{lang==="es"?"Lo pagué yo — cobrar al dueño":"I paid it — bill the owner"}</span>
               </label>
             )}
-            <div><label style={s.label}>¿Quién hizo la compra?</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option><option value="Dueño">Dueño</option><option value="Capitán">Capitán</option>{crewOptions.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select></div>
+            <div><label style={s.label}>¿Quién hizo la compra?</label><select value={performedBy} onChange={e=>setPerformedBy(e.target.value)} style={s.input}><option value="">Seleccionar...</option><option value="Dueño">Dueño</option><option value="Capitán">Capitán</option>{crewOptions.map(p=><option key={p} value={p}>{p}</option>)}<option value="Otro">Otro</option></select>
+              {performedBy==="Otro" && (
+                <input value={otherPerformed} onChange={e=>setOtherPerformed(e.target.value)}
+                  placeholder={lang==="es"?"Escribe quién lo hizo":"Type who did it"}
+                  style={{...s.input, marginTop:8}} autoFocus/>
+              )}</div>
             <div><label style={s.label}>{lang==="es"?"Notas adicionales":"Additional notes"}</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={2} placeholder="Proveedor, observaciones..." style={{...s.input,resize:"vertical"}}/></div>
             <div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#0369a1",display:"flex",gap:8,alignItems:"flex-start"}}>
               <span style={{fontWeight:700}}>ℹ</span>
