@@ -3851,6 +3851,8 @@ function ReportModal({ vessel, onClose }) {
   // estado de reembolso: aquí interesa el soporte documental del barco.
   const [pdfBusy, setPdfBusy] = useState(false);
   const exportInvoicesPDF = async () => {
+    // Formateador propio: el de la generación de HTML vive en otro ámbito
+    const fD = (d) => { if(!d) return "—"; const p=String(d).split("-"); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; };
     const fD2 = parseInputDate(from), tD2 = parseInputDate(to);
     const list = vExpenses
       .filter(e => Array.isArray(e.receipt_urls) && e.receipt_urls.length)
@@ -3882,7 +3884,7 @@ function ReportModal({ vessel, onClose }) {
           if (!first) pdf.addPage();
           first = false; count++;
           pdf.setFontSize(11); pdf.setTextColor(60);
-          pdf.text(`${fmtD(e.expense_date)}  ·  ${e.category||""}  ·  $${Number(e.amount||0).toFixed(2)}${e.vendor?`  ·  ${e.vendor}`:""}`, 40, 36);
+          pdf.text(`${fD(e.expense_date)}  ·  ${e.category||""}  ·  $${Number(e.amount||0).toFixed(2)}${e.vendor?`  ·  ${e.vendor}`:""}`, 40, 36);
           pdf.setFontSize(9); pdf.setTextColor(120);
           const sub = [e.description, e.purchased_by ? `${lang==="es"?"compró":"bought by"}: ${e.purchased_by}` : null,
                        paymentSummary(e, lang) || null, e.invoice_number ? `#${e.invoice_number}` : null]
@@ -3903,7 +3905,7 @@ function ReportModal({ vessel, onClose }) {
       pdf.setFontSize(12); pdf.setTextColor(90);
       pdf.text(vessel.name, 40, 92);
       pdf.setFontSize(10); pdf.setTextColor(120);
-      pdf.text(`${from||to ? `${fmtD(parseInputDate(from)||"")} — ${fmtD(parseInputDate(to)||"")}` : (lang==="es"?"Todo el historial":"All history")}`, 40, 112);
+      pdf.text(`${from||to ? `${fD(parseInputDate(from)||"")} — ${fD(parseInputDate(to)||"")}` : (lang==="es"?"Todo el historial":"All history")}`, 40, 112);
       pdf.text(`${list.length} ${lang==="es"?"gastos con factura":"expenses with invoice"}  ·  ${count} ${lang==="es"?"imágenes":"images"}`, 40, 128);
       pdf.setFontSize(14); pdf.setTextColor(15,42,56);
       pdf.text(`${lang==="es"?"Total":"Total"}: $${total.toFixed(2)} USD`, 40, 154);
