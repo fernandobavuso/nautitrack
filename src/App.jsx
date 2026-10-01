@@ -11,7 +11,8 @@ import CheckinPage from "./CheckinPage";
 import CrewProfile from "./CrewProfile";
 import CaptainView from "./CaptainView";
 import PartnerView from "./PartnerView.jsx";
-import PurchaseMeta, { EXPENSE_CATEGORIES, paymentSummary } from "./PaymentFields.jsx";
+import PurchaseMeta, { EXPENSE_CATEGORIES, paymentSummary, photoUrl } from "./PaymentFields.jsx";
+import { jsPDF } from "jspdf";
 import { docExpiry } from "./docs.js";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
@@ -3846,6 +3847,74 @@ function ReportModal({ vessel, onClose }) {
 </html>`;
   };
 
+  // PDF con las fotos de factura del período, una por página. Independiente del
+  // estado de reembolso: aquí interesa el soporte documental del barco.
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const exportInvoicesPDF = async () => {
+    const fD2 = parseInputDate(from), tD2 = parseInputDate(to);
+    const list = vExpenses
+      .filter(e => Array.isArray(e.receipt_urls) && e.receipt_urls.length)
+      .filter(e => (!fD2 || String(e.expense_date) >= fD2) && (!tD2 || String(e.expense_date) <= tD2))
+      .sort((a,b) => String(a.expense_date).localeCompare(String(b.expense_date)));
+
+    if (!list.length) {
+      alert(lang==="es"
+        ? "No hay facturas con foto en ese período."
+        : "No invoices with photos in that period.");
+      return;
+    }
+    setPdfBusy(true);
+    try {
+      const pdf = new jsPDF({ unit:"pt", format:"letter" });
+      const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+      let first = true, count = 0, total = 0;
+      for (const e of list) {
+        total += Number(e.amount||0);
+        for (const raw of e.receipt_urls) {
+          const url = photoUrl(raw);
+          if (!url) continue;
+          const dataUrl = await fetch(url).then(r=>r.blob()).then(b=>new Promise(res=>{
+            const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(b);
+          })).catch(()=>null);
+          if (!dataUrl) continue;
+          const img = await new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=dataUrl; });
+          if (!img) continue;
+          if (!first) pdf.addPage();
+          first = false; count++;
+          pdf.setFontSize(11); pdf.setTextColor(60);
+          pdf.text(`${fmtD(e.expense_date)}  ·  ${e.category||""}  ·  $${Number(e.amount||0).toFixed(2)}${e.vendor?`  ·  ${e.vendor}`:""}`, 40, 36);
+          pdf.setFontSize(9); pdf.setTextColor(120);
+          const sub = [e.description, e.purchased_by ? `${lang==="es"?"compró":"bought by"}: ${e.purchased_by}` : null,
+                       paymentSummary(e, lang) || null, e.invoice_number ? `#${e.invoice_number}` : null]
+                      .filter(Boolean).join("  ·  ");
+          if (sub) pdf.text(String(sub).slice(0,120), 40, 52);
+          const maxW = W-80, maxH = H-110;
+          const r = Math.min(maxW/img.width, maxH/img.height, 1);
+          const fmt = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+          pdf.addImage(dataUrl, fmt, (W-img.width*r)/2, 66, img.width*r, img.height*r);
+        }
+      }
+      if (!count) { alert(lang==="es"?"No se pudieron cargar las fotos.":"Couldn't load the photos."); setPdfBusy(false); return; }
+
+      // Portada al inicio con el resumen del período
+      pdf.insertPage(1);
+      pdf.setFontSize(20); pdf.setTextColor(15,42,56);
+      pdf.text(lang==="es"?"Facturas":"Invoices", 40, 70);
+      pdf.setFontSize(12); pdf.setTextColor(90);
+      pdf.text(vessel.name, 40, 92);
+      pdf.setFontSize(10); pdf.setTextColor(120);
+      pdf.text(`${from||to ? `${fmtD(parseInputDate(from)||"")} — ${fmtD(parseInputDate(to)||"")}` : (lang==="es"?"Todo el historial":"All history")}`, 40, 112);
+      pdf.text(`${list.length} ${lang==="es"?"gastos con factura":"expenses with invoice"}  ·  ${count} ${lang==="es"?"imágenes":"images"}`, 40, 128);
+      pdf.setFontSize(14); pdf.setTextColor(15,42,56);
+      pdf.text(`${lang==="es"?"Total":"Total"}: $${total.toFixed(2)} USD`, 40, 154);
+
+      pdf.save(`facturas_${vessel.name.replace(/\s+/g,"_")}.pdf`);
+    } catch (err) {
+      alert((lang==="es"?"No se pudo generar el PDF: ":"Couldn't generate the PDF: ")+err.message);
+    }
+    setPdfBusy(false);
+  };
+
   const openReport = () => {
     if (sel.length === 0) { alert(lang==="es"?"Elige al menos una sección para el reporte.":"Pick at least one section for the report."); return; }
     let html;
@@ -3918,7 +3987,12 @@ function ReportModal({ vessel, onClose }) {
           <button style={s.btnOutline} onClick={onClose}>{lang==="es"?"Cancelar":"Cancel"}</button>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button style={{...s.btnOutline,fontSize:11}} onClick={()=>setSel(REPORT_TYPES.map(r=>r.key))}>
-              Seleccionar todo
+              {lang==="es"?"Seleccionar todo":"Select all"}
+            </button>
+            <button onClick={exportInvoicesPDF} disabled={pdfBusy}
+              style={{...s.btnOutline,fontSize:11,borderColor:"#fca5a5",color:"#b91c1c",opacity:pdfBusy?0.6:1}}
+              title={lang==="es"?"PDF con las fotos de factura del período":"PDF with the period's invoice photos"}>
+              {pdfBusy ? (lang==="es"?"Generando...":"Generating...") : `📄 ${lang==="es"?"Facturas (PDF)":"Invoices (PDF)"}`}
             </button>
             <button
               style={{...s.btnPrimary,opacity:sel.length===0?0.4:1,background:"linear-gradient(135deg,#7c3aed,#2563eb)"}}
