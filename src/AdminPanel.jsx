@@ -109,7 +109,7 @@ export default function AdminPanel({ user, onClose, asPage }) {
   // Generar link de WhatsApp para notificar a una tienda de un pedido
   const waLink = (store, req) => {
     const phone = (store.store_phone||"").replace(/[^0-9]/g,"");
-    const msg = `Hola ${store.store_name}, tienes un nuevo pedido en Carive:\n\n📦 ${req.item_name}\n📍 ${req.city||"—"}\n${req.category?`Categoría: ${req.category}\n`:""}${req.part_num?`Ref: ${req.part_num}\n`:""}\nEntra a la app para cotizar: ${window.location.origin}`;
+    const msg = `Hola ${store.store_name}, tienes un nuevo pedido en Carive:\n\n📦 ${req.item_name}\n📍 ${req.city||"—"}\n${req.category?`Categoría: ${req.category}\n`:""}${req.part_num?`Ref: ${req.part_num}\n`:""}\nEntra a la app para cotizar: https://app.carive.co`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   };
 

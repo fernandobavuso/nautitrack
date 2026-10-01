@@ -30,7 +30,9 @@ export async function createInvitation({ kind, inviter, vessel, invitedEmail, in
     status: "pending",
   });
   if (error) throw error;
-  const base = window.location.origin;
+  // Siempre el dominio oficial: si el gestor entró por la URL de Vercel, el link
+  // heredaba ese dominio y se veía poco profesional para quien lo recibe.
+  const base = "https://app.carive.co";
   return `${base}/?invite=${token}`;
 }
 

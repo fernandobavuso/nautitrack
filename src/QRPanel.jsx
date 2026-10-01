@@ -10,7 +10,9 @@ export default function QRPanel({ vessel, onClose }) {
   const [copied,   setCopied]   = useState(false);
   const qrRef = useRef(null);
 
-  const checkinUrl = `${window.location.origin}/checkin?v=${vessel.id}`;
+  // Dominio fijo: este QR se imprime y se pega en el barco, así que no puede
+  // depender de desde dónde se generó.
+  const checkinUrl = `https://app.carive.co/checkin?v=${vessel.id}`;
 
   useEffect(()=>{
     loadLogs();
