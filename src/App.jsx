@@ -1635,6 +1635,35 @@ function IndicatorsCard({ vessel }) {
     return notes.sort((a,b)=>a.rank-b.rank)[0];
   };
 
+  // Última vez que cada indicador se actualizó: se deduce de la bitácora, que es
+  // lo que mueve estos valores (no hace falta guardar una fecha aparte).
+  const lastUpdate = (() => {
+    const log = [...(vessel.log || [])].sort((a,b) => String(b.date||"").localeCompare(String(a.date||"")));
+    const has = (e, f) => e[f] != null && e[f] !== "" && !(typeof e[f] === "object" && !Object.keys(e[f]).length);
+    const find = (fn) => { const e = log.find(fn); return e ? e.date : null; };
+    return {
+      fuel: find(e =>
+        (e.type==="Combustible" && has(e,"fuelQty")) ||
+        (e.type==="Visita" && (e.visitTypes||[]).includes("Combustible") && has(e,"fuelQty")) ||
+        (e.type==="Salida" && has(e,"fuelIn"))),
+      engine: find(e => has(e,"engineHrsIn") || has(e,"engineHrsOut")),
+      gen:    find(e => has(e,"genHrsIn") || has(e,"genHrsOut")),
+      sk:     find(e => has(e,"skHours") || (e.systemId==="seakeeper" && has(e,"equipHours"))),
+    };
+  })();
+
+  // "hoy" / "ayer" / "hace 5 días" / fecha, según lo reciente que sea
+  const agoLabel = (d) => {
+    if (!d) return lang==="es" ? "sin registro" : "no record";
+    const t = new Date(); t.setHours(0,0,0,0);
+    const x = new Date(String(d).slice(0,10) + "T00:00:00");
+    const days = Math.round((t - x) / 86400000);
+    if (days <= 0)  return lang==="es" ? "hoy" : "today";
+    if (days === 1) return lang==="es" ? "ayer" : "yesterday";
+    if (days < 30)  return lang==="es" ? `hace ${days} días` : `${days} days ago`;
+    return x.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+  };
+
   const motorLabelsSvc = getMotorLabels(vessel);
   const motorNote = (()=>{
     const mh = vessel.motorHours||{};
@@ -1685,19 +1714,22 @@ function IndicatorsCard({ vessel }) {
       <div style={s.cardHdr}><span style={s.cardTitle}>{tr("dash.indicators")}</span><span style={s.cardSub}>{vessel.name}</span></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}}>
         {[
-          {Icon:IconFuel,
+          {Icon:IconFuel,upd:lastUpdate.fuel,
             val: isPctUnit ? `${fuelVal}%` : (tankCap>0 ? `${fuelVal}/${tankCap} ${fuelUnit}` : `${fuelVal} ${fuelUnit}`),
             lbl: (!isPctUnit && fuelPct!=null) ? `${tr("dash.fuel")} · ${Math.round(fuelPct)}%` : tr("dash.fuel"),
             color:fc, bar:fuelPct!=null},
-          {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false,note:motorNote},
-          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false,note:genNote},
-          {Icon:IconGyro,val:seakeeperHours!=null?`${seakeeperHours}h`:"—",lbl:"Seakeeper",color:"#0d9488",bar:false,note:skNote},
+          {Icon:IconEngine,val:(()=>{const mh=vessel.motorHours||{};const ms=getMotorLabels(vessel).map(m=>mh[m]).filter(v=>v!=null);return ms.length?ms.map(v=>`${v}h`).join(" / "):`${vessel.engineHours||0}h`;})(),lbl:tr("dash.engineHours"),color:"#2563eb",bar:false,note:motorNote,upd:lastUpdate.engine},
+          {Icon:IconBolt,val:`${vessel.genHours}h`,lbl:tr("dash.genHours"),color:"#7c3aed",bar:false,note:genNote,upd:lastUpdate.gen},
+          {Icon:IconGyro,val:seakeeperHours!=null?`${seakeeperHours}h`:"—",lbl:"Seakeeper",color:"#0d9488",bar:false,note:skNote,upd:lastUpdate.sk},
         ].map(ind => (
           <div key={ind.lbl} style={{...s.indBox,padding:"15px 16px"}}>
             <div style={{marginBottom:8,display:"flex"}}><ind.Icon size={24} color={ind.color}/></div>
             <div style={{fontSize:23,fontWeight:800,color:ind.color,lineHeight:1.15,letterSpacing:"-0.5px"}}>{ind.val}</div>
             <div style={{fontSize:11,color:"#94a3b8",marginTop:3,fontWeight:600}}>{ind.lbl}</div>
             {ind.note && <div style={{fontSize:11,fontWeight:ind.note.color==="#94a3b8"?500:700,color:ind.note.color,marginTop:5}}>{ind.note.text}</div>}
+            <div style={{fontSize:9.5,color:"#cbd5e1",marginTop:4}}>
+              {lang==="es"?"Actualizado":"Updated"} {agoLabel(ind.upd)}
+            </div>
             {ind.bar && <div style={s.indTrack}><div style={{...s.indFill,width:`${fuelPct!=null?fuelPct:0}%`,background:ind.color}} /></div>}
           </div>
         ))}
