@@ -2502,6 +2502,22 @@ function TripDetail({ e, lang }) {
 
 function LogPage({ vessel, vessels, updateVessel, addLogEntry, updateLogEntry, deleteLogEntry }) {
   const { t: tr, lang } = useLang();
+  // El estado de cobro vive en el gasto, no en la entrada de bitácora: se consulta
+  // para que el chip diga la verdad cuando ya se cobró desde Finanzas.
+  const [paidKeys, setPaidKeys] = useState(new Set());
+  useEffect(() => {
+    if (!vessel?.id || vessel.id === "__empty__") { setPaidKeys(new Set()); return; }
+    supabase.from("expenses")
+      .select("expense_date, amount, reimbursed")
+      .eq("vessel_id", vessel.id).eq("source", "log").eq("reimbursable", true)
+      .then(({ data }) => {
+        const k = new Set();
+        (data || []).filter(x => x.reimbursed)
+          .forEach(x => k.add(`${String(x.expense_date).slice(0,10)}|${Number(x.amount).toFixed(2)}`));
+        setPaidKeys(k);
+      });
+  }, [vessel?.id, vessel?.log?.length]);
+  const isPaid = (e) => paidKeys.has(`${String(e.date).slice(0,10)}|${Number(e.costUSD||0).toFixed(2)}`);
   const [showModal, setShowModal]       = useState(false);
   const [editEntry, setEditEntry]       = useState(null);
   const [filter, setFilter]             = useState("Todos");
@@ -2633,10 +2649,13 @@ function LogPage({ vessel, vessels, updateVessel, addLogEntry, updateLogEntry, d
                     : e.type==="Compra"
                       ? <>
                           {`${e.item||""} · $${e.costUSD||0}`}
-                          {e.reimbursable && (
-                            <span style={{marginLeft:6,fontSize:10,fontWeight:700,background:"#fffbeb",border:"1px solid #fde68a",color:"#92400e",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap"}}>
-                              {lang==="es"?"por cobrar":"to bill"}
-                            </span>
+                          {e.reimbursable && (isPaid(e)
+                            ? <span style={{marginLeft:6,fontSize:10,fontWeight:700,background:"#f0fdf4",border:"1px solid #bbf7d0",color:"#15803d",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap"}}>
+                                {lang==="es"?"cobrado":"collected"}
+                              </span>
+                            : <span style={{marginLeft:6,fontSize:10,fontWeight:700,background:"#fffbeb",border:"1px solid #fde68a",color:"#92400e",borderRadius:20,padding:"2px 7px",whiteSpace:"nowrap"}}>
+                                {lang==="es"?"por cobrar":"to bill"}
+                              </span>
                           )}
                         </>
                       : <LongCell text={e.desc||""} limit={110}/>}
