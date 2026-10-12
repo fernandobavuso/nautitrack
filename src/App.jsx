@@ -2483,7 +2483,7 @@ function TripDetail({ e, lang }) {
   return (
     <>
       <button onClick={()=>setOpen(o=>!o)}
-        style={{display:"block",marginTop:5,background:"none",border:"none",padding:0,color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+        style={{display:"block",width:"100%",textAlign:"center",marginTop:5,background:"none",border:"none",padding:0,color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer"}}>
         {open ? L("ocultar detalle","hide details") : L("ver detalle","view details")}
       </button>
       {open && (
@@ -2607,7 +2607,11 @@ function LogPage({ vessel, vessels, updateVessel, addLogEntry, updateLogEntry, d
       </div>
       <div style={{overflowX:"auto"}}>
         <table style={s.table}>
-          <thead><tr style={{background:"#1e3a5f"}}>{[tr("log.date"),tr("log.type"),tr("log.desc"),tr("tasks.photos"),tr("log.by"),""].map(h=><th key={h} style={s.th}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:"#1e3a5f"}}>{[tr("log.date"),tr("log.type"),tr("log.desc"),tr("tasks.photos"),tr("log.by"),""].map((h,hi)=>(
+            // Los títulos de las columnas con contenido centrado van centrados
+            // también, para que queden encima de lo que describen.
+            <th key={h} style={{...s.th, textAlign: hi===0 ? "left" : "center"}}>{h}</th>
+          ))}</tr></thead>
           <tbody>
             {filtered.length===0&&<tr><td colSpan={6} style={{textAlign:"center",padding:"40px",color:"#94a3b8"}}>{tr("log.empty")}</td></tr>}
             {filtered.map((e,i)=>(
