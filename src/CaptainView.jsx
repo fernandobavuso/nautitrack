@@ -6,6 +6,7 @@ import CariveLogo from "./CariveLogo";
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useResponsive } from "./useResponsive";
+import { taskStatus } from "./App.jsx";
 import { useLang } from "./i18n.jsx";
 
 export default function CaptainView({ vessel, user, onLogout }) {
@@ -36,10 +37,10 @@ export default function CaptainView({ vessel, user, onLogout }) {
   const fmtTime = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true });
   const fmtDate = (ts) => new Date(ts).toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short" });
 
-  const overdueTasks = (vessel.tasks||[]).filter(t=>t.status==="overdue");
-  const dueTasks     = (vessel.tasks||[]).filter(t=>t.status==="due");
+  const overdueTasks = (vessel.tasks||[]).filter(t=>taskStatus(t).key==="overdue");
+  const dueTasks     = (vessel.tasks||[]).filter(t=>taskStatus(t).key==="due");
   const myTasks      = (vessel.tasks||[]).filter(t=>
-    !t.status||t.status==="pending"||t.status==="due"||t.status==="overdue"
+    t.status!=="done"
   );
 
   const NAV = [
@@ -222,7 +223,7 @@ export default function CaptainView({ vessel, user, onLogout }) {
                       <div style={{fontSize:11, color:"#64748b", marginTop:2}}>{t.system} · Vence: {t.nextDue||"—"}</div>
                     </div>
                     <div style={{fontSize:11, color:"#94a3b8", textTransform:"uppercase", fontWeight:600}}>
-                      {t.status==="overdue"?"Vencida":t.status==="due"?"Pronto":"Pendiente"}
+                      {taskStatus(t).key==="overdue"?"Vencida":taskStatus(t).key==="due"?"Pronto":"Pendiente"}
                     </div>
                   </div>
                 );

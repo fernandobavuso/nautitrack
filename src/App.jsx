@@ -137,7 +137,7 @@ const hrsNum = (v) => {
 // Estado de una tarea calculado SIEMPRE con la fecha de hoy (antes se guardaba en la
 // base y quedaba congelado: una tarea seguía "al día" en verde aunque ya hubiera
 // vencido). Devuelve también los días que faltan para mostrarlos en la lista.
-function taskStatus(t) {
+export function taskStatus(t) {
   if (t.status === "done") return { key:"done", days:null };
   if (t.nextDue) {
     const today = new Date(); today.setHours(0,0,0,0);
@@ -1972,8 +1972,8 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
   const FILTERS = ["Todas","Sin completar","Por vencer","Vencidas","Completadas"];
   const filtered = (vessel.tasks||[]).filter(t => {
     if (filter==="Sin completar") return t.status!=="done";
-    if (filter==="Vencidas")    return t.status==="overdue";
-    if (filter==="Por vencer")  return t.status==="due" || t.status==="soon";
+    if (filter==="Vencidas")    return taskStatus(t).key==="overdue";
+    if (filter==="Por vencer")  return ["due","soon"].includes(taskStatus(t).key);
     if (filter==="Completadas") return t.status==="done";
     return true;
   })
@@ -2012,7 +2012,7 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
             <button key={f} onClick={() => setFilter(f)} style={{...s.filterBtn,background:filter===f?"#1e3a5f":"transparent",color:filter===f?"#fff":"#64748b",borderColor:filter===f?"#4a9eff":"#e2e8f0"}}>
               {({"Todas":tr("tasks.all"),"Sin completar":(lang==="es"?"Sin completar":"Open"),"Por vencer":tr("tasks.due"),"Vencidas":tr("tasks.overdue"),"Completadas":tr("tasks.completed")})[f]||f}
               <span style={{marginLeft:4,fontSize:10,background:filter===f?"rgba(255,255,255,0.2)":"#e2e8f0",color:filter===f?"#fff":"#64748b",padding:"1px 6px",borderRadius:10}}>
-                {f==="Todas"?(vessel.tasks||[]).length:f==="Sin completar"?(vessel.tasks||[]).filter(t=>t.status!=="done").length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>t.status==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>t.status==="due"||t.status==="soon").length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
+                {f==="Todas"?(vessel.tasks||[]).length:f==="Sin completar"?(vessel.tasks||[]).filter(t=>t.status!=="done").length:f==="Vencidas"?(vessel.tasks||[]).filter(t=>taskStatus(t).key==="overdue").length:f==="Por vencer"?(vessel.tasks||[]).filter(t=>["due","soon"].includes(taskStatus(t).key)).length:(vessel.tasks||[]).filter(t=>t.status==="done").length}
               </span>
             </button>
           ))}
@@ -2071,14 +2071,14 @@ function TasksPage({ vessel, updateVessel, addTask, updateTask, deleteTask }) {
                     <td style={{...s.td,fontWeight:500,color:"#1e293b"}}>{task.name}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.assigned?.split(" ")[0]}</td>
                     <td style={{...s.td,color:"#64748b"}}>{task.interval}</td>
-                    <td style={{...s.td,color:task.status==="overdue"?"#dc2626":"#1e293b",fontWeight:task.status==="overdue"?600:400}}>
+                    <td style={{...s.td,color:taskStatus(task).key==="overdue"?"#dc2626":"#1e293b",fontWeight:taskStatus(task).key==="overdue"?600:400}}>
                   {task.interval==="Por horas"
                     ? `${task.dueHours}h · ${task.motorName||"motor"}`
                     : <>
                         {fmtDate(task.nextDue)}
                         {task.daysLeft!==null && task.daysLeft!==undefined && task.status!=="done" && (
                           <div style={{fontSize:10,marginTop:2,fontWeight:600,
-                            color: task.status==="overdue" ? "#dc2626" : task.status==="due" ? "#b45309" : "#94a3b8"}}>
+                            color: taskStatus(task).key==="overdue" ? "#dc2626" : taskStatus(task).key==="due" ? "#b45309" : "#94a3b8"}}>
                             {dueLabel(task.daysLeft, lang)}
                           </div>
                         )}
@@ -3736,8 +3736,8 @@ function ReportModal({ vessel, onClose }) {
 
     // ── TASKS ─────────────────────────────────────────────────────────────────
     if (sel.includes("tasks")) {
-      const overdue = filteredTasks.filter(t=>t.status==="overdue");
-      const due     = filteredTasks.filter(t=>t.status==="due");
+      const overdue = filteredTasks.filter(t=>taskStatus(t).key==="overdue");
+      const due     = filteredTasks.filter(t=>taskStatus(t).key==="due");
       const ok      = filteredTasks.filter(t=>t.status==="ok");
       sections += sectionHeader("☑","Estado de Mantenimiento",`${filteredTasks.length} tareas programadas`,"#dbeafe","#1d4ed8");
       sections += `
@@ -3761,13 +3761,13 @@ function ReportModal({ vessel, onClose }) {
       <table>
         <thead><tr><th>{lang==="es"?"Sistema":"System"}</th><th>{lang==="es"?"Equipo":"Equipment"}</th><th>Tarea</th><th>Intervalo</th><th>Próx. Venc.</th><th>{lang==="es"?"Estado":"Status"}</th></tr></thead>
         <tbody>
-          ${filteredTasks.sort((a,b)=>a.status==="overdue"?-1:b.status==="overdue"?1:0).map((t,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+          ${filteredTasks.sort((a,b)=>taskStatus(a).key==="overdue"?-1:taskStatus(b).key==="overdue"?1:0).map((t,i)=>`<tr style="background:${i%2===0?"#fff":"#f8fafc"}">
             <td style="color:#64748b;">${t.system||"—"}</td>
             <td class="td-bold">${t.equipment||"—"}</td>
             <td>${t.name||"—"}</td>
             <td style="color:#64748b;">${t.interval||"—"}</td>
             <td class="td-date">${fmtD(t.nextDue)}</td>
-            <td><span class="badge ${t.status==="overdue"?"badge-red":t.status==="due"?"badge-yellow":"badge-green"}">${t.status==="overdue"?"Vencido":t.status==="due"?"Por vencer":"Al día"}</span></td>
+            <td><span class="badge ${taskStatus(t).key==="overdue"?"badge-red":taskStatus(t).key==="due"?"badge-yellow":"badge-green"}">${taskStatus(t).key==="overdue"?"Vencido":taskStatus(t).key==="due"?"Por vencer":"Al día"}</span></td>
           </tr>`).join("")}
         </tbody>
       </table>`;
@@ -3860,7 +3860,7 @@ function ReportModal({ vessel, onClose }) {
         <div class="stat-lbl">📋 Entradas Bitácora</div>
       </div>
       <div class="stat">
-        <div class="stat-val">${(vessel.tasks||[]).filter(t=>t.status==="overdue").length}</div>
+        <div class="stat-val">${(vessel.tasks||[]).filter(t=>taskStatus(t).key==="overdue").length}</div>
         <div class="stat-lbl" style="color:#dc2626;">⚠ Tareas Vencidas</div>
       </div>
       <div class="stat">

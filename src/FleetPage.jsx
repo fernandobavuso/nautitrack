@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import { useLang } from "./i18n.jsx";
+import { taskStatus } from "./App.jsx";
 import { hasFeature, PremiumLock } from "./plans.jsx";
 
 // Vista consolidada de toda la flota
@@ -46,7 +47,7 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
   vessels.forEach(v => {
     const c = costs[v.id]||{usd:0,ves:0};
     totalUSD += c.usd; totalVES += c.ves;
-    totalAlerts += (v.tasks||[]).filter(t=>t.status==="overdue").length;
+    totalAlerts += (v.tasks||[]).filter(t=>taskStatus(t).key==="overdue").length;
   });
 
   // Próximo servicio por horas/fecha del barco (motores, generador, Seakeeper).
@@ -216,8 +217,8 @@ export default function FleetPage({ vessels, vessel, user, setVesselId, setPage,
   };
 
   const statusInfo = (v) => {
-    const overdue = (v.tasks||[]).filter(t=>t.status==="overdue").length;
-    const due = (v.tasks||[]).filter(t=>t.status==="due").length;
+    const overdue = (v.tasks||[]).filter(t=>taskStatus(t).key==="overdue").length;
+    const due = (v.tasks||[]).filter(t=>taskStatus(t).key==="due").length;
     if (overdue>0) return { color:"#dc2626", bg:"#fff5f5", label:`${overdue} vencida${overdue>1?"s":""}` };
     if (due>0) return { color:"#d97706", bg:"#fffbeb", label:`${due} por vencer` };
     return { color:"#16a34a", bg:"#f0fdf4", label:"Al día" };
