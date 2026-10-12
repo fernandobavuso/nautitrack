@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "./supabase.js";
 import { useLang } from "./i18n.jsx";
 import { accountHasFleet } from "./plans.jsx";
-import PurchaseMeta, { paymentSummary, photoUrl } from "./PaymentFields.jsx";
+import PurchaseMeta, { paymentSummary, photoUrl, catL } from "./PaymentFields.jsx";
 
 const CATEGORIES = [
   "Materiales y suministros", "Limpiezas", "Transporte y gasolina",
@@ -24,6 +24,9 @@ export default function CompanyPage({ user, vessels }) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);   // gasto en edición (solo si no está saldado)
   const [showCut, setShowCut]   = useState(false);
+  const [showAR, setShowAR]     = useState(false);   // cuentas por cobrar
+  const [ar, setAr]             = useState([]);      // gastos reembolsables sin cobrar
+  const [arCopied, setArCopied] = useState("");
   const [copied, setCopied]     = useState("");
   const [splitPct, setSplitPct] = useState(50);
   const [saving, setSaving]   = useState(false);
@@ -43,6 +46,18 @@ export default function CompanyPage({ user, vessels }) {
 
   const isFleet = accountHasFleet(vessels);
 
+  // Cuentas por cobrar: lo adelantado en cada barco que el dueño aún no ha pagado
+  const loadAR = async () => {
+    const vids = (vessels||[]).map(v=>v.id);
+    if (!vids.length) { setAr([]); return; }
+    const { data, error } = await supabase.from("expenses")
+      .select("id,vessel_id,category,description,amount,expense_date,purchased_by,vendor,receipt_urls")
+      .in("vessel_id", vids).eq("reimbursable", true).eq("reimbursed", false)
+      .order("expense_date", { ascending: true });
+    if (error) { console.error("[Carive] cuentas por cobrar:", error.message); return; }
+    setAr(data || []);
+  };
+
   const resolveOwner = async () => {
     const { data } = await supabase.from("fleet_managers")
       .select("fleet_owner_id").eq("manager_id", user.id).eq("status","active").limit(1);
@@ -59,7 +74,7 @@ export default function CompanyPage({ user, vessels }) {
     setRows(data||[]);
     setLoading(false);
   };
-  useEffect(()=>{ resolveOwner().then(oid=>load(oid)); /* eslint-disable-next-line */ },[user?.id]);
+  useEffect(()=>{ resolveOwner().then(oid=>load(oid)); loadAR(); /* eslint-disable-next-line */ },[user?.id, vessels?.length]);
 
   // ── Cálculos del mes seleccionado ──────────────────────────────────────────
   const calc = useMemo(()=>{
@@ -158,6 +173,17 @@ export default function CompanyPage({ user, vessels }) {
     setEditingId(r.id); setCreating(true);
   };
 
+  const markARPaid = async (vesselId) => {
+    const items = ar.filter(x => x.vessel_id === vesselId);
+    const name = (vessels||[]).find(v=>v.id===vesselId)?.name || "";
+    if (!confirm(L(`¿Marcar como cobrados los ${items.length} gastos de ${name}?`,
+                   `Mark ${name}'s ${items.length} expenses as collected?`))) return;
+    const { error } = await supabase.from("expenses")
+      .update({ reimbursed: true }).in("id", items.map(x=>x.id));
+    if (error) { setMsg("Error: "+error.message); setTimeout(()=>setMsg(""),4000); return; }
+    setAr(l => l.filter(x => x.vessel_id !== vesselId));
+  };
+
   const toggleSettled = async (exp) => {
     const next = !exp.settled;
     const { data, error } = await supabase.from("company_expenses")
@@ -234,6 +260,29 @@ export default function CompanyPage({ user, vessels }) {
       </div>
 
       {loading ? <div style={{padding:40,textAlign:"center",color:"#94a3b8",fontSize:13}}>{L("Cargando...","Loading...")}</div> : <>
+
+      {/* Cuentas por cobrar: lo adelantado en los barcos que el dueño aún no paga */}
+      {ar.length>0 && (()=>{
+        const tot = ar.reduce((a,x)=>a+Number(x.amount||0),0);
+        const barcos = new Set(ar.map(x=>x.vessel_id)).size;
+        return (
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"13px 15px",marginBottom:14,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:170}}>
+              <div style={{fontSize:11,color:"#92400e",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>
+                {L("Por cobrar a los dueños","To collect from owners")}
+              </div>
+              <div style={{fontSize:12,color:"#b45309",marginTop:2}}>
+                {ar.length} {ar.length===1?L("gasto","expense"):L("gastos","expenses")} · {barcos} {barcos===1?L("barco","vessel"):L("barcos","vessels")}
+              </div>
+            </div>
+            <div style={{fontSize:24,fontWeight:800,color:"#b45309"}}>{money(tot)}</div>
+            <button onClick={()=>setShowAR(true)}
+              style={{padding:"8px 14px",background:"#d97706",border:"none",borderRadius:8,color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {L("Ver resumen","View summary")}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Corte con el socio: todo lo no saldado, sin importar el mes */}
       {(()=>{
@@ -345,6 +394,112 @@ export default function CompanyPage({ user, vessels }) {
             </div>}
       </div>
       </>}
+
+      {/* Resumen de cuentas por cobrar, agrupado por barco */}
+      {showAR && (()=>{
+        const byV = {};
+        ar.forEach(x => { (byV[x.vessel_id] = byV[x.vessel_id] || []).push(x); });
+        const grupos = Object.entries(byV)
+          .map(([vid, items]) => ({
+            vid,
+            name: (vessels||[]).find(v=>v.id===vid)?.name || L("Barco","Vessel"),
+            items,
+            total: items.reduce((a,x)=>a+Number(x.amount||0),0),
+          }))
+          .sort((a,b)=>b.total-a.total);
+        const tot = grupos.reduce((a,g)=>a+g.total,0);
+        const fdate = (d)=>new Date(String(d)+"T00:00:00").toLocaleDateString("en-US");
+        const fix = (n)=>Number(n).toFixed(2);
+
+        const plain = [
+          L("Cuentas por cobrar — The Boating Zone","Receivables — The Boating Zone"),
+          `${L("Generado","Generated")}: ${new Date().toLocaleDateString("en-US")}`, "",
+          ...grupos.flatMap(g => [
+            `${g.name} — $${fix(g.total)}`,
+            ...g.items.map(x => `   ${fdate(x.expense_date)}  ${x.category}  ${[x.description,x.vendor].filter(Boolean).join(" · ")||"—"}  $${fix(x.amount)}`),
+            "",
+          ]),
+          `${L("TOTAL POR COBRAR","TOTAL RECEIVABLE")}: $${fix(tot)}`,
+        ].join("\n");
+
+        const tsv = [
+          ["Vessel","Date","Category","Description","Vendor","Bought by","Amount"].join("\t"),
+          ...grupos.flatMap(g => g.items.map(x => [
+            g.name, fdate(x.expense_date), x.category||"", (x.description||"").replace(/\t/g," "),
+            x.vendor||"", x.purchased_by||"", fix(x.amount),
+          ].join("\t"))),
+          "", ["TOTAL","","","","","",fix(tot)].join("\t"),
+        ].join("\n");
+
+        const copy = (t,w)=>navigator.clipboard?.writeText(t)
+          .then(()=>{setArCopied(w);setTimeout(()=>setArCopied(""),2000);})
+          .catch(()=>{setArCopied("err");setTimeout(()=>setArCopied(""),2500);});
+
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000,padding:12,overflowY:"auto"}} onClick={()=>setShowAR(false)}>
+            <div style={{background:"#fff",borderRadius:16,padding:20,maxWidth:640,width:"100%",maxHeight:"92vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:12}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:16,fontWeight:800,color:"#0f172a"}}>{L("Cuentas por cobrar","Receivables")}</div>
+                  <div style={{fontSize:12,color:"#64748b",marginTop:2}}>
+                    {L("Lo que adelantaste y los dueños aún no te han pagado.","What you advanced and owners haven't paid back yet.")}
+                  </div>
+                </div>
+                <button onClick={()=>setShowAR(false)} style={{background:"none",border:"none",fontSize:20,color:"#94a3b8",cursor:"pointer",lineHeight:1}}>✕</button>
+              </div>
+
+              <div style={{background:"#fffbeb",borderRadius:10,padding:"12px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:13,fontWeight:700,color:"#92400e"}}>{L("Total por cobrar","Total receivable")}</span>
+                <span style={{fontSize:24,fontWeight:800,color:"#b45309"}}>{money(tot)}</span>
+              </div>
+
+              <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
+                {grupos.map(g=>(
+                  <div key={g.vid} style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 13px",background:"#f8fafc",flexWrap:"wrap"}}>
+                      <div style={{flex:1,minWidth:130}}>
+                        <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{g.name}</div>
+                        <div style={{fontSize:11,color:"#94a3b8"}}>{g.items.length} {g.items.length===1?L("gasto","expense"):L("gastos","expenses")}</div>
+                      </div>
+                      <div style={{fontSize:17,fontWeight:800,color:"#b45309"}}>{money(g.total)}</div>
+                      <button onClick={()=>markARPaid(g.vid)}
+                        style={{padding:"6px 12px",background:"#f0fdf4",border:"1.5px solid #86efac",borderRadius:8,color:"#15803d",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                        ✓ {L("Ya me pagaron","Collected")}
+                      </button>
+                    </div>
+                    <div style={{padding:"4px 13px 9px"}}>
+                      {g.items.map(x=>(
+                        <div key={x.id} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:11,color:"#64748b",padding:"3px 0"}}>
+                          <span style={{minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            {fdate(x.expense_date)} · {catL(x.category, lang)}{x.description?` · ${x.description}`:""}
+                            {Array.isArray(x.receipt_urls)&&x.receipt_urls.length?" 📎":""}
+                          </span>
+                          <span style={{fontWeight:700,color:"#334155",whiteSpace:"nowrap"}}>${fix(x.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>copy(tsv,"tsv")} style={{flex:1,minWidth:160,padding:"11px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:9,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {arCopied==="tsv" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como tabla","Copy as table")}
+                </button>
+                <button onClick={()=>copy(plain,"plain")} style={{flex:1,minWidth:150,padding:"11px",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:9,color:"#334155",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {arCopied==="plain" ? `✓ ${L("Copiado","Copied")}` : L("Copiar como texto","Copy as text")}
+                </button>
+              </div>
+              {arCopied==="err" && <div style={{fontSize:11,color:"#dc2626",marginTop:8}}>{L("No se pudo copiar.","Couldn't copy.")}</div>}
+
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
+                {L("Incluye todos los gastos marcados “cobrar al dueño” que siguen pendientes, de todos los barcos. El detalle con fotos de factura está en Finanzas de cada barco.",
+                   "Includes every expense marked “bill the owner” still pending, across all vessels. Invoice photos are in each vessel's Finances.")}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal: corte con el socio */}
       {showCut && (()=>{
