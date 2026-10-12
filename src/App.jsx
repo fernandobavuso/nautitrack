@@ -5537,7 +5537,7 @@ const s = {
   table:      { width:"100%", borderCollapse:"collapse", background:"#fff", borderRadius:10, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" },
   th:         { padding:"10px 14px", textAlign:"left", color:"#93c5fd", fontSize:11, fontWeight:600, letterSpacing:"0.04em", whiteSpace:"nowrap" },
   trow:       { borderBottom:"1px solid #f1f5f9", transition:"background 0.1s" },
-  td:         { padding:"11px 14px", color:"#475569", fontSize:13, verticalAlign:"middle", textAlign:"left" },
+  td:         { padding:"11px 14px", color:"#475569", fontSize:13, verticalAlign:"middle" },
   statusPill: { display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:700 },
   modalOverlay: { position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" },
   modalBox:   { background:"#fff", borderRadius:16, width:"100%", maxWidth:560, maxHeight:"92vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" },
