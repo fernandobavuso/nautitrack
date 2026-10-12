@@ -14,6 +14,7 @@ import PartnerView from "./PartnerView.jsx";
 import PurchaseMeta, { EXPENSE_CATEGORIES, paymentSummary, photoUrl } from "./PaymentFields.jsx";
 import { jsPDF } from "jspdf";
 import { docExpiry } from "./docs.js";
+import TripDetail from "./TripDetail.jsx";
 import CrewMarketplace from "./CrewMarketplace";
 import NotifPanel from "./NotifPanel";
 import CostsPage from "./CostsPage";
@@ -2436,66 +2437,6 @@ function LongCell({ text, limit = 90 }) {
         style={{background:"none",border:"none",padding:0,color:"#2563eb",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
         {open ? (lang==="es"?"ver menos":"show less") : (lang==="es"?"ver todo":"show all")}
       </button>
-    </>
-  );
-}
-
-// Detalle de una salida: combustible consumido, horas de uso, tripulación y notas.
-// La fila solo cabe el resumen; esto se despliega bajo demanda.
-function TripDetail({ e, lang }) {
-  const [open, setOpen] = useState(false);
-  const L = (es,en)=>lang==="en"?en:es;
-  const n = (x) => { const v = Number(x); return isNaN(v) ? null : v; };
-  const maxOf = (x) => {
-    if (x == null || x === "") return null;
-    if (typeof x === "object") { const v = Object.values(x).map(Number).filter(k=>!isNaN(k)); return v.length?Math.max(...v):null; }
-    return n(x);
-  };
-
-  const fo = n(e.fuelOut), fi = n(e.fuelIn);
-  const eo = maxOf(e.engineHrsOut), ei = maxOf(e.engineHrsIn);
-  const go = maxOf(e.genHrsOut),    gi = maxOf(e.genHrsIn);
-  const r1 = (v) => Math.round(v*10)/10;
-
-  const rows = [];
-  if (fo != null || fi != null) {
-    const gasto = (fo != null && fi != null && fo >= fi) ? fo - fi : null;
-    rows.push([L("Combustible","Fuel"),
-      `${fo ?? "—"} → ${fi ?? "—"}${gasto != null ? `  (${L("consumo","used")}: ${r1(gasto)})` : ""}`]);
-  }
-  if (eo != null || ei != null) {
-    const uso = (eo != null && ei != null && ei >= eo) ? ei - eo : null;
-    rows.push([L("Horas motor","Engine hours"),
-      `${eo ?? "—"} → ${ei ?? "—"}${uso != null ? `  (${r1(uso)}h ${L("de uso","used")})` : ""}`]);
-  }
-  if (go != null || gi != null) {
-    const uso = (go != null && gi != null && gi >= go) ? gi - go : null;
-    rows.push([L("Horas generador","Generator hours"),
-      `${go ?? "—"} → ${gi ?? "—"}${uso != null ? `  (${r1(uso)}h)` : ""}`]);
-  }
-  if (e.ownerAboard) rows.push([L("Dueño a bordo","Owner aboard"), e.ownerName || L("Sí","Yes")]);
-  if (Array.isArray(e.crewSel) && e.crewSel.length) rows.push([L("Tripulación","Crew"), e.crewSel.join(", ")]);
-  if (e.salidaClima) rows.push([L("Clima","Weather"), e.salidaClima]);
-  if (e.desc) rows.push([L("Notas","Notes"), e.desc]);
-
-  if (!rows.length) return null;
-
-  return (
-    <>
-      <button onClick={()=>setOpen(o=>!o)}
-        style={{display:"block",width:"100%",textAlign:"center",marginTop:5,background:"none",border:"none",padding:0,color:"#2563eb",fontSize:11,fontWeight:700,cursor:"pointer"}}>
-        {open ? L("ocultar detalle","hide details") : L("ver detalle","view details")}
-      </button>
-      {open && (
-        <div style={{marginTop:6,background:"#f8fafc",borderRadius:8,padding:"8px 10px",display:"flex",flexDirection:"column",gap:4}}>
-          {rows.map(([k,v],i)=>(
-            <div key={i} style={{display:"flex",gap:8,fontSize:11,lineHeight:1.5}}>
-              <span style={{color:"#94a3b8",fontWeight:600,minWidth:104,flexShrink:0}}>{k}</span>
-              <span style={{color:"#334155",whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{v}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }

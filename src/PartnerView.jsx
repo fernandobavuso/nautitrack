@@ -8,6 +8,7 @@ import { useLang } from "./i18n.jsx";
 import CalendarPage from "./CalendarPage.jsx";
 import { photoUrl, catL } from "./PaymentFields.jsx";
 import { docExpiry, systemL } from "./docs.js";
+import TripDetail from "./TripDetail.jsx";
 import { logTypeL, visitTypeL } from "./App.jsx";
 
 const fmtD = (d) => { if(!d) return "—"; const p=String(d).split("-"); return p.length===3?`${p[1]}/${p[2]}/${p[0]}`:d; };
@@ -60,6 +61,95 @@ export default function PartnerView({ user, onLogout }) {
     ]);
     setLog(lg||[]); setTasks(tk||[]); setExpenses(ex||[]); setDocs(dc||[]);
   })(); },[vid]);
+
+  // Reporte imprimible de lo que el dueño ve, respetando el rango elegido.
+  // No usa el generador del gestor: aquí interesa el resumen que el dueño
+  // necesita para sus propios correos, no el expediente técnico completo.
+  const buildReport = () => {
+    const per = (from||to)
+      ? `${from?fmtD(from):"—"} — ${to?fmtD(to):"—"}`
+      : L("Todo el historial","All history");
+    const esc = (x)=>String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\n/g,"<br>");
+    const totF = expF.reduce((a,e)=>a+Number(e.amount||0),0);
+    const byCat = {};
+    expF.forEach(e=>{ byCat[e.category||"Otro"]=(byCat[e.category||"Otro"]||0)+Number(e.amount||0); });
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(vessel?.name)}</title><style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;font-size:13px;line-height:1.5;padding:36px;background:#fff}
+      h1{font-size:22px;color:#0a2540;margin-bottom:2px}
+      .sub{color:#64748b;font-size:13px;margin-bottom:22px}
+      h2{font-size:14px;color:#0f172a;margin:22px 0 8px;padding-top:14px;border-top:1px solid #e2e8f0}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px}
+      th{background:#0a2540;color:#fff;text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+      td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+      .r{text-align:right;white-space:nowrap}
+      .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+      .card{flex:1;min-width:120px;background:#f8fafc;border-radius:8px;padding:10px 12px}
+      .cl{font-size:10px;color:#64748b;font-weight:600}
+      .cv{font-size:19px;font-weight:800;color:#0f172a}
+      @media print{@page{margin:12mm}body{padding:0}.noprint{display:none}}
+    </style></head><body>
+      <h1>${esc(vessel?.name)}</h1>
+      <div class="sub">${L("Reporte del propietario","Owner report")} · ${per} · ${L("generado","generated")} ${new Date().toLocaleDateString("en-US")}</div>
+
+      <div class="cards">
+        <div class="card"><div class="cl">${L("Combustible","Fuel")}</div><div class="cv">${fuelPct!=null?Math.round(fuelPct)+"%":(fuelVal+" "+fuelUnit)}</div></div>
+        <div class="card"><div class="cl">${L("Horas motor","Engine hours")}</div><div class="cv">${engineH!=null?engineH+"h":"—"}</div></div>
+        <div class="card"><div class="cl">${L("Generador","Generator")}</div><div class="cv">${genH!=null?genH+"h":"—"}</div></div>
+        <div class="card"><div class="cl">${L("Gastos del período","Period expenses")}</div><div class="cv">${money(totF)}</div></div>
+      </div>
+
+      <h2>${L("Actividad","Activity")} · ${logF.length}</h2>
+      ${logF.length? `<table><thead><tr>
+          <th>${L("Fecha","Date")}</th><th>${L("Tipo","Type")}</th><th>${L("Detalle","Detail")}</th><th>${L("Realizado por","By")}</th>
+        </tr></thead><tbody>${logF.map(e=>`<tr>
+          <td style="white-space:nowrap">${fmtD(e.date)}</td>
+          <td>${esc(logTypeL(e.type,lang))}${Array.isArray(e.visit_types)&&e.visit_types.length?" · "+esc(e.visit_types.map(v=>visitTypeL(v,lang)).join(", ")):""}</td>
+          <td>${e.type==="Salida"
+                ? esc(`${e.dest||""} · ${e.persons||"—"}p · ${e.dept_time||"—"} → ${e.arr_time||"—"}`)
+                : esc(e.description||e.item||"—")}</td>
+          <td style="color:#64748b">${esc(e.performed_by||"—")}</td>
+        </tr>`).join("")}</tbody></table>`
+        : `<div style="color:#94a3b8">${L("Sin actividad en el período.","No activity in this period.")}</div>`}
+
+      <h2>${L("Tareas","Tasks")} · ${tasksF.length}</h2>
+      ${tasksF.length? `<table><thead><tr>
+          <th>${L("Tarea","Task")}</th><th>${L("Sistema","System")}</th><th>${L("Vence","Due")}</th><th>${L("Estado","Status")}</th>
+        </tr></thead><tbody>${tasksF.map(t=>{const st=tStatus(t);return `<tr>
+          <td>${esc(t.name)}</td><td style="color:#64748b">${esc(systemL(t.system,lang)||"—")}</td>
+          <td style="white-space:nowrap">${t.next_due?fmtD(t.next_due):"—"}</td>
+          <td style="color:${st.bg==="#ef4444"?"#dc2626":"#64748b"}">${esc(st.l)}</td>
+        </tr>`;}).join("")}</tbody></table>`
+        : `<div style="color:#94a3b8">${L("Sin tareas.","No tasks.")}</div>`}
+
+      <h2>${L("Gastos","Expenses")} · ${money(totF)}</h2>
+      ${Object.keys(byCat).length? `<table><thead><tr><th>${L("Categoría","Category")}</th><th class="r">${L("Monto","Amount")}</th></tr></thead>
+        <tbody>${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<tr><td>${esc(catL(c,lang))}</td><td class="r"><b>${money(v)}</b></td></tr>`).join("")}
+        <tr style="background:#f8fafc"><td><b>${L("TOTAL","TOTAL")}</b></td><td class="r"><b>${money(totF)}</b></td></tr></tbody></table>`
+        : `<div style="color:#94a3b8">${L("Sin gastos en el período.","No expenses in this period.")}</div>`}
+
+      <div style="margin-top:24px;font-size:10px;color:#cbd5e1">Carive · ${esc(vessel?.name)}</div>
+      <div class="noprint" style="position:fixed;bottom:18px;right:18px">
+        <button onclick="window.print()" style="padding:12px 18px;background:linear-gradient(120deg,#2563eb,#0ea5e9);color:#fff;border:none;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer">
+          ${L("Imprimir / Guardar PDF","Print / Save PDF")}
+        </button>
+      </div>
+    </body></html>`;
+  };
+
+  const openReport = () => {
+    const html = buildReport();
+    const w = window.open("", "_blank");
+    if (!w) {
+      const url = URL.createObjectURL(new Blob([html], { type:"text/html" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `reporte_${(vessel?.name||"barco").replace(/\s+/g,"_")}.html`; a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    w.document.write(html); w.document.close();
+  };
 
   const openDoc = async (d) => {
     if (d.kind === "link") { window.open(d.url, "_blank"); return; }
@@ -211,6 +301,7 @@ export default function PartnerView({ user, onLogout }) {
         {tabBtn("cal", L("Calendario","Calendar"))}
         {tabBtn("costs", L("Gastos","Expenses"))}
         {tabBtn("docs", L("Documentos","Documents"))}
+        {tabBtn("report", L("Reportes","Reports"))}
       </div>
 
       <div style={{padding:"16px 18px",maxWidth:900,margin:"0 auto"}}>
@@ -343,7 +434,8 @@ export default function PartnerView({ user, onLogout }) {
                     </div>
                     <div style={{fontSize:13,color:"#334155",marginTop:6,lineHeight:1.5}}>
                       {e.type==="Salida"
-                        ? `${e.dest||""} · ${e.persons||"—"}p · ${e.dept_time||"—"} → ${e.arr_time||L("Pendiente","Pending")}`
+                        ? <><span>{`${e.dest||""} · ${e.persons||"—"}p · ${e.dept_time||"—"} → ${e.arr_time||L("Pendiente","Pending")}`}</span>
+                            <TripDetail e={e} lang={lang}/></>
                         : e.type==="Compra"
                           ? `${e.item||""} · ${money(e.cost_usd)}`
                           : (openEntry===e.id || (e.description||"").length<=140)
@@ -447,6 +539,51 @@ export default function PartnerView({ user, onLogout }) {
                   </>
                 );
               })()
+        )}
+
+        {/* REPORTES */}
+        {tab==="report" && (
+          <div style={{maxWidth:520}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#0f172a",marginBottom:4}}>{L("Reporte del propietario","Owner report")}</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:16,lineHeight:1.6}}>
+              {L("Genera un documento con la actividad, las tareas y los gastos del barco. Elige el período con las fechas de abajo y se abre listo para imprimir o guardar como PDF.",
+                 "Builds a document with the vessel's activity, tasks and expenses. Pick the period below and it opens ready to print or save as PDF.")}
+            </div>
+
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Desde","From")}</label>
+                <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={sel}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:4}}>{L("Hasta","To")}</label>
+                <input type="date" value={to} min={from||undefined} onChange={e=>setTo(e.target.value)} style={sel}/>
+              </div>
+              {(from||to) && (
+                <button onClick={()=>{setFrom("");setTo("");}} style={{alignSelf:"flex-end",background:"none",border:"none",cursor:"pointer",color:"#2563eb",fontSize:11,fontWeight:700,paddingBottom:8}}>
+                  {L("Todo","All")}
+                </button>
+              )}
+            </div>
+
+            <div style={{background:"#f8fafc",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:7}}>{L("Incluye","Includes")}</div>
+              <div style={{fontSize:12,color:"#475569",lineHeight:1.9}}>
+                • {logF.length} {L("entradas de bitácora","logbook entries")}<br/>
+                • {tasksF.length} {L("tareas","tasks")}<br/>
+                • {expF.length} {L("gastos","expenses")} · {money(expF.reduce((a,e)=>a+Number(e.amount||0),0))}
+              </div>
+            </div>
+
+            <button onClick={openReport}
+              style={{width:"100%",padding:"12px",background:"linear-gradient(120deg,#2563eb,#0ea5e9)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              {L("Generar reporte","Generate report")}
+            </button>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:10,lineHeight:1.5}}>
+              {L("Se abre en una pestaña nueva. Desde ahí puedes imprimir o guardarlo como PDF.",
+                 "Opens in a new tab. From there you can print it or save it as PDF.")}
+            </div>
+          </div>
         )}
 
         {/* GASTOS */}
